@@ -1,34 +1,41 @@
 import { Image } from "expo-image";
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import { APP_SHELL_MAIN_TEXT_COLOR } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
+import { useDailyGoals } from "@/features/actions/daily-goals-context";
+import { DAILY_GOAL_LIMITS } from "@/lib/db";
 
 import {
   STEPS_ACTION_CARD_BACKGROUND,
   WATER_ADD_ICON,
   WATER_SUBTRACT_ICON,
 } from "../constants";
-import { getActionRowProgressDisplay } from "../data";
+import { getActionRowAccentColor } from "../data";
 
 const SECTION_TITLE = "Daily target";
 const TARGET_STEP = 500;
-const TARGET_MIN = 1_000;
-const TARGET_MAX = 50_000;
+const TARGET_MIN = DAILY_GOAL_LIMITS.steps.min;
+const TARGET_MAX = DAILY_GOAL_LIMITS.steps.max;
 
 export function StepsDailyTargetSection() {
-  const { accentColor } = getActionRowProgressDisplay("steps");
-  const [targetSteps, setTargetSteps] = useState(10_000);
+  const accentColor = getActionRowAccentColor("steps");
+  const { goals, updateGoals } = useDailyGoals();
+  const targetSteps = goals.steps;
 
   const decrease = useCallback(() => {
-    setTargetSteps((n) => Math.max(TARGET_MIN, n - TARGET_STEP));
-  }, []);
+    void updateGoals({
+      steps: Math.max(TARGET_MIN, targetSteps - TARGET_STEP),
+    });
+  }, [targetSteps, updateGoals]);
 
   const increase = useCallback(() => {
-    setTargetSteps((n) => Math.min(TARGET_MAX, n + TARGET_STEP));
-  }, []);
+    void updateGoals({
+      steps: Math.min(TARGET_MAX, targetSteps + TARGET_STEP),
+    });
+  }, [targetSteps, updateGoals]);
 
   const valueA11y = `${targetSteps.toLocaleString("en-US")} steps`;
 
@@ -91,9 +98,7 @@ export function StepsDailyTargetSection() {
                 minimumFontScale={0.75}
                 style={styles.valueText}
               >
-                <Text
-                  style={[styles.valueNumber, { color: accentColor }]}
-                >
+                <Text style={[styles.valueNumber, { color: accentColor }]}>
                   {targetSteps.toLocaleString("en-US")}
                 </Text>
                 <Text style={styles.valueSuffix}>STEPS</Text>

@@ -1,34 +1,41 @@
 import { Image } from "expo-image";
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import { APP_SHELL_MAIN_TEXT_COLOR } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
+import { useDailyGoals } from "@/features/actions/daily-goals-context";
+import { DAILY_GOAL_LIMITS } from "@/lib/db";
 
 import {
   TRAIN_ACTION_CARD_BACKGROUND,
   WATER_ADD_ICON,
   WATER_SUBTRACT_ICON,
 } from "../constants";
-import { getActionRowProgressDisplay } from "../data";
+import { getActionRowAccentColor } from "../data";
 
 const SECTION_TITLE = "Daily target";
 const TARGET_STEP_MIN = 15;
-const TARGET_MIN_MIN = 15;
-const TARGET_MAX_MIN = 240;
+const TARGET_MIN_MIN = DAILY_GOAL_LIMITS.trainMinutes.min;
+const TARGET_MAX_MIN = DAILY_GOAL_LIMITS.trainMinutes.max;
 
 export function TrainDailyTargetSection() {
-  const { accentColor } = getActionRowProgressDisplay("train");
-  const [targetMin, setTargetMin] = useState(60);
+  const accentColor = getActionRowAccentColor("train");
+  const { goals, updateGoals } = useDailyGoals();
+  const targetMin = goals.trainMinutes;
 
   const decrease = useCallback(() => {
-    setTargetMin((m) => Math.max(TARGET_MIN_MIN, m - TARGET_STEP_MIN));
-  }, []);
+    void updateGoals({
+      trainMinutes: Math.max(TARGET_MIN_MIN, targetMin - TARGET_STEP_MIN),
+    });
+  }, [targetMin, updateGoals]);
 
   const increase = useCallback(() => {
-    setTargetMin((m) => Math.min(TARGET_MAX_MIN, m + TARGET_STEP_MIN));
-  }, []);
+    void updateGoals({
+      trainMinutes: Math.min(TARGET_MAX_MIN, targetMin + TARGET_STEP_MIN),
+    });
+  }, [targetMin, updateGoals]);
 
   const valueA11y = `${targetMin} minutes`;
 

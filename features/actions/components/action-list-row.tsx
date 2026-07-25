@@ -11,12 +11,8 @@ import {
   ACTION_CARD_PLUS_ICON,
   ACTION_ROW_BACKGROUND,
 } from "../constants";
-import {
-  ACTION_ROWS,
-  getActionRowBarSources,
-  getActionRowFillPercent,
-  getActionRowProgressLabel,
-} from "../data";
+import { ACTION_ROWS, getActionRowBarSources } from "../data";
+import { useActionProgress } from "../use-action-progress";
 import { ActionRowProgressLabel } from "./action-row-progress-label";
 
 type ActionRow = (typeof ACTION_ROWS)[number];
@@ -26,10 +22,12 @@ type Props = {
 };
 
 export function ActionListRow({ row }: Props) {
+  const { progressLabel, barFillPercent } = useActionProgress(row.id);
+
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${row.label}. ${getActionRowProgressLabel(row.id)}`}
+      accessibilityLabel={`${row.label}. ${progressLabel}`}
       android_ripple={{ color: "rgba(255,255,255,0.12)" }}
       style={({ pressed }) => [
         styles.listRow,
@@ -72,7 +70,7 @@ export function ActionListRow({ row }: Props) {
               </ThemedText>
               <ActionProgressBar
                 sources={getActionRowBarSources(row)}
-                fillPercent={getActionRowFillPercent(row.id)}
+                fillPercent={barFillPercent}
                 style={styles.listRowBar}
               />
               <ActionRowProgressLabel actionId={row.id} />

@@ -1,38 +1,47 @@
 import { Image } from "expo-image";
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import { APP_SHELL_MAIN_TEXT_COLOR } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
+import { useDailyGoals } from "@/features/actions/daily-goals-context";
+import { DAILY_GOAL_LIMITS } from "@/lib/db";
 
 import {
   FOOD_ACTION_CARD_BACKGROUND,
   WATER_ADD_ICON,
   WATER_SUBTRACT_ICON,
 } from "../constants";
-import { getActionRowProgressDisplay } from "../data";
+import { getActionRowAccentColor } from "../data";
 
 const SECTION_TITLE = "Daily target";
 const FOOD_DAILY_TARGET_STEP_KCAL = 50;
-const FOOD_DAILY_TARGET_MIN_KCAL = 500;
-const FOOD_DAILY_TARGET_MAX_KCAL = 6_000;
+const FOOD_DAILY_TARGET_MIN_KCAL = DAILY_GOAL_LIMITS.foodKcal.min;
+const FOOD_DAILY_TARGET_MAX_KCAL = DAILY_GOAL_LIMITS.foodKcal.max;
 
 export function FoodDailyTargetSection() {
-  const { accentColor } = getActionRowProgressDisplay("food");
-  const [dailyTargetKcal, setDailyTargetKcal] = useState(2_500);
+  const accentColor = getActionRowAccentColor("food");
+  const { goals, updateGoals } = useDailyGoals();
+  const dailyTargetKcal = goals.foodKcal;
 
   const decrease = useCallback(() => {
-    setDailyTargetKcal((k) =>
-      Math.max(FOOD_DAILY_TARGET_MIN_KCAL, k - FOOD_DAILY_TARGET_STEP_KCAL),
-    );
-  }, []);
+    void updateGoals({
+      foodKcal: Math.max(
+        FOOD_DAILY_TARGET_MIN_KCAL,
+        dailyTargetKcal - FOOD_DAILY_TARGET_STEP_KCAL,
+      ),
+    });
+  }, [dailyTargetKcal, updateGoals]);
 
   const increase = useCallback(() => {
-    setDailyTargetKcal((k) =>
-      Math.min(FOOD_DAILY_TARGET_MAX_KCAL, k + FOOD_DAILY_TARGET_STEP_KCAL),
-    );
-  }, []);
+    void updateGoals({
+      foodKcal: Math.min(
+        FOOD_DAILY_TARGET_MAX_KCAL,
+        dailyTargetKcal + FOOD_DAILY_TARGET_STEP_KCAL,
+      ),
+    });
+  }, [dailyTargetKcal, updateGoals]);
 
   const valueA11y = `${dailyTargetKcal.toLocaleString("en-US")} kilocalories daily`;
 

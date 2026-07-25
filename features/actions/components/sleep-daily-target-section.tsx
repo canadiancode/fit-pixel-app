@@ -1,22 +1,24 @@
 import { Image } from "expo-image";
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import { APP_SHELL_MAIN_TEXT_COLOR } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
+import { useDailyGoals } from "@/features/actions/daily-goals-context";
+import { DAILY_GOAL_LIMITS } from "@/lib/db";
 
 import {
   SLEEP_ACTION_CARD_BACKGROUND,
   WATER_ADD_ICON,
   WATER_SUBTRACT_ICON,
 } from "../constants";
-import { getActionRowProgressDisplay } from "../data";
+import { getActionRowAccentColor } from "../data";
 
 const SECTION_TITLE = "Daily target";
 const TARGET_STEP_HOURS = 0.5;
-const TARGET_MIN_HOURS = 6;
-const TARGET_MAX_HOURS = 12;
+const TARGET_MIN_HOURS = DAILY_GOAL_LIMITS.sleepHours.min;
+const TARGET_MAX_HOURS = DAILY_GOAL_LIMITS.sleepHours.max;
 
 function formatSleepHours(h: number): string {
   if (Number.isInteger(h)) {
@@ -26,20 +28,27 @@ function formatSleepHours(h: number): string {
 }
 
 export function SleepDailyTargetSection() {
-  const { accentColor } = getActionRowProgressDisplay("sleep");
-  const [targetHours, setTargetHours] = useState(8);
+  const accentColor = getActionRowAccentColor("sleep");
+  const { goals, updateGoals } = useDailyGoals();
+  const targetHours = goals.sleepHours;
 
   const decrease = useCallback(() => {
-    setTargetHours((t) =>
-      Math.max(TARGET_MIN_HOURS, Math.round((t - TARGET_STEP_HOURS) * 10) / 10),
-    );
-  }, []);
+    void updateGoals({
+      sleepHours: Math.max(
+        TARGET_MIN_HOURS,
+        Math.round((targetHours - TARGET_STEP_HOURS) * 10) / 10,
+      ),
+    });
+  }, [targetHours, updateGoals]);
 
   const increase = useCallback(() => {
-    setTargetHours((t) =>
-      Math.min(TARGET_MAX_HOURS, Math.round((t + TARGET_STEP_HOURS) * 10) / 10),
-    );
-  }, []);
+    void updateGoals({
+      sleepHours: Math.min(
+        TARGET_MAX_HOURS,
+        Math.round((targetHours + TARGET_STEP_HOURS) * 10) / 10,
+      ),
+    });
+  }, [targetHours, updateGoals]);
 
   const valueA11y = `${formatSleepHours(targetHours)} hours`;
 

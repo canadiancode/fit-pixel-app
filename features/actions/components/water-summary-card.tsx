@@ -7,26 +7,22 @@ import { APP_SHELL_MAIN_TEXT_COLOR } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
 
 import { WATER_ACTION_CARD_ICON } from "../constants";
-import {
-  getActionRow,
-  getActionRowBarSources,
-  getActionRowFillPercent,
-  getActionRowProgressDisplay,
-  getActionRowProgressPercent,
-} from "../data";
+import { getActionRow, getActionRowBarSources } from "../data";
+import { useActionProgress } from "../use-action-progress";
 
 const WATER_CARD_TITLE = "Today's progress";
 
 export function WaterSummaryCard() {
   const waterRow = getActionRow("water");
-  const { current, accentColor } = getActionRowProgressDisplay("water");
-  const barFillPercent = getActionRowFillPercent("water");
-  const progressPercent = getActionRowProgressPercent("water");
-  const progressPercentLabel = `${Math.round(progressPercent)}%`;
-  const goalOz =
-    waterRow.progressRest.match(/\d+/)?.[0] ?? waterRow.progressCurrent;
-  const progressRest = ` / ${goalOz}oz`;
-  const progressLabel = `${current}${progressRest}`;
+  const {
+    current,
+    rest,
+    accentColor,
+    percent,
+    progressLabel,
+    barFillPercent,
+  } = useActionProgress("water");
+  const progressPercentLabel = `${Math.round(percent)}%`;
 
   return (
     <View
@@ -61,7 +57,7 @@ export function WaterSummaryCard() {
             <Text style={[styles.valueCurrent, { color: accentColor }]}>
               {current}
             </Text>
-            <Text style={styles.valueRest}>{progressRest}</Text>
+            <Text style={styles.valueRest}>{rest}</Text>
           </Text>
           <View style={styles.barRow}>
             <ActionProgressBar

@@ -1,36 +1,48 @@
 import { Image } from "expo-image";
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import { APP_SHELL_MAIN_TEXT_COLOR } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
+import { useDailyGoals } from "@/features/actions/daily-goals-context";
+import { waterAmountLimits } from "@/lib/db";
 
 import {
   WATER_ACTION_CARD_BACKGROUND,
   WATER_ADD_ICON,
   WATER_SUBTRACT_ICON,
 } from "../constants";
-import { getActionRowProgressDisplay } from "../data";
+import { getActionRowAccentColor } from "../data";
 
 const SECTION_TITLE = "Daily target";
 const TARGET_STEP_OZ = 8;
-const TARGET_MIN_OZ = 8;
-const TARGET_MAX_OZ = 256;
 
 export function WaterDailyTargetSection() {
-  const { accentColor } = getActionRowProgressDisplay("water");
-  const [targetOz, setTargetOz] = useState(80);
+  const accentColor = getActionRowAccentColor("water");
+  const { goals, updateGoals } = useDailyGoals();
+  const targetAmount = goals.waterAmount;
+  const unit = goals.waterUnit;
+  const { min: targetMin, max: targetMax } = waterAmountLimits(unit);
+  const step = unit === "oz" ? TARGET_STEP_OZ : 250;
+  const suffix = unit === "oz" ? "oz" : "ml";
 
   const decrease = useCallback(() => {
-    setTargetOz((oz) => Math.max(TARGET_MIN_OZ, oz - TARGET_STEP_OZ));
-  }, []);
+    void updateGoals({
+      waterAmount: Math.max(targetMin, targetAmount - step),
+    });
+  }, [targetAmount, targetMin, step, updateGoals]);
 
   const increase = useCallback(() => {
-    setTargetOz((oz) => Math.min(TARGET_MAX_OZ, oz + TARGET_STEP_OZ));
-  }, []);
+    void updateGoals({
+      waterAmount: Math.min(targetMax, targetAmount + step),
+    });
+  }, [targetAmount, targetMax, step, updateGoals]);
 
-  const valueA11y = `${targetOz} ounces`;
+  const valueA11y =
+    unit === "oz"
+      ? `${targetAmount} ounces`
+      : `${targetAmount} milliliters`;
 
   return (
     <View
@@ -63,14 +75,14 @@ export function WaterDailyTargetSection() {
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Decrease daily water target"
-              accessibilityState={{ disabled: targetOz <= TARGET_MIN_OZ }}
+              accessibilityState={{ disabled: targetAmount <= targetMin }}
               hitSlop={8}
-              disabled={targetOz <= TARGET_MIN_OZ}
+              disabled={targetAmount <= targetMin}
               onPress={decrease}
               style={({ pressed }) => [
                 styles.stepperColumn,
                 pressed && styles.stepperPressed,
-                targetOz <= TARGET_MIN_OZ && styles.stepperDisabled,
+                targetAmount <= targetMin && styles.stepperDisabled,
               ]}
             >
               <Image
@@ -92,22 +104,22 @@ export function WaterDailyTargetSection() {
                 style={styles.valueText}
               >
                 <Text style={[styles.valueNumber, { color: accentColor }]}>
-                  {targetOz}
+                  {targetAmount}
                 </Text>
-                <Text style={styles.valueSuffix}>oz</Text>
+                <Text style={styles.valueSuffix}>{suffix}</Text>
               </Text>
             </View>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Increase daily water target"
-              accessibilityState={{ disabled: targetOz >= TARGET_MAX_OZ }}
+              accessibilityState={{ disabled: targetAmount >= targetMax }}
               hitSlop={8}
-              disabled={targetOz >= TARGET_MAX_OZ}
+              disabled={targetAmount >= targetMax}
               onPress={increase}
               style={({ pressed }) => [
                 styles.stepperColumn,
                 pressed && styles.stepperPressed,
-                targetOz >= TARGET_MAX_OZ && styles.stepperDisabled,
+                targetAmount >= targetMax && styles.stepperDisabled,
               ]}
             >
               <Image

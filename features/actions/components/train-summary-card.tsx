@@ -6,31 +6,23 @@ import { ThemedText } from "@/components/themed-text";
 import { APP_SHELL_MAIN_TEXT_COLOR } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
 
-import {
-  ACTION_ROW_ACCENT_COLORS,
-  TRAIN_ACTION_CARD_ICON,
-} from "../constants";
-import {
-  getActionRow,
-  getActionRowBarSources,
-  getActionRowFillPercent,
-  getActionRowProgressDisplay,
-  getActionRowProgressPercent,
-} from "../data";
+import { TRAIN_ACTION_CARD_ICON } from "../constants";
+import { getActionRow, getActionRowBarSources } from "../data";
+import { useActionProgress } from "../use-action-progress";
 
 const TRAIN_CARD_TITLE = "Today's progress";
 
 export function TrainSummaryCard() {
   const trainRow = getActionRow("train");
-  const { current } = getActionRowProgressDisplay("train");
-  const barFillPercent = getActionRowFillPercent("train");
-  const progressPercent = getActionRowProgressPercent("train");
-  const progressPercentLabel = `${Math.round(progressPercent)}%`;
-  const goalMin =
-    trainRow.progressRest.match(/\d+/)?.[0] ?? trainRow.progressCurrent;
-  const progressRest = ` / ${goalMin}M`;
-  const progressLabel = `${current}${progressRest}`;
-  const valueGrey = ACTION_ROW_ACCENT_COLORS.train;
+  const {
+    current,
+    rest,
+    accentColor,
+    percent,
+    progressLabel,
+    barFillPercent,
+  } = useActionProgress("train");
+  const progressPercentLabel = `${Math.round(percent)}%`;
 
   return (
     <View
@@ -62,12 +54,10 @@ export function TrainSummaryCard() {
             ellipsizeMode="tail"
             style={styles.valueText}
           >
-            <Text style={[styles.valueCurrent, { color: valueGrey }]}>
+            <Text style={[styles.valueCurrent, { color: accentColor }]}>
               {current}
             </Text>
-            <Text style={[styles.valueRest, { color: valueGrey }]}>
-              {progressRest}
-            </Text>
+            <Text style={styles.valueRest}>{rest}</Text>
           </Text>
           <View style={styles.barRow}>
             <ActionProgressBar
@@ -146,5 +136,6 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILY,
     fontSize: 16,
     lineHeight: 20,
+    color: APP_SHELL_MAIN_TEXT_COLOR,
   },
 });

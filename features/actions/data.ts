@@ -1,4 +1,5 @@
 import { clampActionBarPercent } from "@/lib/action-bar-progress";
+import type { DailyGoals } from "@/lib/db";
 
 import { ACTION_BAR_CONTAINER, ACTION_ROW_ACCENT_COLORS } from "./constants";
 
@@ -9,8 +10,6 @@ export const ACTION_ROWS_DAILY = [
     icon: require("@/assets/icons/apple.png"),
     barFill: require("@/assets/bars/action-bar-red.png"),
     barEnd: require("@/assets/bars/action-bar-red-end.png"),
-    progressCurrent: "2,500",
-    progressRest: " / 2,500 KCAL",
   },
   {
     id: "water",
@@ -18,8 +17,6 @@ export const ACTION_ROWS_DAILY = [
     icon: require("@/assets/icons/water-drop.png"),
     barFill: require("@/assets/bars/action-bar-blue.png"),
     barEnd: require("@/assets/bars/action-bar-blue-end.png"),
-    progressCurrent: "80",
-    progressRest: " / 80 OZ",
   },
   {
     id: "train",
@@ -27,8 +24,6 @@ export const ACTION_ROWS_DAILY = [
     icon: require("@/assets/icons/dumbbell.png"),
     barFill: require("@/assets/bars/action-bar-grey.png"),
     barEnd: require("@/assets/bars/action-bar-grey-end.png"),
-    progressCurrent: "60",
-    progressRest: " / 60M",
   },
   {
     id: "sleep",
@@ -36,8 +31,6 @@ export const ACTION_ROWS_DAILY = [
     icon: require("@/assets/icons/purple-moon.png"),
     barFill: require("@/assets/bars/action-bar-purple.png"),
     barEnd: require("@/assets/bars/action-bar-purple-end.png"),
-    progressCurrent: "8H",
-    progressRest: " / 8H",
   },
   {
     id: "steps",
@@ -45,8 +38,6 @@ export const ACTION_ROWS_DAILY = [
     icon: require("@/assets/icons/lightning.png"),
     barFill: require("@/assets/bars/action-bar-yellow.png"),
     barEnd: require("@/assets/bars/action-bar-yellow-end.png"),
-    progressCurrent: "10,000",
-    progressRest: " / 10,000 STEPS",
   },
   {
     id: "calories",
@@ -54,8 +45,6 @@ export const ACTION_ROWS_DAILY = [
     icon: require("@/assets/icons/fire.png"),
     barFill: require("@/assets/bars/action-bar-orange.png"),
     barEnd: require("@/assets/bars/action-bar-orange-end.png"),
-    progressCurrent: "800",
-    progressRest: " / 800 KCAL",
   },
 ] as const;
 
@@ -66,8 +55,6 @@ export const ACTION_ROWS_LONG_TERM = [
     icon: require("@/assets/icons/scale.png"),
     barFill: require("@/assets/bars/action-bar-grey.png"),
     barEnd: require("@/assets/bars/action-bar-grey-end.png"),
-    progressCurrent: "123",
-    progressRest: " / 123 LBS",
   },
 ] as const;
 
@@ -80,6 +67,43 @@ export const ACTION_ROWS = [
 
 export type ActionRouteId = (typeof ACTION_ROWS)[number]["id"];
 
+/** Logged totals for today (Phase 2). Until then, omit or pass zeros. */
+export type ActionProgressTotals = {
+  foodKcal?: number;
+  waterAmount?: number;
+  trainMinutes?: number;
+  sleepHours?: number;
+  steps?: number;
+  activeKcal?: number;
+  weight?: number;
+};
+
+export type ActionProgressDisplay = {
+  current: string;
+  rest: string;
+  accentColor: string;
+  /** Raw 0–100 progress toward the goal. */
+  percent: number;
+};
+
+function formatInt(n: number): string {
+  return Math.round(n).toLocaleString("en-US");
+}
+
+function formatSleepHours(h: number): string {
+  if (Number.isInteger(h)) {
+    return String(h);
+  }
+  return h.toFixed(1).replace(/\.0$/, "");
+}
+
+function percentToward(current: number, goal: number): number {
+  if (!(goal > 0) || !Number.isFinite(current) || current <= 0) {
+    return 0;
+  }
+  return Math.min(100, (current / goal) * 100);
+}
+
 export function getActionRow(id: ActionRouteId) {
   const row = ACTION_ROWS.find((r) => r.id === id);
   if (!row) {
@@ -88,30 +112,129 @@ export function getActionRow(id: ActionRouteId) {
   return row;
 }
 
-/** Raw daily progress for an action row (0–100). Replace with real logged values later. */
-export function getActionRowProgressPercent(_id: ActionRouteId): number {
-  void _id;
-  return 100;
+export function getActionRowAccentColor(id: ActionRouteId): string {
+  return ACTION_ROW_ACCENT_COLORS[id];
 }
 
-export function getActionRowProgressDisplay(id: ActionRouteId) {
-  const row = getActionRow(id);
-  return {
-    current: row.progressCurrent,
-    rest: row.progressRest,
-    accentColor: ACTION_ROW_ACCENT_COLORS[id],
-  };
+/**
+ * Progress label + % from goals and optional logged totals.
+ * Totals default to 0 until habit logs exist (Phase 2).
+ */
+export function getActionRowProgressDisplay(
+  id: ActionRouteId,
+  goals: DailyGoals,
+  totals: ActionProgressTotals = {},
+): ActionProgressDisplay {
+  const accentColor = getActionRowAccentColor(id);
+
+  switch (id) {
+    case "food": {
+      const current = totals.foodKcal ?? 0;
+      const goal = goals.foodKcal;
+      return {
+        current: formatInt(current),
+        rest: ` / ${formatInt(goal)} KCAL`,
+        accentColor,
+        percent: percentToward(current, goal),
+      };
+    }
+    case "water": {
+      const current = totals.waterAmount ?? 0;
+      const goal = goals.waterAmount;
+      const unit = goals.waterUnit === "ml" ? "ml" : "oz";
+      return {
+        current: formatInt(current),
+        rest: ` / ${formatInt(goal)}${unit}`,
+        accentColor,
+        percent: percentToward(current, goal),
+      };
+    }
+    case "train": {
+      const current = totals.trainMinutes ?? 0;
+      const goal = goals.trainMinutes;
+      return {
+        current: formatInt(current),
+        rest: ` / ${formatInt(goal)}M`,
+        accentColor,
+        percent: percentToward(current, goal),
+      };
+    }
+    case "sleep": {
+      const current = totals.sleepHours ?? 0;
+      const goal = goals.sleepHours;
+      return {
+        current: `${formatSleepHours(current)}H`,
+        rest: ` / ${formatSleepHours(goal)}H`,
+        accentColor,
+        percent: percentToward(current, goal),
+      };
+    }
+    case "steps": {
+      const current = totals.steps ?? 0;
+      const goal = goals.steps;
+      return {
+        current: formatInt(current),
+        rest: ` / ${formatInt(goal)} STEPS`,
+        accentColor,
+        percent: percentToward(current, goal),
+      };
+    }
+    case "calories": {
+      const current = totals.activeKcal ?? 0;
+      const goal = goals.activeKcal;
+      return {
+        current: formatInt(current),
+        rest: ` / ${formatInt(goal)} KCAL`,
+        accentColor,
+        percent: percentToward(current, goal),
+      };
+    }
+    case "weight": {
+      const current = totals.weight ?? 0;
+      const goal = goals.weightGoal;
+      const unit = goals.weightUnit === "kg" ? "KG" : "LBS";
+      return {
+        current: formatInt(current),
+        rest: ` / ${formatInt(goal)} ${unit}`,
+        accentColor,
+        percent: percentToward(current, goal),
+      };
+    }
+    default: {
+      const _exhaustive: never = id;
+      void _exhaustive;
+      throw new Error(`Unknown action route: ${id}`);
+    }
+  }
 }
 
-/** Full label for accessibility, e.g. `2,500/2,500 KCAL`. */
-export function getActionRowProgressLabel(id: ActionRouteId): string {
-  const { current, rest } = getActionRowProgressDisplay(id);
+/** Full label for accessibility, e.g. `0/2,500 KCAL`. */
+export function getActionRowProgressLabel(
+  id: ActionRouteId,
+  goals: DailyGoals,
+  totals?: ActionProgressTotals,
+): string {
+  const { current, rest } = getActionRowProgressDisplay(id, goals, totals);
   return `${current}${rest}`;
 }
 
-/** Clamped fill percent for the action bar artwork (10–90% display range). */
-export function getActionRowFillPercent(id: ActionRouteId): number {
-  return clampActionBarPercent(getActionRowProgressPercent(id));
+export function getActionRowProgressPercent(
+  id: ActionRouteId,
+  goals: DailyGoals,
+  totals?: ActionProgressTotals,
+): number {
+  return getActionRowProgressDisplay(id, goals, totals).percent;
+}
+
+/** Clamped fill percent for the action bar artwork. */
+export function getActionRowFillPercent(
+  id: ActionRouteId,
+  goals: DailyGoals,
+  totals?: ActionProgressTotals,
+): number {
+  return clampActionBarPercent(
+    getActionRowProgressPercent(id, goals, totals),
+  );
 }
 
 export function getActionRowBarSources(row: (typeof ACTION_ROWS)[number]) {

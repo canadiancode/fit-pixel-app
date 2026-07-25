@@ -7,6 +7,7 @@ import {
 } from "@react-navigation/native";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
+import { SQLiteProvider } from "expo-sqlite";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
@@ -20,6 +21,7 @@ import {
 import { APP_SHELL_PADDING } from "@/constants/app-shell";
 import { FONT_FAMILY } from "@/constants/fonts";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import { DATABASE_NAME, migrateDbIfNeeded } from "@/lib/db";
 
 SplashScreen.preventAutoHideAsync();
 const CELL_HEADING_FONT_FAMILY = "PixeloidSans";
@@ -66,32 +68,34 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={navigationTheme}>
-      <View
-        style={{
-          flex: 1,
-          flexDirection: "column",
-          paddingTop: 0,
-          paddingHorizontal: APP_SHELL_PADDING,
-          paddingBottom: 0,
-          backgroundColor: APP_SHELL_PRIMARY_BACKGROUND,
-        }}
-      >
+      <SQLiteProvider databaseName={DATABASE_NAME} onInit={migrateDbIfNeeded}>
         <View
           style={{
             flex: 1,
-            backgroundColor: APP_SHELL_SECONDARY_BACKGROUND,
+            flexDirection: "column",
+            paddingTop: 0,
+            paddingHorizontal: APP_SHELL_PADDING,
+            paddingBottom: 0,
+            backgroundColor: APP_SHELL_PRIMARY_BACKGROUND,
           }}
         >
-          <Stack>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen
-              name="modal"
-              options={{ presentation: "modal", title: "Modal" }}
-            />
-          </Stack>
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: APP_SHELL_SECONDARY_BACKGROUND,
+            }}
+          >
+            <Stack>
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen
+                name="modal"
+                options={{ presentation: "modal", title: "Modal" }}
+              />
+            </Stack>
+          </View>
+          <StatusBar style="auto" />
         </View>
-        <StatusBar style="auto" />
-      </View>
+      </SQLiteProvider>
     </ThemeProvider>
   );
 }

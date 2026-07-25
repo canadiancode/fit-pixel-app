@@ -1,34 +1,41 @@
 import { Image } from "expo-image";
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import { APP_SHELL_MAIN_TEXT_COLOR } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
+import { useDailyGoals } from "@/features/actions/daily-goals-context";
+import { DAILY_GOAL_LIMITS } from "@/lib/db";
 
 import {
   CALORIES_ACTION_CARD_BACKGROUND,
   WATER_ADD_ICON,
   WATER_SUBTRACT_ICON,
 } from "../constants";
-import { getActionRowProgressDisplay } from "../data";
+import { getActionRowAccentColor } from "../data";
 
 const SECTION_TITLE = "Daily target";
 const TARGET_STEP_KCAL = 50;
-const TARGET_MIN_KCAL = 200;
-const TARGET_MAX_KCAL = 5_000;
+const TARGET_MIN_KCAL = DAILY_GOAL_LIMITS.activeKcal.min;
+const TARGET_MAX_KCAL = DAILY_GOAL_LIMITS.activeKcal.max;
 
 export function CaloriesDailyTargetSection() {
-  const { accentColor } = getActionRowProgressDisplay("calories");
-  const [targetKcal, setTargetKcal] = useState(800);
+  const accentColor = getActionRowAccentColor("calories");
+  const { goals, updateGoals } = useDailyGoals();
+  const targetKcal = goals.activeKcal;
 
   const decrease = useCallback(() => {
-    setTargetKcal((k) => Math.max(TARGET_MIN_KCAL, k - TARGET_STEP_KCAL));
-  }, []);
+    void updateGoals({
+      activeKcal: Math.max(TARGET_MIN_KCAL, targetKcal - TARGET_STEP_KCAL),
+    });
+  }, [targetKcal, updateGoals]);
 
   const increase = useCallback(() => {
-    setTargetKcal((k) => Math.min(TARGET_MAX_KCAL, k + TARGET_STEP_KCAL));
-  }, []);
+    void updateGoals({
+      activeKcal: Math.min(TARGET_MAX_KCAL, targetKcal + TARGET_STEP_KCAL),
+    });
+  }, [targetKcal, updateGoals]);
 
   const valueA11y = `${targetKcal} kilocalories`;
 

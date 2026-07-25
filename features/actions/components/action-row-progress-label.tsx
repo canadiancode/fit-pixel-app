@@ -4,14 +4,14 @@ import { APP_SHELL_MAIN_TEXT_COLOR } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
 
 import type { ActionRouteId } from "../data";
-import { getActionRowProgressDisplay } from "../data";
+import { useActionProgress } from "../use-action-progress";
 
 type Props = {
   actionId: ActionRouteId;
 };
 
 export function ActionRowProgressLabel({ actionId }: Props) {
-  const { current, rest, accentColor } = getActionRowProgressDisplay(actionId);
+  const { current, rest, accentColor } = useActionProgress(actionId);
 
   return (
     <View style={styles.row}>

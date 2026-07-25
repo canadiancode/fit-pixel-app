@@ -7,24 +7,22 @@ import { APP_SHELL_MAIN_TEXT_COLOR } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
 
 import { STEPS_ACTION_CARD_ICON } from "../constants";
-import {
-  getActionRow,
-  getActionRowBarSources,
-  getActionRowFillPercent,
-  getActionRowProgressDisplay,
-  getActionRowProgressPercent,
-} from "../data";
+import { getActionRow, getActionRowBarSources } from "../data";
+import { useActionProgress } from "../use-action-progress";
 
 const STEPS_CARD_TITLE = "Today's progress";
 
 export function StepsSummaryCard() {
   const stepsRow = getActionRow("steps");
-  const { current, accentColor } = getActionRowProgressDisplay("steps");
-  const barFillPercent = getActionRowFillPercent("steps");
-  const progressPercent = getActionRowProgressPercent("steps");
-  const progressPercentLabel = `${Math.round(progressPercent)}%`;
-  const progressRest = stepsRow.progressRest;
-  const progressLabel = `${current}${progressRest}`;
+  const {
+    current,
+    rest,
+    accentColor,
+    percent,
+    progressLabel,
+    barFillPercent,
+  } = useActionProgress("steps");
+  const progressPercentLabel = `${Math.round(percent)}%`;
 
   return (
     <View
@@ -59,7 +57,7 @@ export function StepsSummaryCard() {
             <Text style={[styles.valueCurrent, { color: accentColor }]}>
               {current}
             </Text>
-            <Text style={styles.valueRest}>{progressRest}</Text>
+            <Text style={styles.valueRest}>{rest}</Text>
           </Text>
           <View style={styles.barRow}>
             <ActionProgressBar

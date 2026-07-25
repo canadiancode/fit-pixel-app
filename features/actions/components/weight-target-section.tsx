@@ -1,36 +1,47 @@
 import { Image } from "expo-image";
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import { APP_SHELL_MAIN_TEXT_COLOR } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
+import { useDailyGoals } from "@/features/actions/daily-goals-context";
+import { weightGoalLimits } from "@/lib/db";
 
 import {
   WATER_ADD_ICON,
   WATER_SUBTRACT_ICON,
   WEIGHT_ACTION_CARD_BACKGROUND,
 } from "../constants";
-import { getActionRowProgressDisplay } from "../data";
+import { getActionRowAccentColor } from "../data";
 
 const SECTION_TITLE = "Target";
-const TARGET_STEP_LBS = 1;
-const TARGET_MIN_LBS = 100;
-const TARGET_MAX_LBS = 400;
+const TARGET_STEP = 1;
 
 export function WeightTargetSection() {
-  const { accentColor } = getActionRowProgressDisplay("weight");
-  const [targetLbs, setTargetLbs] = useState(123);
+  const accentColor = getActionRowAccentColor("weight");
+  const { goals, updateGoals } = useDailyGoals();
+  const targetWeight = goals.weightGoal;
+  const unit = goals.weightUnit;
+  const { min: targetMin, max: targetMax } = weightGoalLimits(unit);
+  const suffix = unit === "lb" ? "LBS" : "KG";
 
   const decrease = useCallback(() => {
-    setTargetLbs((lbs) => Math.max(TARGET_MIN_LBS, lbs - TARGET_STEP_LBS));
-  }, []);
+    void updateGoals({
+      weightGoal: Math.max(targetMin, targetWeight - TARGET_STEP),
+    });
+  }, [targetMin, targetWeight, updateGoals]);
 
   const increase = useCallback(() => {
-    setTargetLbs((lbs) => Math.min(TARGET_MAX_LBS, lbs + TARGET_STEP_LBS));
-  }, []);
+    void updateGoals({
+      weightGoal: Math.min(targetMax, targetWeight + TARGET_STEP),
+    });
+  }, [targetMax, targetWeight, updateGoals]);
 
-  const valueA11y = `${targetLbs} pounds`;
+  const valueA11y =
+    unit === "lb"
+      ? `${targetWeight} pounds`
+      : `${targetWeight} kilograms`;
 
   return (
     <View
@@ -63,14 +74,14 @@ export function WeightTargetSection() {
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Decrease goal weight"
-              accessibilityState={{ disabled: targetLbs <= TARGET_MIN_LBS }}
+              accessibilityState={{ disabled: targetWeight <= targetMin }}
               hitSlop={8}
-              disabled={targetLbs <= TARGET_MIN_LBS}
+              disabled={targetWeight <= targetMin}
               onPress={decrease}
               style={({ pressed }) => [
                 styles.stepperColumn,
                 pressed && styles.stepperPressed,
-                targetLbs <= TARGET_MIN_LBS && styles.stepperDisabled,
+                targetWeight <= targetMin && styles.stepperDisabled,
               ]}
             >
               <Image
@@ -92,22 +103,22 @@ export function WeightTargetSection() {
                 style={styles.valueText}
               >
                 <Text style={[styles.valueNumber, { color: accentColor }]}>
-                  {targetLbs}
+                  {targetWeight}
                 </Text>
-                <Text style={styles.valueSuffix}>LBS</Text>
+                <Text style={styles.valueSuffix}>{suffix}</Text>
               </Text>
             </View>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Increase goal weight"
-              accessibilityState={{ disabled: targetLbs >= TARGET_MAX_LBS }}
+              accessibilityState={{ disabled: targetWeight >= targetMax }}
               hitSlop={8}
-              disabled={targetLbs >= TARGET_MAX_LBS}
+              disabled={targetWeight >= targetMax}
               onPress={increase}
               style={({ pressed }) => [
                 styles.stepperColumn,
                 pressed && styles.stepperPressed,
-                targetLbs >= TARGET_MAX_LBS && styles.stepperDisabled,
+                targetWeight >= targetMax && styles.stepperDisabled,
               ]}
             >
               <Image

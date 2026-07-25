@@ -7,24 +7,22 @@ import { APP_SHELL_MAIN_TEXT_COLOR } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
 
 import { FOOD_ACTION_CARD_ICON } from "../constants";
-import {
-  getActionRow,
-  getActionRowBarSources,
-  getActionRowFillPercent,
-  getActionRowProgressDisplay,
-  getActionRowProgressPercent,
-} from "../data";
+import { getActionRow, getActionRowBarSources } from "../data";
+import { useActionProgress } from "../use-action-progress";
 
 const FOOD_CARD_TITLE = "Today's progress";
 
 export function FoodSummaryCard() {
   const foodRow = getActionRow("food");
-  const { current, accentColor } = getActionRowProgressDisplay("food");
-  const barFillPercent = getActionRowFillPercent("food");
-  const progressPercent = getActionRowProgressPercent("food");
-  const progressPercentLabel = `${Math.round(progressPercent)}%`;
-  const progressRest = foodRow.progressRest;
-  const progressLabel = `${current}${progressRest}`;
+  const {
+    current,
+    rest,
+    accentColor,
+    percent,
+    progressLabel,
+    barFillPercent,
+  } = useActionProgress("food");
+  const progressPercentLabel = `${Math.round(percent)}%`;
 
   return (
     <View
@@ -59,7 +57,7 @@ export function FoodSummaryCard() {
             <Text style={[styles.valueCurrent, { color: accentColor }]}>
               {current}
             </Text>
-            <Text style={styles.valueRest}>{progressRest}</Text>
+            <Text style={styles.valueRest}>{rest}</Text>
           </Text>
           <View style={styles.barRow}>
             <ActionProgressBar

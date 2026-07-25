@@ -36,6 +36,8 @@
     "plugins": [
       "expo-dev-client",
       "expo-router",
+      "expo-sqlite",
+
       [
         "@kingstinct/react-native-healthkit",
         {
