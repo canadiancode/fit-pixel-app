@@ -6,6 +6,7 @@ import { ThemedText } from "@/components/themed-text";
 import { APP_SHELL_MAIN_TEXT_COLOR } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
 import { useDailyGoals } from "@/features/actions/daily-goals-context";
+import { useHoldToRepeat } from "@/hooks/use-hold-to-repeat";
 import { DAILY_GOAL_LIMITS } from "@/lib/db";
 
 import {
@@ -16,7 +17,7 @@ import {
 import { getActionRowAccentColor } from "../data";
 
 const SECTION_TITLE = "Daily target";
-const TARGET_STEP_MIN = 15;
+const TARGET_STEP_MIN = 5;
 const TARGET_MIN_MIN = DAILY_GOAL_LIMITS.trainMinutes.min;
 const TARGET_MAX_MIN = DAILY_GOAL_LIMITS.trainMinutes.max;
 
@@ -26,16 +27,23 @@ export function TrainDailyTargetSection() {
   const targetMin = goals.trainMinutes;
 
   const decrease = useCallback(() => {
-    void updateGoals({
-      trainMinutes: Math.max(TARGET_MIN_MIN, targetMin - TARGET_STEP_MIN),
-    });
-  }, [targetMin, updateGoals]);
+    void updateGoals((prev) => ({
+      trainMinutes: Math.max(TARGET_MIN_MIN, prev.trainMinutes - TARGET_STEP_MIN),
+    }));
+  }, [updateGoals]);
 
   const increase = useCallback(() => {
-    void updateGoals({
-      trainMinutes: Math.min(TARGET_MAX_MIN, targetMin + TARGET_STEP_MIN),
-    });
-  }, [targetMin, updateGoals]);
+    void updateGoals((prev) => ({
+      trainMinutes: Math.min(TARGET_MAX_MIN, prev.trainMinutes + TARGET_STEP_MIN),
+    }));
+  }, [updateGoals]);
+
+  const decreaseHold = useHoldToRepeat(decrease, {
+    disabled: targetMin <= TARGET_MIN_MIN,
+  });
+  const increaseHold = useHoldToRepeat(increase, {
+    disabled: targetMin >= TARGET_MAX_MIN,
+  });
 
   const valueA11y = `${targetMin} minutes`;
 
@@ -73,7 +81,8 @@ export function TrainDailyTargetSection() {
               accessibilityState={{ disabled: targetMin <= TARGET_MIN_MIN }}
               hitSlop={8}
               disabled={targetMin <= TARGET_MIN_MIN}
-              onPress={decrease}
+              onPressIn={decreaseHold.onPressIn}
+              onPressOut={decreaseHold.onPressOut}
               style={({ pressed }) => [
                 styles.stepperColumn,
                 pressed && styles.stepperPressed,
@@ -110,7 +119,8 @@ export function TrainDailyTargetSection() {
               accessibilityState={{ disabled: targetMin >= TARGET_MAX_MIN }}
               hitSlop={8}
               disabled={targetMin >= TARGET_MAX_MIN}
-              onPress={increase}
+              onPressIn={increaseHold.onPressIn}
+              onPressOut={increaseHold.onPressOut}
               style={({ pressed }) => [
                 styles.stepperColumn,
                 pressed && styles.stepperPressed,

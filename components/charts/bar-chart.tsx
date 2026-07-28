@@ -74,7 +74,7 @@ export function buildBarChartLayout(
   const count = Math.min(userData.x.length, userData.y.length);
   const xLabels = userData.x.slice(0, count);
   const yValues = userData.y.slice(0, count);
-  const scale = generateMarkers(yValues, increment, yDomainFromZero);
+  const scale = generateMarkers(yValues, increment, yDomainFromZero, targetVal);
   return { xLabels, yValues, scale, targetVal, count };
 }
 

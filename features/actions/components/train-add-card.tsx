@@ -6,6 +6,7 @@ import { ThemedText } from "@/components/themed-text";
 import { APP_SHELL_MAIN_TEXT_COLOR } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
 import { useHabitProgress } from "@/features/actions/habit-progress-context";
+import { useHoldToRepeat } from "@/hooks/use-hold-to-repeat";
 
 import {
   TRAIN_ADD_CARD_BACKGROUND,
@@ -37,6 +38,17 @@ export function TrainAddCard() {
   const adjustServing = useCallback((delta: number) => {
     setServingMinutes((current) => current + delta);
   }, []);
+
+  const decreaseServing = useCallback(() => {
+    adjustServing(-SERVING_STEP_MIN);
+  }, [adjustServing]);
+
+  const increaseServing = useCallback(() => {
+    adjustServing(SERVING_STEP_MIN);
+  }, [adjustServing]);
+
+  const decreaseHold = useHoldToRepeat(decreaseServing, { disabled: isSaving });
+  const increaseHold = useHoldToRepeat(increaseServing, { disabled: isSaving });
 
   const commitMinutes = useCallback(
     async (durationMin: number) => {
@@ -83,7 +95,8 @@ export function TrainAddCard() {
               accessibilityLabel="Decrease training time amount"
               hitSlop={8}
               disabled={isSaving}
-              onPress={() => adjustServing(-SERVING_STEP_MIN)}
+              onPressIn={decreaseHold.onPressIn}
+              onPressOut={decreaseHold.onPressOut}
               style={({ pressed }) => [
                 styles.stepperColumn,
                 pressed && styles.stepperPressed,
@@ -110,7 +123,8 @@ export function TrainAddCard() {
               accessibilityLabel="Increase training time amount"
               hitSlop={8}
               disabled={isSaving}
-              onPress={() => adjustServing(SERVING_STEP_MIN)}
+              onPressIn={increaseHold.onPressIn}
+              onPressOut={increaseHold.onPressOut}
               style={({ pressed }) => [
                 styles.stepperColumn,
                 pressed && styles.stepperPressed,
@@ -130,11 +144,9 @@ export function TrainAddCard() {
                 <Pressable
                   key={opt.minutes}
                   accessibilityRole="button"
-                  accessibilityLabel={`Add ${opt.minutes} minutes of training`}
+                  accessibilityLabel={`Increase amount by ${opt.minutes} minutes`}
                   disabled={isSaving}
-                  onPress={() => {
-                    void commitMinutes(opt.minutes);
-                  }}
+                  onPress={() => adjustServing(opt.minutes)}
                   style={({ pressed }) => [
                     styles.bulkColumn,
                     pressed && styles.stepperPressed,

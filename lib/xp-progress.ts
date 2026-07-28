@@ -1,5 +1,5 @@
 export const XP_BAR_DISPLAY_MIN = 5;
-export const XP_BAR_DISPLAY_MAX = 98;
+export const XP_BAR_DISPLAY_MAX = 99;
 
 /** XP required to advance one level. Each level is a 100-point band. */
 export const XP_PER_LEVEL = 100;

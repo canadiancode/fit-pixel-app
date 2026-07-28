@@ -6,6 +6,7 @@ import { ThemedText } from "@/components/themed-text";
 import { APP_SHELL_MAIN_TEXT_COLOR } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
 import { useHabitProgress } from "@/features/actions/habit-progress-context";
+import { useHoldToRepeat } from "@/hooks/use-hold-to-repeat";
 
 import {
   CALORIES_ADD_CALORIES_BUTTON_BACKGROUND,
@@ -40,6 +41,17 @@ export function CaloriesAddCard() {
   const adjustServing = useCallback((delta: number) => {
     setServingKcal((current) => current + delta);
   }, []);
+
+  const decreaseServing = useCallback(() => {
+    adjustServing(-SERVING_STEP_KCAL);
+  }, [adjustServing]);
+
+  const increaseServing = useCallback(() => {
+    adjustServing(SERVING_STEP_KCAL);
+  }, [adjustServing]);
+
+  const decreaseHold = useHoldToRepeat(decreaseServing, { disabled: isSaving });
+  const increaseHold = useHoldToRepeat(increaseServing, { disabled: isSaving });
 
   const commitKcal = useCallback(
     async (kcal: number) => {
@@ -86,7 +98,8 @@ export function CaloriesAddCard() {
               accessibilityLabel="Decrease calorie amount"
               hitSlop={8}
               disabled={isSaving}
-              onPress={() => adjustServing(-SERVING_STEP_KCAL)}
+              onPressIn={decreaseHold.onPressIn}
+              onPressOut={decreaseHold.onPressOut}
               style={({ pressed }) => [
                 styles.stepperSide,
                 pressed && styles.stepperPressed,
@@ -116,7 +129,8 @@ export function CaloriesAddCard() {
               accessibilityLabel="Increase calorie amount"
               hitSlop={8}
               disabled={isSaving}
-              onPress={() => adjustServing(SERVING_STEP_KCAL)}
+              onPressIn={increaseHold.onPressIn}
+              onPressOut={increaseHold.onPressOut}
               style={({ pressed }) => [
                 styles.stepperSide,
                 pressed && styles.stepperPressed,
@@ -136,11 +150,9 @@ export function CaloriesAddCard() {
                 <Pressable
                   key={opt.kcal}
                   accessibilityRole="button"
-                  accessibilityLabel={`Add ${String(opt.kcal)} kilocalories`}
+                  accessibilityLabel={`Increase amount by ${String(opt.kcal)} kilocalories`}
                   disabled={isSaving}
-                  onPress={() => {
-                    void commitKcal(opt.kcal);
-                  }}
+                  onPress={() => adjustServing(opt.kcal)}
                   style={({ pressed }) => [
                     styles.bulkColumn,
                     pressed && styles.stepperPressed,

@@ -10,6 +10,7 @@ import {
 import { FONT_FAMILY } from "@/constants/fonts";
 import { useDailyGoals } from "@/features/actions/daily-goals-context";
 import { useWeeklyHabitHistoryChart } from "@/features/actions/use-habit-history-chart";
+import { formatSleepDurationLabel } from "@/features/actions/data";
 
 import { WATER_RIGHT_ARROW_ICON } from "../constants";
 
@@ -66,7 +67,7 @@ export function SleepWeeklyHistorySection() {
       </View>
       <BarChart
         increment={SLEEP_WEEKLY_CHART_INCREMENT}
-        targetLabel={`${String(goals.sleepHours)}H`}
+        targetLabel={formatSleepDurationLabel(goals.sleepHours)}
         targetVal={goals.sleepHours}
         theme="blue"
         userData={userData}

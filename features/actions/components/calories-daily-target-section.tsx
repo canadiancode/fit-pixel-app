@@ -6,6 +6,7 @@ import { ThemedText } from "@/components/themed-text";
 import { APP_SHELL_MAIN_TEXT_COLOR } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
 import { useDailyGoals } from "@/features/actions/daily-goals-context";
+import { useHoldToRepeat } from "@/hooks/use-hold-to-repeat";
 import { DAILY_GOAL_LIMITS } from "@/lib/db";
 
 import {
@@ -26,16 +27,23 @@ export function CaloriesDailyTargetSection() {
   const targetKcal = goals.activeKcal;
 
   const decrease = useCallback(() => {
-    void updateGoals({
-      activeKcal: Math.max(TARGET_MIN_KCAL, targetKcal - TARGET_STEP_KCAL),
-    });
-  }, [targetKcal, updateGoals]);
+    void updateGoals((prev) => ({
+      activeKcal: Math.max(TARGET_MIN_KCAL, prev.activeKcal - TARGET_STEP_KCAL),
+    }));
+  }, [updateGoals]);
 
   const increase = useCallback(() => {
-    void updateGoals({
-      activeKcal: Math.min(TARGET_MAX_KCAL, targetKcal + TARGET_STEP_KCAL),
-    });
-  }, [targetKcal, updateGoals]);
+    void updateGoals((prev) => ({
+      activeKcal: Math.min(TARGET_MAX_KCAL, prev.activeKcal + TARGET_STEP_KCAL),
+    }));
+  }, [updateGoals]);
+
+  const decreaseHold = useHoldToRepeat(decrease, {
+    disabled: targetKcal <= TARGET_MIN_KCAL,
+  });
+  const increaseHold = useHoldToRepeat(increase, {
+    disabled: targetKcal >= TARGET_MAX_KCAL,
+  });
 
   const valueA11y = `${targetKcal} kilocalories`;
 
@@ -73,7 +81,8 @@ export function CaloriesDailyTargetSection() {
               accessibilityState={{ disabled: targetKcal <= TARGET_MIN_KCAL }}
               hitSlop={8}
               disabled={targetKcal <= TARGET_MIN_KCAL}
-              onPress={decrease}
+              onPressIn={decreaseHold.onPressIn}
+              onPressOut={decreaseHold.onPressOut}
               style={({ pressed }) => [
                 styles.stepperColumn,
                 pressed && styles.stepperPressed,
@@ -110,7 +119,8 @@ export function CaloriesDailyTargetSection() {
               accessibilityState={{ disabled: targetKcal >= TARGET_MAX_KCAL }}
               hitSlop={8}
               disabled={targetKcal >= TARGET_MAX_KCAL}
-              onPress={increase}
+              onPressIn={increaseHold.onPressIn}
+              onPressOut={increaseHold.onPressOut}
               style={({ pressed }) => [
                 styles.stepperColumn,
                 pressed && styles.stepperPressed,

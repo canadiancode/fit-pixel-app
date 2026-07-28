@@ -5,7 +5,10 @@ import { ActionProgressBar } from "@/components/action-progress-bar";
 import { ThemedText } from "@/components/themed-text";
 import { APP_SHELL_MAIN_TEXT_COLOR } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
+import { useDailyGoals } from "@/features/actions/daily-goals-context";
+import { useHabitProgress } from "@/features/actions/habit-progress-context";
 
+import { SleepDurationParts } from "./sleep-duration-parts";
 import { SLEEP_ACTION_CARD_ICON } from "../constants";
 import { getActionRow, getActionRowBarSources } from "../data";
 import { useActionProgress } from "../use-action-progress";
@@ -14,15 +17,13 @@ const SLEEP_CARD_TITLE = "Today's progress";
 
 export function SleepSummaryCard() {
   const sleepRow = getActionRow("sleep");
-  const {
-    current,
-    rest,
-    accentColor,
-    percent,
-    progressLabel,
-    barFillPercent,
-  } = useActionProgress("sleep");
+  const { goals } = useDailyGoals();
+  const { totals } = useHabitProgress();
+  const { accentColor, percent, progressLabel, barFillPercent } =
+    useActionProgress("sleep");
   const progressPercentLabel = `${Math.round(percent)}%`;
+  const currentHours = totals.sleepHours ?? 0;
+  const goalHours = goals.sleepHours;
 
   return (
     <View
@@ -54,10 +55,18 @@ export function SleepSummaryCard() {
             ellipsizeMode="tail"
             style={styles.valueText}
           >
-            <Text style={[styles.valueCurrent, { color: accentColor }]}>
-              {current}
-            </Text>
-            <Text style={styles.valueRest}>{rest}</Text>
+            <SleepDurationParts
+              hours={currentHours}
+              valueStyle={styles.valueCurrent}
+              unitStyle={styles.valueCurrentUnit}
+              valueColor={accentColor}
+            />
+            <Text style={styles.valueRestSeparator}> / </Text>
+            <SleepDurationParts
+              hours={goalHours}
+              valueStyle={styles.valueRest}
+              unitStyle={styles.valueRestUnit}
+            />
           </Text>
           <View style={styles.barRow}>
             <ActionProgressBar
@@ -132,10 +141,30 @@ const styles = StyleSheet.create({
     fontSize: 22,
     lineHeight: 28,
   },
+  valueCurrentUnit: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 16,
+    lineHeight: 20,
+    marginLeft: 1,
+    color: APP_SHELL_MAIN_TEXT_COLOR,
+  },
+  valueRestSeparator: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 16,
+    lineHeight: 20,
+    color: APP_SHELL_MAIN_TEXT_COLOR,
+  },
   valueRest: {
     fontFamily: FONT_FAMILY,
     fontSize: 16,
     lineHeight: 20,
+    color: APP_SHELL_MAIN_TEXT_COLOR,
+  },
+  valueRestUnit: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 12,
+    lineHeight: 16,
+    marginLeft: 1,
     color: APP_SHELL_MAIN_TEXT_COLOR,
   },
 });

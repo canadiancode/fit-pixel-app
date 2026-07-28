@@ -6,6 +6,7 @@ import { ThemedText } from "@/components/themed-text";
 import { APP_SHELL_MAIN_TEXT_COLOR } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
 import { useDailyGoals } from "@/features/actions/daily-goals-context";
+import { useHoldToRepeat } from "@/hooks/use-hold-to-repeat";
 import { DAILY_GOAL_LIMITS } from "@/lib/db";
 
 import {
@@ -16,41 +17,54 @@ import {
 import { getActionRowAccentColor } from "../data";
 
 const SECTION_TITLE = "Daily target";
-const TARGET_STEP_HOURS = 0.5;
+const TARGET_STEP_MINUTES = 5;
 const TARGET_MIN_HOURS = DAILY_GOAL_LIMITS.sleepHours.min;
 const TARGET_MAX_HOURS = DAILY_GOAL_LIMITS.sleepHours.max;
+const TARGET_MIN_MINUTES = TARGET_MIN_HOURS * 60;
+const TARGET_MAX_MINUTES = TARGET_MAX_HOURS * 60;
 
-function formatSleepHours(h: number): string {
-  if (Number.isInteger(h)) {
-    return String(h);
-  }
-  return h.toFixed(1).replace(/\.0$/, "");
+function sleepHoursToMinutes(hours: number): number {
+  return Math.round(hours * 60);
 }
 
 export function SleepDailyTargetSection() {
   const accentColor = getActionRowAccentColor("sleep");
   const { goals, updateGoals } = useDailyGoals();
-  const targetHours = goals.sleepHours;
+  const targetMinutes = sleepHoursToMinutes(goals.sleepHours);
+  const hoursPart = Math.floor(targetMinutes / 60);
+  const minutesPart = targetMinutes % 60;
 
   const decrease = useCallback(() => {
-    void updateGoals({
-      sleepHours: Math.max(
-        TARGET_MIN_HOURS,
-        Math.round((targetHours - TARGET_STEP_HOURS) * 10) / 10,
-      ),
+    void updateGoals((prev) => {
+      const nextMinutes = Math.max(
+        TARGET_MIN_MINUTES,
+        sleepHoursToMinutes(prev.sleepHours) - TARGET_STEP_MINUTES,
+      );
+      return { sleepHours: nextMinutes / 60 };
     });
-  }, [targetHours, updateGoals]);
+  }, [updateGoals]);
 
   const increase = useCallback(() => {
-    void updateGoals({
-      sleepHours: Math.min(
-        TARGET_MAX_HOURS,
-        Math.round((targetHours + TARGET_STEP_HOURS) * 10) / 10,
-      ),
+    void updateGoals((prev) => {
+      const nextMinutes = Math.min(
+        TARGET_MAX_MINUTES,
+        sleepHoursToMinutes(prev.sleepHours) + TARGET_STEP_MINUTES,
+      );
+      return { sleepHours: nextMinutes / 60 };
     });
-  }, [targetHours, updateGoals]);
+  }, [updateGoals]);
 
-  const valueA11y = `${formatSleepHours(targetHours)} hours`;
+  const decreaseHold = useHoldToRepeat(decrease, {
+    disabled: targetMinutes <= TARGET_MIN_MINUTES,
+  });
+  const increaseHold = useHoldToRepeat(increase, {
+    disabled: targetMinutes >= TARGET_MAX_MINUTES,
+  });
+
+  const valueA11y =
+    minutesPart === 0
+      ? `${hoursPart} hours`
+      : `${hoursPart} hours ${minutesPart} minutes`;
 
   return (
     <View
@@ -83,14 +97,17 @@ export function SleepDailyTargetSection() {
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Decrease daily sleep target"
-              accessibilityState={{ disabled: targetHours <= TARGET_MIN_HOURS }}
+              accessibilityState={{
+                disabled: targetMinutes <= TARGET_MIN_MINUTES,
+              }}
               hitSlop={8}
-              disabled={targetHours <= TARGET_MIN_HOURS}
-              onPress={decrease}
+              disabled={targetMinutes <= TARGET_MIN_MINUTES}
+              onPressIn={decreaseHold.onPressIn}
+              onPressOut={decreaseHold.onPressOut}
               style={({ pressed }) => [
                 styles.stepperColumn,
                 pressed && styles.stepperPressed,
-                targetHours <= TARGET_MIN_HOURS && styles.stepperDisabled,
+                targetMinutes <= TARGET_MIN_MINUTES && styles.stepperDisabled,
               ]}
             >
               <Image
@@ -112,22 +129,33 @@ export function SleepDailyTargetSection() {
                 style={styles.valueText}
               >
                 <Text style={[styles.valueNumber, { color: accentColor }]}>
-                  {formatSleepHours(targetHours)}
+                  {hoursPart}
                 </Text>
                 <Text style={styles.valueSuffix}>H</Text>
+                {minutesPart > 0 ? (
+                  <>
+                    <Text style={[styles.valueNumber, { color: accentColor }]}>
+                      {minutesPart}
+                    </Text>
+                    <Text style={styles.valueSuffix}>M</Text>
+                  </>
+                ) : null}
               </Text>
             </View>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Increase daily sleep target"
-              accessibilityState={{ disabled: targetHours >= TARGET_MAX_HOURS }}
+              accessibilityState={{
+                disabled: targetMinutes >= TARGET_MAX_MINUTES,
+              }}
               hitSlop={8}
-              disabled={targetHours >= TARGET_MAX_HOURS}
-              onPress={increase}
+              disabled={targetMinutes >= TARGET_MAX_MINUTES}
+              onPressIn={increaseHold.onPressIn}
+              onPressOut={increaseHold.onPressOut}
               style={({ pressed }) => [
                 styles.stepperColumn,
                 pressed && styles.stepperPressed,
-                targetHours >= TARGET_MAX_HOURS && styles.stepperDisabled,
+                targetMinutes >= TARGET_MAX_MINUTES && styles.stepperDisabled,
               ]}
             >
               <Image
@@ -201,7 +229,7 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILY,
     fontSize: 20,
     lineHeight: 25,
-    marginLeft: 6,
+    marginLeft: 1,
     color: APP_SHELL_MAIN_TEXT_COLOR,
   },
 });

@@ -6,6 +6,7 @@ import { ThemedText } from "@/components/themed-text";
 import { APP_SHELL_MAIN_TEXT_COLOR } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
 import { useHabitProgress } from "@/features/actions/habit-progress-context";
+import { useHoldToRepeat } from "@/hooks/use-hold-to-repeat";
 
 import {
   STEPS_ADD_CARD_BACKGROUND,
@@ -40,6 +41,17 @@ export function StepsAddCard() {
   const adjustServing = useCallback((delta: number) => {
     setServingSteps((current) => current + delta);
   }, []);
+
+  const decreaseServing = useCallback(() => {
+    adjustServing(-SERVING_STEP);
+  }, [adjustServing]);
+
+  const increaseServing = useCallback(() => {
+    adjustServing(SERVING_STEP);
+  }, [adjustServing]);
+
+  const decreaseHold = useHoldToRepeat(decreaseServing, { disabled: isSaving });
+  const increaseHold = useHoldToRepeat(increaseServing, { disabled: isSaving });
 
   const commitSteps = useCallback(
     async (steps: number) => {
@@ -86,7 +98,8 @@ export function StepsAddCard() {
               accessibilityLabel="Decrease step amount"
               hitSlop={8}
               disabled={isSaving}
-              onPress={() => adjustServing(-SERVING_STEP)}
+              onPressIn={decreaseHold.onPressIn}
+              onPressOut={decreaseHold.onPressOut}
               style={({ pressed }) => [
                 styles.stepperColumn,
                 pressed && styles.stepperPressed,
@@ -113,7 +126,8 @@ export function StepsAddCard() {
               accessibilityLabel="Increase step amount"
               hitSlop={8}
               disabled={isSaving}
-              onPress={() => adjustServing(SERVING_STEP)}
+              onPressIn={increaseHold.onPressIn}
+              onPressOut={increaseHold.onPressOut}
               style={({ pressed }) => [
                 styles.stepperColumn,
                 pressed && styles.stepperPressed,
@@ -133,11 +147,9 @@ export function StepsAddCard() {
                 <Pressable
                   key={opt.amount}
                   accessibilityRole="button"
-                  accessibilityLabel={`Add ${opt.amount.toLocaleString("en-US")} steps`}
+                  accessibilityLabel={`Increase amount by ${opt.amount.toLocaleString("en-US")} steps`}
                   disabled={isSaving}
-                  onPress={() => {
-                    void commitSteps(opt.amount);
-                  }}
+                  onPress={() => adjustServing(opt.amount)}
                   style={({ pressed }) => [
                     styles.bulkColumn,
                     pressed && styles.stepperPressed,

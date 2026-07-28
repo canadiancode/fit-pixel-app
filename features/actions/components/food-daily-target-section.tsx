@@ -6,6 +6,7 @@ import { ThemedText } from "@/components/themed-text";
 import { APP_SHELL_MAIN_TEXT_COLOR } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
 import { useDailyGoals } from "@/features/actions/daily-goals-context";
+import { useHoldToRepeat } from "@/hooks/use-hold-to-repeat";
 import { DAILY_GOAL_LIMITS } from "@/lib/db";
 
 import {
@@ -26,22 +27,29 @@ export function FoodDailyTargetSection() {
   const dailyTargetKcal = goals.foodKcal;
 
   const decrease = useCallback(() => {
-    void updateGoals({
+    void updateGoals((prev) => ({
       foodKcal: Math.max(
         FOOD_DAILY_TARGET_MIN_KCAL,
-        dailyTargetKcal - FOOD_DAILY_TARGET_STEP_KCAL,
+        prev.foodKcal - FOOD_DAILY_TARGET_STEP_KCAL,
       ),
-    });
-  }, [dailyTargetKcal, updateGoals]);
+    }));
+  }, [updateGoals]);
 
   const increase = useCallback(() => {
-    void updateGoals({
+    void updateGoals((prev) => ({
       foodKcal: Math.min(
         FOOD_DAILY_TARGET_MAX_KCAL,
-        dailyTargetKcal + FOOD_DAILY_TARGET_STEP_KCAL,
+        prev.foodKcal + FOOD_DAILY_TARGET_STEP_KCAL,
       ),
-    });
-  }, [dailyTargetKcal, updateGoals]);
+    }));
+  }, [updateGoals]);
+
+  const decreaseHold = useHoldToRepeat(decrease, {
+    disabled: dailyTargetKcal <= FOOD_DAILY_TARGET_MIN_KCAL,
+  });
+  const increaseHold = useHoldToRepeat(increase, {
+    disabled: dailyTargetKcal >= FOOD_DAILY_TARGET_MAX_KCAL,
+  });
 
   const valueA11y = `${dailyTargetKcal.toLocaleString("en-US")} kilocalories daily`;
 
@@ -81,7 +89,8 @@ export function FoodDailyTargetSection() {
               }}
               hitSlop={8}
               disabled={dailyTargetKcal <= FOOD_DAILY_TARGET_MIN_KCAL}
-              onPress={decrease}
+              onPressIn={decreaseHold.onPressIn}
+              onPressOut={decreaseHold.onPressOut}
               style={({ pressed }) => [
                 styles.stepperColumn,
                 pressed && styles.stepperPressed,
@@ -121,7 +130,8 @@ export function FoodDailyTargetSection() {
               }}
               hitSlop={8}
               disabled={dailyTargetKcal >= FOOD_DAILY_TARGET_MAX_KCAL}
-              onPress={increase}
+              onPressIn={increaseHold.onPressIn}
+              onPressOut={increaseHold.onPressOut}
               style={({ pressed }) => [
                 styles.stepperColumn,
                 pressed && styles.stepperPressed,

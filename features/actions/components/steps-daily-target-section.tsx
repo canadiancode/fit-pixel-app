@@ -6,6 +6,7 @@ import { ThemedText } from "@/components/themed-text";
 import { APP_SHELL_MAIN_TEXT_COLOR } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
 import { useDailyGoals } from "@/features/actions/daily-goals-context";
+import { useHoldToRepeat } from "@/hooks/use-hold-to-repeat";
 import { DAILY_GOAL_LIMITS } from "@/lib/db";
 
 import {
@@ -26,16 +27,23 @@ export function StepsDailyTargetSection() {
   const targetSteps = goals.steps;
 
   const decrease = useCallback(() => {
-    void updateGoals({
-      steps: Math.max(TARGET_MIN, targetSteps - TARGET_STEP),
-    });
-  }, [targetSteps, updateGoals]);
+    void updateGoals((prev) => ({
+      steps: Math.max(TARGET_MIN, prev.steps - TARGET_STEP),
+    }));
+  }, [updateGoals]);
 
   const increase = useCallback(() => {
-    void updateGoals({
-      steps: Math.min(TARGET_MAX, targetSteps + TARGET_STEP),
-    });
-  }, [targetSteps, updateGoals]);
+    void updateGoals((prev) => ({
+      steps: Math.min(TARGET_MAX, prev.steps + TARGET_STEP),
+    }));
+  }, [updateGoals]);
+
+  const decreaseHold = useHoldToRepeat(decrease, {
+    disabled: targetSteps <= TARGET_MIN,
+  });
+  const increaseHold = useHoldToRepeat(increase, {
+    disabled: targetSteps >= TARGET_MAX,
+  });
 
   const valueA11y = `${targetSteps.toLocaleString("en-US")} steps`;
 
@@ -73,7 +81,8 @@ export function StepsDailyTargetSection() {
               accessibilityState={{ disabled: targetSteps <= TARGET_MIN }}
               hitSlop={8}
               disabled={targetSteps <= TARGET_MIN}
-              onPress={decrease}
+              onPressIn={decreaseHold.onPressIn}
+              onPressOut={decreaseHold.onPressOut}
               style={({ pressed }) => [
                 styles.stepperColumn,
                 pressed && styles.stepperPressed,
@@ -110,7 +119,8 @@ export function StepsDailyTargetSection() {
               accessibilityState={{ disabled: targetSteps >= TARGET_MAX }}
               hitSlop={8}
               disabled={targetSteps >= TARGET_MAX}
-              onPress={increase}
+              onPressIn={increaseHold.onPressIn}
+              onPressOut={increaseHold.onPressOut}
               style={({ pressed }) => [
                 styles.stepperColumn,
                 pressed && styles.stepperPressed,

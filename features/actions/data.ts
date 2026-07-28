@@ -91,11 +91,20 @@ function formatInt(n: number): string {
   return Math.round(n).toLocaleString("en-US");
 }
 
-function formatSleepHours(h: number): string {
-  if (Number.isInteger(h)) {
-    return String(h);
+/**
+ * Format sleep duration stored in hours as `8H` or `8H30M` (no decimal hours).
+ */
+export function formatSleepDurationLabel(hours: number): string {
+  if (!Number.isFinite(hours) || hours <= 0) {
+    return "0H";
   }
-  return h.toFixed(1).replace(/\.0$/, "");
+  const totalMinutes = Math.round(hours * 60);
+  const h = Math.floor(Math.abs(totalMinutes) / 60);
+  const m = Math.abs(totalMinutes) % 60;
+  if (m === 0) {
+    return `${h}H`;
+  }
+  return `${h}H${m}M`;
 }
 
 function percentToward(current: number, goal: number): number {
@@ -164,8 +173,8 @@ export function getActionRowProgressDisplay(
       const current = totals.sleepHours ?? 0;
       const goal = goals.sleepHours;
       return {
-        current: `${formatSleepHours(current)}H`,
-        rest: ` / ${formatSleepHours(goal)}H`,
+        current: formatSleepDurationLabel(current),
+        rest: ` / ${formatSleepDurationLabel(goal)}`,
         accentColor,
         percent: percentToward(current, goal),
       };

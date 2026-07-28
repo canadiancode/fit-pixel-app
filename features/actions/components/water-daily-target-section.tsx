@@ -6,6 +6,7 @@ import { ThemedText } from "@/components/themed-text";
 import { APP_SHELL_MAIN_TEXT_COLOR } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
 import { useDailyGoals } from "@/features/actions/daily-goals-context";
+import { useHoldToRepeat } from "@/hooks/use-hold-to-repeat";
 import { waterAmountLimits } from "@/lib/db";
 
 import {
@@ -16,7 +17,7 @@ import {
 import { getActionRowAccentColor } from "../data";
 
 const SECTION_TITLE = "Daily target";
-const TARGET_STEP_OZ = 8;
+const TARGET_STEP_OZ = 1;
 
 export function WaterDailyTargetSection() {
   const accentColor = getActionRowAccentColor("water");
@@ -28,16 +29,23 @@ export function WaterDailyTargetSection() {
   const suffix = unit === "oz" ? "oz" : "ml";
 
   const decrease = useCallback(() => {
-    void updateGoals({
-      waterAmount: Math.max(targetMin, targetAmount - step),
-    });
-  }, [targetAmount, targetMin, step, updateGoals]);
+    void updateGoals((prev) => ({
+      waterAmount: Math.max(targetMin, prev.waterAmount - step),
+    }));
+  }, [targetMin, step, updateGoals]);
 
   const increase = useCallback(() => {
-    void updateGoals({
-      waterAmount: Math.min(targetMax, targetAmount + step),
-    });
-  }, [targetAmount, targetMax, step, updateGoals]);
+    void updateGoals((prev) => ({
+      waterAmount: Math.min(targetMax, prev.waterAmount + step),
+    }));
+  }, [targetMax, step, updateGoals]);
+
+  const decreaseHold = useHoldToRepeat(decrease, {
+    disabled: targetAmount <= targetMin,
+  });
+  const increaseHold = useHoldToRepeat(increase, {
+    disabled: targetAmount >= targetMax,
+  });
 
   const valueA11y =
     unit === "oz"
@@ -78,7 +86,8 @@ export function WaterDailyTargetSection() {
               accessibilityState={{ disabled: targetAmount <= targetMin }}
               hitSlop={8}
               disabled={targetAmount <= targetMin}
-              onPress={decrease}
+              onPressIn={decreaseHold.onPressIn}
+              onPressOut={decreaseHold.onPressOut}
               style={({ pressed }) => [
                 styles.stepperColumn,
                 pressed && styles.stepperPressed,
@@ -115,7 +124,8 @@ export function WaterDailyTargetSection() {
               accessibilityState={{ disabled: targetAmount >= targetMax }}
               hitSlop={8}
               disabled={targetAmount >= targetMax}
-              onPress={increase}
+              onPressIn={increaseHold.onPressIn}
+              onPressOut={increaseHold.onPressOut}
               style={({ pressed }) => [
                 styles.stepperColumn,
                 pressed && styles.stepperPressed,

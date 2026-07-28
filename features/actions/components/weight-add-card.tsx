@@ -7,6 +7,7 @@ import { APP_SHELL_MAIN_TEXT_COLOR } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
 import { useDailyGoals } from "@/features/actions/daily-goals-context";
 import { useHabitProgress } from "@/features/actions/habit-progress-context";
+import { useHoldToRepeat } from "@/hooks/use-hold-to-repeat";
 
 import {
   WATER_ADD_ICON,
@@ -44,6 +45,17 @@ export function WeightAddCard() {
     },
     [],
   );
+
+  const decreaseValue = useCallback(() => {
+    adjustValue(-step);
+  }, [adjustValue, step]);
+
+  const increaseValue = useCallback(() => {
+    adjustValue(step);
+  }, [adjustValue, step]);
+
+  const decreaseHold = useHoldToRepeat(decreaseValue, { disabled: isSaving });
+  const increaseHold = useHoldToRepeat(increaseValue, { disabled: isSaving });
 
   const commitWeight = useCallback(async () => {
     if (isSaving) return;
@@ -87,7 +99,8 @@ export function WeightAddCard() {
               accessibilityLabel="Decrease weight log amount"
               hitSlop={8}
               disabled={isSaving}
-              onPress={() => adjustValue(-step)}
+              onPressIn={decreaseHold.onPressIn}
+              onPressOut={decreaseHold.onPressOut}
               style={({ pressed }) => [
                 styles.stepperColumn,
                 pressed && styles.stepperPressed,
@@ -114,7 +127,8 @@ export function WeightAddCard() {
               accessibilityLabel="Increase weight log amount"
               hitSlop={8}
               disabled={isSaving}
-              onPress={() => adjustValue(step)}
+              onPressIn={increaseHold.onPressIn}
+              onPressOut={increaseHold.onPressOut}
               style={({ pressed }) => [
                 styles.stepperColumn,
                 pressed && styles.stepperPressed,

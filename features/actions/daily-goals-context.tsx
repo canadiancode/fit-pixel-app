@@ -5,6 +5,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -17,11 +18,15 @@ import {
   type DailyGoalsUpdate,
 } from "@/lib/db";
 
+export type DailyGoalsUpdateInput =
+  | DailyGoalsUpdate
+  | ((prev: DailyGoals) => DailyGoalsUpdate);
+
 type DailyGoalsContextValue = {
   goals: DailyGoals;
   /** False until SQLite has been read once. */
   isHydrated: boolean;
-  updateGoals: (update: DailyGoalsUpdate) => Promise<DailyGoals>;
+  updateGoals: (update: DailyGoalsUpdateInput) => Promise<DailyGoals>;
 };
 
 const DailyGoalsContext = createContext<DailyGoalsContextValue | null>(null);
@@ -35,6 +40,12 @@ export function DailyGoalsProvider({ children }: { children: ReactNode }) {
   const db = useSQLiteContext();
   const [goals, setGoals] = useState<DailyGoals>(INITIAL_GOALS);
   const [isHydrated, setIsHydrated] = useState(false);
+  const goalsRef = useRef(goals);
+  goalsRef.current = goals;
+  /** Serialize SQLite writes so rapid stepper holds cannot race. */
+  const writeChainRef = useRef(Promise.resolve());
+  /** Skip applying stale write results after newer optimistic updates. */
+  const writeGenRef = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -58,10 +69,27 @@ export function DailyGoalsProvider({ children }: { children: ReactNode }) {
   }, [db]);
 
   const updateGoals = useCallback(
-    async (update: DailyGoalsUpdate) => {
-      const next = await setDailyGoals(db, update);
-      setGoals(next);
-      return next;
+    (update: DailyGoalsUpdateInput) => {
+      const patch =
+        typeof update === "function" ? update(goalsRef.current) : update;
+      const optimistic: DailyGoals = { ...goalsRef.current, ...patch };
+      goalsRef.current = optimistic;
+      setGoals(optimistic);
+      const gen = ++writeGenRef.current;
+
+      const run = writeChainRef.current.then(async () => {
+        const next = await setDailyGoals(db, patch);
+        if (gen === writeGenRef.current) {
+          goalsRef.current = next;
+          setGoals(next);
+        }
+        return next;
+      });
+      writeChainRef.current = run.then(
+        () => undefined,
+        () => undefined,
+      );
+      return run;
     },
     [db],
   );

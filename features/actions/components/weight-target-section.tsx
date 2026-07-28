@@ -6,6 +6,7 @@ import { ThemedText } from "@/components/themed-text";
 import { APP_SHELL_MAIN_TEXT_COLOR } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
 import { useDailyGoals } from "@/features/actions/daily-goals-context";
+import { useHoldToRepeat } from "@/hooks/use-hold-to-repeat";
 import { weightGoalLimits } from "@/lib/db";
 
 import {
@@ -27,16 +28,23 @@ export function WeightTargetSection() {
   const suffix = unit === "lb" ? "LBS" : "KG";
 
   const decrease = useCallback(() => {
-    void updateGoals({
-      weightGoal: Math.max(targetMin, targetWeight - TARGET_STEP),
-    });
-  }, [targetMin, targetWeight, updateGoals]);
+    void updateGoals((prev) => ({
+      weightGoal: Math.max(targetMin, prev.weightGoal - TARGET_STEP),
+    }));
+  }, [targetMin, updateGoals]);
 
   const increase = useCallback(() => {
-    void updateGoals({
-      weightGoal: Math.min(targetMax, targetWeight + TARGET_STEP),
-    });
-  }, [targetMax, targetWeight, updateGoals]);
+    void updateGoals((prev) => ({
+      weightGoal: Math.min(targetMax, prev.weightGoal + TARGET_STEP),
+    }));
+  }, [targetMax, updateGoals]);
+
+  const decreaseHold = useHoldToRepeat(decrease, {
+    disabled: targetWeight <= targetMin,
+  });
+  const increaseHold = useHoldToRepeat(increase, {
+    disabled: targetWeight >= targetMax,
+  });
 
   const valueA11y =
     unit === "lb"
@@ -77,7 +85,8 @@ export function WeightTargetSection() {
               accessibilityState={{ disabled: targetWeight <= targetMin }}
               hitSlop={8}
               disabled={targetWeight <= targetMin}
-              onPress={decrease}
+              onPressIn={decreaseHold.onPressIn}
+              onPressOut={decreaseHold.onPressOut}
               style={({ pressed }) => [
                 styles.stepperColumn,
                 pressed && styles.stepperPressed,
@@ -114,7 +123,8 @@ export function WeightTargetSection() {
               accessibilityState={{ disabled: targetWeight >= targetMax }}
               hitSlop={8}
               disabled={targetWeight >= targetMax}
-              onPress={increase}
+              onPressIn={increaseHold.onPressIn}
+              onPressOut={increaseHold.onPressOut}
               style={({ pressed }) => [
                 styles.stepperColumn,
                 pressed && styles.stepperPressed,
