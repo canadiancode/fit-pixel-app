@@ -87,8 +87,17 @@ export async function getDayBoundary(
   return seedDayBoundaryIfNeeded(db);
 }
 
+export type SetDayBoundaryOptions = {
+  /**
+   * When true, skip enqueueing a `prefs` op (caller owns a consolidated prefs
+   * fact — e.g. `setPrefs`). Direct callers should leave this false.
+   */
+  skipEnqueue?: boolean;
+};
+
 /**
- * Update day boundary prefs. Enqueues a `prefs` fact for later sync.
+ * Update day boundary prefs. Enqueues a `prefs` fact for later sync unless
+ * `skipEnqueue` is set.
  *
  * Known local exploit: shifting the boundary or zone can move “today” and
  * re-open daily bonuses — documented on the day-boundary module; server must
@@ -97,6 +106,7 @@ export async function getDayBoundary(
 export async function setDayBoundary(
   db: SQLiteDatabase,
   update: DayBoundaryUpdate,
+  options?: SetDayBoundaryOptions,
 ): Promise<DayBoundary> {
   const current = await getDayBoundary(db);
 
@@ -128,16 +138,18 @@ export async function setDayBoundary(
 
   const next: DayBoundary = { dayStartsAtMinutes, timeZone, updatedAt };
 
-  await enqueueOp(
-    db,
-    "prefs",
-    {
-      dayStartsAtMinutes: next.dayStartsAtMinutes,
-      timeZone: next.timeZone,
-      updatedAt: next.updatedAt,
-    },
-    { clientClockAt: updatedAt },
-  );
+  if (!options?.skipEnqueue) {
+    await enqueueOp(
+      db,
+      "prefs",
+      {
+        dayStartsAtMinutes: next.dayStartsAtMinutes,
+        timeZone: next.timeZone,
+        updatedAt: next.updatedAt,
+      },
+      { clientClockAt: updatedAt },
+    );
+  }
 
   return next;
 }

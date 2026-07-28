@@ -19,6 +19,7 @@ export const FACT_PENDING_OP_TYPES = [
   "loadout",
   "profile",
   "prefs",
+  "saved_meal",
 ] as const satisfies readonly PendingServerOpType[];
 
 export function trustForOpType(

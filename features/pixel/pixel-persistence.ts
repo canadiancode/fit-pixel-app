@@ -15,16 +15,25 @@ import { PIXEL_LAYER_Z_INDEX, type PixelItemId, type PixelLoadout } from "./type
 /** Persisted under the app documents directory (already in the Expo native binary). */
 const STATE_FILENAME = "pixel-user-state-v1.json";
 
+/**
+ * Bumped when the day-1 starter set shrinks (Phase 5.2 shop carve).
+ * Missing/old versions re-seed inventory from DEFAULT_PIXEL_INVENTORY so
+ * pre-shop "everything owned" grants do not keep shop items forever.
+ */
+export const PIXEL_INVENTORY_GRANT_VERSION = 2;
+
 const LAYER_IDS = Object.keys(PIXEL_LAYER_Z_INDEX) as (keyof typeof PIXEL_LAYER_Z_INDEX)[];
 
 export type PixelPersistedState = {
   loadout: PixelLoadout;
   inventory: readonly PixelItemId[];
+  inventoryGrantVersion: number;
 };
 
 type RawPersistedState = {
   loadout?: unknown;
   inventory?: unknown;
+  inventoryGrantVersion?: unknown;
 };
 
 function getStateUri(): string | null {
@@ -36,8 +45,17 @@ function isItemId(value: unknown): value is PixelItemId {
   return typeof value === "string" && value.length > 0;
 }
 
-/** Keep starter `def-*` grants, plus any previously unlocked ids. */
-function normalizeInventory(raw: unknown): PixelItemId[] {
+/**
+ * Keep starter grants plus previously unlocked ids.
+ * Pre–grant-version-2 saves are re-seeded (starter only).
+ */
+function normalizeInventory(
+  raw: unknown,
+  grantVersion: number,
+): PixelItemId[] {
+  if (grantVersion < PIXEL_INVENTORY_GRANT_VERSION) {
+    return [...DEFAULT_PIXEL_INVENTORY];
+  }
   const saved = Array.isArray(raw)
     ? raw.filter(isItemId)
     : ([] as PixelItemId[]);
@@ -77,6 +95,7 @@ export function createDefaultPixelPersistedState(): PixelPersistedState {
   return {
     loadout: { ...DEFAULT_PIXEL_LOADOUT },
     inventory: [...DEFAULT_PIXEL_INVENTORY],
+    inventoryGrantVersion: PIXEL_INVENTORY_GRANT_VERSION,
   };
 }
 
@@ -87,9 +106,17 @@ function parsePersistedState(raw: string | null): PixelPersistedState {
 
   try {
     const parsed = JSON.parse(raw) as RawPersistedState;
-    const inventory = normalizeInventory(parsed.inventory);
+    const savedGrantVersion =
+      typeof parsed.inventoryGrantVersion === "number"
+        ? parsed.inventoryGrantVersion
+        : 0;
+    const inventory = normalizeInventory(parsed.inventory, savedGrantVersion);
     const loadout = normalizeLoadout(parsed.loadout, inventory);
-    return { loadout, inventory };
+    return {
+      loadout,
+      inventory,
+      inventoryGrantVersion: PIXEL_INVENTORY_GRANT_VERSION,
+    };
   } catch {
     return createDefaultPixelPersistedState();
   }
@@ -122,6 +149,7 @@ export async function savePixelPersistedState(
   const payload: PixelPersistedState = {
     loadout: state.loadout,
     inventory: [...state.inventory],
+    inventoryGrantVersion: PIXEL_INVENTORY_GRANT_VERSION,
   };
   try {
     const uri = getStateUri();

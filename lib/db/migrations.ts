@@ -31,6 +31,31 @@ export async function ensureDailySummarySchema(
 }
 
 /**
+ * Idempotent saved_meals schema (v8). Safe on every launch / read path.
+ */
+export async function ensureSavedMealsSchema(
+  db: SQLiteDatabase,
+): Promise<void> {
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS saved_meals (
+      id TEXT PRIMARY KEY NOT NULL,
+      name TEXT NOT NULL,
+      vendor TEXT,
+      portionSize TEXT,
+      kcal REAL NOT NULL,
+      proteinG REAL,
+      carbsG REAL,
+      fatG REAL,
+      mealType TEXT,
+      createdAt TEXT NOT NULL,
+      updatedAt TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_saved_meals_updated
+      ON saved_meals (updatedAt DESC);
+  `);
+}
+
+/**
  * Idempotent XP schema (v7). Safe to call on every launch — repairs Fast Refresh
  * / onInit-skip cases where user_version is ahead but tables were never created.
  */
@@ -66,6 +91,56 @@ export async function ensureXpSchema(db: SQLiteDatabase): Promise<void> {
     `INSERT OR IGNORE INTO xp_state (id, lifetimeXp, level, updatedAt)
      VALUES (1, 0, 0, ?)`,
     nowIso(),
+  );
+}
+
+/**
+ * Idempotent prefs + profile schema (v9). Safe on every launch / read path.
+ */
+export async function ensurePrefsProfileSchema(
+  db: SQLiteDatabase,
+): Promise<void> {
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS app_prefs (
+      id INTEGER PRIMARY KEY NOT NULL CHECK (id = 1),
+      unitSystem TEXT NOT NULL CHECK (unitSystem IN ('metric', 'imperial')),
+      selectedThemeId TEXT NOT NULL,
+      unlockedThemeIdsJson TEXT NOT NULL,
+      notifAccountability INTEGER NOT NULL DEFAULT 0
+        CHECK (notifAccountability IN (0, 1)),
+      notifNews INTEGER NOT NULL DEFAULT 0
+        CHECK (notifNews IN (0, 1)),
+      updatedAt TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS app_profile (
+      id INTEGER PRIMARY KEY NOT NULL CHECK (id = 1),
+      displayName TEXT NOT NULL DEFAULT '',
+      bio TEXT NOT NULL DEFAULT '',
+      homeGymId TEXT,
+      homeGymName TEXT,
+      profileVisible INTEGER NOT NULL DEFAULT 1
+        CHECK (profileVisible IN (0, 1)),
+      instagram TEXT,
+      tiktok TEXT,
+      youtube TEXT,
+      updatedAt TEXT NOT NULL
+    );
+  `);
+  const seededAt = nowIso();
+  await db.runAsync(
+    `INSERT OR IGNORE INTO app_prefs (
+      id, unitSystem, selectedThemeId, unlockedThemeIdsJson,
+      notifAccountability, notifNews, updatedAt
+    ) VALUES (1, 'imperial', 'blue', ?, 0, 0, ?)`,
+    JSON.stringify(["blue"]),
+    seededAt,
+  );
+  await db.runAsync(
+    `INSERT OR IGNORE INTO app_profile (
+      id, displayName, bio, homeGymId, homeGymName, profileVisible,
+      instagram, tiktok, youtube, updatedAt
+    ) VALUES (1, '', '', NULL, NULL, 1, NULL, NULL, NULL, ?)`,
+    seededAt,
   );
 }
 
@@ -194,10 +269,22 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase): Promise<void> {
     currentVersion = 7;
   }
 
-  // Always repair derived/XP tables — Fast Refresh can skip onInit while
+  if (currentVersion === 7) {
+    await ensureSavedMealsSchema(db);
+    currentVersion = 8;
+  }
+
+  if (currentVersion === 8) {
+    await ensurePrefsProfileSchema(db);
+    currentVersion = 9;
+  }
+
+  // Always repair derived/XP/saved/prefs tables — Fast Refresh can skip onInit while
   // stamping user_version ahead of CREATE TABLE.
   await ensureDailySummarySchema(db);
   await ensureXpSchema(db);
+  await ensureSavedMealsSchema(db);
+  await ensurePrefsProfileSchema(db);
 
   await db.execAsync(`PRAGMA user_version = ${DATABASE_VERSION}`);
 }

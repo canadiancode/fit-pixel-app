@@ -13,6 +13,7 @@ export const PENDING_SERVER_OP_TYPES = [
   "loadout",
   "profile",
   "prefs",
+  "saved_meal",
 ] as const;
 
 export type PendingServerOpType = (typeof PENDING_SERVER_OP_TYPES)[number];

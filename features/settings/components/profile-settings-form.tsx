@@ -1,10 +1,9 @@
-import { useState } from "react";
-import { Pressable, StyleSheet, Switch, View } from "react-native";
+import { useEffect, useState } from "react";
+import { StyleSheet, Switch, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import {
   APP_SHELL_INPUT_BOARDER_COLOR,
-  APP_SHELL_INPUT_PLACEHOLDER_COLOR,
   APP_SHELL_LABEL_COLOR,
   APP_SHELL_MAIN_TEXT_COLOR,
 } from "@/constants/app-colors";
@@ -12,11 +11,33 @@ import {
   SettingsBioTextField,
   SettingsSingleLineTextField,
 } from "@/features/settings/components/settings-text-field";
+import { usePrefsProfile } from "@/features/settings/prefs-profile-context";
+
+const SAVE_DEBOUNCE_MS = 300;
 
 export function ProfileSettingsForm() {
-  const [displayName, setDisplayName] = useState("");
-  const [bio, setBio] = useState("");
-  const [profileVisible, setProfileVisible] = useState(true);
+  const { profile, isHydrated, updateProfile } = usePrefsProfile();
+  const [displayName, setDisplayName] = useState(profile.displayName);
+  const [bio, setBio] = useState(profile.bio);
+  const [homeGymName, setHomeGymName] = useState(profile.homeGymName ?? "");
+
+  useEffect(() => {
+    setDisplayName(profile.displayName);
+    setBio(profile.bio);
+    setHomeGymName(profile.homeGymName ?? "");
+  }, [profile.displayName, profile.bio, profile.homeGymName]);
+
+  useEffect(() => {
+    if (!isHydrated) return;
+    const handle = setTimeout(() => {
+      void updateProfile({
+        displayName,
+        bio,
+        homeGymName: homeGymName.trim() === "" ? null : homeGymName,
+      });
+    }, SAVE_DEBOUNCE_MS);
+    return () => clearTimeout(handle);
+  }, [displayName, bio, homeGymName, isHydrated, updateProfile]);
 
   return (
     <View style={styles.root}>
@@ -36,6 +57,7 @@ export function ProfileSettingsForm() {
           autoCapitalize="words"
           autoCorrect
           maxLength={80}
+          editable={isHydrated}
         />
       </View>
 
@@ -53,6 +75,7 @@ export function ProfileSettingsForm() {
           onChangeText={setBio}
           placeholder="Just a pixel getting fit"
           maxLength={500}
+          editable={isHydrated}
         />
       </View>
 
@@ -64,26 +87,16 @@ export function ProfileSettingsForm() {
         >
           Home gym
         </ThemedText>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Home gym. No gym selected"
-          accessibilityHint="Opens gym selection"
-          style={({ pressed }) => [
-            styles.selectorButton,
-            pressed && styles.selectorButtonPressed,
-          ]}
-          onPress={() => {
-            /* gym picker — wire when data layer exists */
-          }}
-        >
-          <ThemedText
-            lightColor={APP_SHELL_INPUT_PLACEHOLDER_COLOR}
-            darkColor={APP_SHELL_INPUT_PLACEHOLDER_COLOR}
-            style={styles.selectorButtonText}
-          >
-            No gym selected
-          </ThemedText>
-        </Pressable>
+        <SettingsSingleLineTextField
+          accessibilityLabel="Home gym name"
+          value={homeGymName}
+          onChangeText={setHomeGymName}
+          placeholder="No gym selected"
+          autoCapitalize="words"
+          autoCorrect
+          maxLength={120}
+          editable={isHydrated}
+        />
       </View>
 
       <View style={[styles.field, styles.visibilityRow]}>
@@ -96,8 +109,12 @@ export function ProfileSettingsForm() {
         </ThemedText>
         <Switch
           accessibilityLabel="Profile visibility"
-          value={profileVisible}
-          onValueChange={setProfileVisible}
+          accessibilityHint="When off, your profile should not be published later"
+          value={profile.profileVisible}
+          disabled={!isHydrated}
+          onValueChange={(value) => {
+            void updateProfile({ profileVisible: value });
+          }}
           ios_backgroundColor={APP_SHELL_INPUT_BOARDER_COLOR}
           trackColor={{
             false: APP_SHELL_INPUT_BOARDER_COLOR,
@@ -120,20 +137,6 @@ const styles = StyleSheet.create({
   fieldLabel: {
     fontSize: 12,
     lineHeight: 16,
-  },
-  selectorButton: {
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: APP_SHELL_INPUT_BOARDER_COLOR,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 13,
-  },
-  selectorButtonPressed: {
-    opacity: 0.88,
-  },
-  selectorButtonText: {
-    fontSize: 14,
-    lineHeight: 18,
   },
   visibilityRow: {
     flexDirection: "row",

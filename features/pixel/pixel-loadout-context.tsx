@@ -1,3 +1,4 @@
+import { useSQLiteContext } from "expo-sqlite";
 import {
   createContext,
   useCallback,
@@ -9,27 +10,44 @@ import {
   type ReactNode,
 } from "react";
 
+import { useXpState } from "@/features/xp/xp-state-context";
+import { enqueueOp, nowIso, uuid } from "@/lib/db";
+
+import { DEFAULT_PIXEL_LOADOUT } from "./default-loadout";
 import {
   DEFAULT_PIXEL_INVENTORY,
   getPixelItem,
 } from "./layer-assets";
-import { DEFAULT_PIXEL_LOADOUT } from "./default-loadout";
 import {
+  PIXEL_INVENTORY_GRANT_VERSION,
   loadPixelPersistedState,
   savePixelPersistedState,
 } from "./pixel-persistence";
+import { getShopOffer } from "./shop-catalog";
 import type { PixelItemId, PixelLayerId, PixelLoadout } from "./types";
+
+export type UnlockItemResult =
+  | { ok: true }
+  | {
+      ok: false;
+      reason: "unknown" | "not_shop" | "already_owned" | "level_locked";
+    };
 
 type PixelLoadoutContextValue = {
   /** Equipped item id per layer. */
   loadout: PixelLoadout;
-  /** Item ids the user owns (starter set = all bundled assets). */
+  /** Item ids the user owns (starter set + unlocked shop items). */
   inventory: readonly PixelItemId[];
   /** False until device storage has been read once. */
   isHydrated: boolean;
   ownsItem: (itemId: PixelItemId) => boolean;
   /** Equip an owned catalog item on its layer. */
   selectItem: (layerId: PixelLayerId, itemId: PixelItemId) => void;
+  /**
+   * Unlock a shop offer if local level meets the gate.
+   * SECURITY: local level/XP checks are honor-system until server re-validates.
+   */
+  unlockItem: (itemId: PixelItemId) => Promise<UnlockItemResult>;
 };
 
 const PixelLoadoutContext = createContext<PixelLoadoutContextValue | null>(
@@ -37,12 +55,16 @@ const PixelLoadoutContext = createContext<PixelLoadoutContextValue | null>(
 );
 
 export function PixelLoadoutProvider({ children }: { children: ReactNode }) {
+  const db = useSQLiteContext();
+  const { xp } = useXpState();
   const [loadout, setLoadout] = useState<PixelLoadout>(DEFAULT_PIXEL_LOADOUT);
   const [inventory, setInventory] = useState<readonly PixelItemId[]>(
     DEFAULT_PIXEL_INVENTORY,
   );
   const [isHydrated, setIsHydrated] = useState(false);
   const hasHydratedRef = useRef(false);
+  const inventoryRef = useRef(inventory);
+  inventoryRef.current = inventory;
 
   useEffect(() => {
     let cancelled = false;
@@ -63,7 +85,11 @@ export function PixelLoadoutProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!hasHydratedRef.current) return;
-    void savePixelPersistedState({ loadout, inventory });
+    void savePixelPersistedState({
+      loadout,
+      inventory,
+      inventoryGrantVersion: PIXEL_INVENTORY_GRANT_VERSION,
+    });
   }, [loadout, inventory]);
 
   const ownsItem = useCallback(
@@ -81,9 +107,56 @@ export function PixelLoadoutProvider({ children }: { children: ReactNode }) {
     [inventory],
   );
 
+  const unlockItem = useCallback(
+    async (itemId: PixelItemId): Promise<UnlockItemResult> => {
+      const offer = getShopOffer(itemId);
+      if (offer == null) {
+        return { ok: false, reason: getPixelItem(itemId) == null ? "unknown" : "not_shop" };
+      }
+      if (inventoryRef.current.includes(itemId)) {
+        return { ok: false, reason: "already_owned" };
+      }
+      // SECURITY: cheatable until server re-validates entitlement from facts.
+      if (xp.level < offer.requiredLevel) {
+        return { ok: false, reason: "level_locked" };
+      }
+
+      const unlockedAt = nowIso();
+      const opId = uuid();
+
+      setInventory((current) =>
+        current.includes(itemId) ? current : [...current, itemId],
+      );
+
+      await enqueueOp(
+        db,
+        "inventory_unlock",
+        {
+          itemId,
+          reason: "level_gate",
+          requiredLevel: offer.requiredLevel,
+          clientLevel: xp.level,
+          clientLifetimeXp: xp.lifetimeXp,
+          unlockedAt,
+        },
+        { id: opId, clientClockAt: unlockedAt },
+      );
+
+      return { ok: true };
+    },
+    [db, xp.level, xp.lifetimeXp],
+  );
+
   const value = useMemo(
-    () => ({ loadout, inventory, isHydrated, ownsItem, selectItem }),
-    [loadout, inventory, isHydrated, ownsItem, selectItem],
+    () => ({
+      loadout,
+      inventory,
+      isHydrated,
+      ownsItem,
+      selectItem,
+      unlockItem,
+    }),
+    [loadout, inventory, isHydrated, ownsItem, selectItem, unlockItem],
   );
 
   if (!isHydrated) {

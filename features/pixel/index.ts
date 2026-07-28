@@ -22,12 +22,21 @@ export {
 export {
   PixelLoadoutProvider,
   usePixelLoadout,
+  type UnlockItemResult,
 } from "./pixel-loadout-context";
 export {
+  PIXEL_INVENTORY_GRANT_VERSION,
   loadPixelPersistedState,
   savePixelPersistedState,
   type PixelPersistedState,
 } from "./pixel-persistence";
+export {
+  PIXEL_SHOP_OFFERS,
+  SHOP_ITEM_IDS,
+  getShopOffer,
+  isShopItem,
+  type PixelShopOffer,
+} from "./shop-catalog";
 export {
   PIXEL_LAYER_Z_INDEX,
   type PixelItem,

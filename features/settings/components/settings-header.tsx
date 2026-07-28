@@ -6,15 +6,22 @@ import {
   APP_SHELL_MAIN_TEXT_COLOR,
   APP_SHELL_PRIMARY_BACKGROUND,
 } from "@/constants/app-colors";
-
 import {
   TAB_HEADER_CONTENT_HEIGHT,
   TAB_HEADER_ROW_LAYOUT,
 } from "@/constants/app-shell";
+import { PROFILE_DISPLAY_NAME_FALLBACK } from "@/lib/db";
 
-import { DISPLAY_NAME, PIXEL_IMAGE } from "../constants";
+import { PIXEL_IMAGE } from "../constants";
+import { usePrefsProfile } from "../prefs-profile-context";
 
 export function SettingsHeader() {
+  const { profile } = usePrefsProfile();
+  const displayName =
+    profile.displayName.trim() === ""
+      ? PROFILE_DISPLAY_NAME_FALLBACK
+      : profile.displayName.trim();
+
   return (
     <View style={styles.headerRow}>
       <ThemedText
@@ -24,7 +31,7 @@ export function SettingsHeader() {
         style={styles.displayName}
         accessibilityRole="header"
       >
-        {DISPLAY_NAME}
+        {displayName}
       </ThemedText>
       <Image
         accessibilityLabel="Pixel avatar"

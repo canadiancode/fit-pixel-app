@@ -4,6 +4,11 @@ export {
   weightHabitValueLimits,
 } from "./limits";
 export {
+  DEFAULT_RECENT_FOOD_MEALS_LIMIT,
+  listRecentFoodMeals,
+  type RecentFoodMeal,
+} from "./recent-food";
+export {
   getHabitLog,
   insertHabitLog,
   listHabitLogsForDay,

@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { StyleSheet, Switch, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
@@ -7,10 +6,10 @@ import {
   APP_SHELL_LABEL_COLOR,
   APP_SHELL_MAIN_TEXT_COLOR,
 } from "@/constants/app-colors";
+import { usePrefsProfile } from "@/features/settings/prefs-profile-context";
 
 export function NotificationsSettingsForm() {
-  const [accountabilityReminders, setAccountabilityReminders] = useState(false);
-  const [newsAndUpdates, setNewsAndUpdates] = useState(false);
+  const { prefs, isHydrated, updatePrefs } = usePrefsProfile();
 
   return (
     <View style={styles.root}>
@@ -27,8 +26,11 @@ export function NotificationsSettingsForm() {
           <Switch
             accessibilityLabel="Accountability reminders"
             accessibilityHint="Toggles banner reminders to help you hit your daily goals"
-            value={accountabilityReminders}
-            onValueChange={setAccountabilityReminders}
+            value={prefs.notifAccountability}
+            disabled={!isHydrated}
+            onValueChange={(value) => {
+              void updatePrefs({ notifAccountability: value });
+            }}
             ios_backgroundColor={APP_SHELL_INPUT_BOARDER_COLOR}
             trackColor={{
               false: APP_SHELL_INPUT_BOARDER_COLOR,
@@ -62,8 +64,11 @@ export function NotificationsSettingsForm() {
           <Switch
             accessibilityLabel="News and updates"
             accessibilityHint="Toggles notifications about new releases and product news"
-            value={newsAndUpdates}
-            onValueChange={setNewsAndUpdates}
+            value={prefs.notifNews}
+            disabled={!isHydrated}
+            onValueChange={(value) => {
+              void updatePrefs({ notifNews: value });
+            }}
             ios_backgroundColor={APP_SHELL_INPUT_BOARDER_COLOR}
             trackColor={{
               false: APP_SHELL_INPUT_BOARDER_COLOR,

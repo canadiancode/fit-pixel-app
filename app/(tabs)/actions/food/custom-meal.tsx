@@ -1,6 +1,14 @@
 import { Image } from "expo-image";
+import { router } from "expo-router";
 import { useState } from "react";
-import { Keyboard, Platform, StyleSheet, TextInput, View } from "react-native";
+import {
+  Alert,
+  Keyboard,
+  Platform,
+  StyleSheet,
+  TextInput,
+  View,
+} from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import {
@@ -11,6 +19,8 @@ import {
 import { FONT_FAMILY } from "@/constants/fonts";
 import { ActionsSubScreenLayout } from "@/features/actions/components/actions-sub-screen-layout";
 import { FoodLimePillButton } from "@/features/actions/components/food-lime-pill-button";
+import { useFoodMeals } from "@/features/actions/food-meals-context";
+import { useHabitProgress } from "@/features/actions/habit-progress-context";
 
 const BG_LONG = require("@/assets/backgrounds/text-input-long.png");
 const BG_MED = require("@/assets/backgrounds/text-input-med.png");
@@ -29,12 +39,25 @@ const INPUT_ROW_PLATFORM = Platform.select({
   default: {},
 });
 
+function parseOptionalNonNegative(raw: string, label: string): number | undefined {
+  const trimmed = raw.trim();
+  if (!trimmed) return undefined;
+  const n = Number(trimmed);
+  if (!Number.isFinite(n)) {
+    throw new Error(`${label} must be a number`);
+  }
+  return n;
+}
+
 export default function FoodCustomMealScreen() {
+  const { addFood } = useHabitProgress();
+  const { saveMeal } = useFoodMeals();
   const [mealName, setMealName] = useState("");
   const [mealCalories, setMealCalories] = useState("");
   const [mealProtein, setMealProtein] = useState("");
   const [mealCarbs, setMealCarbs] = useState("");
   const [mealFat, setMealFat] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const gramMacroFields = [
     {
@@ -62,6 +85,58 @@ export default function FoodCustomMealScreen() {
       accessibilityLabel: "Meal fat, grams",
     },
   ] as const;
+
+  const onAddMeal = async () => {
+    if (isSubmitting) return;
+    Keyboard.dismiss();
+
+    const name = mealName.trim();
+    if (!name) {
+      Alert.alert("Meal name required", "Enter a name for this meal.");
+      return;
+    }
+    if (!mealCalories.trim()) {
+      Alert.alert("Calories required", "Enter calories for this meal.");
+      return;
+    }
+
+    try {
+      const kcal = Number(mealCalories.trim());
+      if (!Number.isFinite(kcal)) {
+        throw new Error("Calories must be a number");
+      }
+      const proteinG = parseOptionalNonNegative(mealProtein, "Protein");
+      const carbsG = parseOptionalNonNegative(mealCarbs, "Carbs");
+      const fatG = parseOptionalNonNegative(mealFat, "Fat");
+
+      setIsSubmitting(true);
+      try {
+        await addFood({
+          name,
+          kcal,
+          ...(proteinG !== undefined ? { proteinG } : {}),
+          ...(carbsG !== undefined ? { carbsG } : {}),
+          ...(fatG !== undefined ? { fatG } : {}),
+        });
+        // Same-flow: persist as a reusable saved meal (local draft / favorite).
+        await saveMeal({
+          name,
+          kcal,
+          ...(proteinG !== undefined ? { proteinG } : {}),
+          ...(carbsG !== undefined ? { carbsG } : {}),
+          ...(fatG !== undefined ? { fatG } : {}),
+        });
+        router.back();
+      } finally {
+        setIsSubmitting(false);
+      }
+    } catch (err) {
+      setIsSubmitting(false);
+      const message =
+        err instanceof Error ? err.message : "Could not save this meal.";
+      Alert.alert("Could not add meal", message);
+    }
+  };
 
   return (
     <ActionsSubScreenLayout>
@@ -204,11 +279,10 @@ export default function FoodCustomMealScreen() {
         ))}
 
         <FoodLimePillButton
-          title="+ add meal"
+          title={isSubmitting ? "Adding…" : "+ add meal"}
           accessibilityLabel="Add custom meal"
           onPress={() => {
-            Keyboard.dismiss();
-            // TODO: persist meal from mealName, mealCalories, mealProtein, mealCarbs, mealFat
+            void onAddMeal();
           }}
         />
       </View>

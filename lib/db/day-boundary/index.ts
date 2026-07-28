@@ -4,7 +4,12 @@ export {
   getDeviceTimeZone,
   getLocalDayKey,
 } from "./day-key";
-export { getDayBoundary, getTodayDayKey, setDayBoundary } from "./store";
+export {
+  getDayBoundary,
+  getTodayDayKey,
+  setDayBoundary,
+  type SetDayBoundaryOptions,
+} from "./store";
 export {
   DAY_STARTS_AT_MINUTES_MAX,
   DAY_STARTS_AT_MINUTES_MIN,

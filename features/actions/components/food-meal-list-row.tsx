@@ -30,6 +30,10 @@ type Props = {
   showBottomBorder: boolean;
   /** Logs this meal into today's food total. */
   onQuickAdd?: () => void | Promise<unknown>;
+  /** When set, heart toggles save/unsave. */
+  onToggleSave?: () => void | Promise<unknown>;
+  /** Visual saved state for the heart control. */
+  isSaved?: boolean;
 };
 
 const MEAL_NAME_FONT_SIZE = 12;
@@ -45,13 +49,19 @@ export function FoodMealListRow({
   fat,
   showBottomBorder,
   onQuickAdd,
+  onToggleSave,
+  isSaved = false,
 }: Props) {
-  const [isSaving, setIsSaving] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
+  const [isTogglingSave, setIsTogglingSave] = useState(false);
   const caloriesLabel = `Calories: ${calories.toLocaleString("en-US")}`;
   const proteinLabel = `Protein: ${protein}g`;
   const carbsLabel = `Carbs: ${carbs}g`;
   const fatLabel = `Fat: ${fat}g`;
   const macrosA11y = `${proteinLabel}, ${carbsLabel}, ${fatLabel}`;
+  const saveLabel = isSaved
+    ? `Unsave ${name}`
+    : `Save ${name} to favorites`;
 
   return (
     <View style={[styles.cell, showBottomBorder && styles.cellBorderBottom]}>
@@ -103,12 +113,12 @@ export function FoodMealListRow({
             accessibilityRole="button"
             accessibilityLabel={`Add ${name}, ${caloriesLabel}, ${macrosA11y}, to today`}
             hitSlop={8}
-            disabled={isSaving || onQuickAdd == null}
+            disabled={isAdding || onQuickAdd == null}
             onPress={() => {
-              if (onQuickAdd == null || isSaving) return;
-              setIsSaving(true);
+              if (onQuickAdd == null || isAdding) return;
+              setIsAdding(true);
               void Promise.resolve(onQuickAdd()).finally(() => {
-                setIsSaving(false);
+                setIsAdding(false);
               });
             }}
             style={({ pressed }) => [
@@ -130,13 +140,46 @@ export function FoodMealListRow({
               </Text>
             </View>
           </Pressable>
-          <Image
-            accessibilityElementsHidden
-            importantForAccessibility="no-hide-descendants"
-            source={FOOD_MEAL_ROW_HEART_ICON}
-            style={styles.heartIcon}
-            contentFit="contain"
-          />
+          {onToggleSave != null ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={saveLabel}
+              accessibilityState={{ selected: isSaved }}
+              hitSlop={8}
+              disabled={isTogglingSave}
+              onPress={() => {
+                if (isTogglingSave) return;
+                setIsTogglingSave(true);
+                void Promise.resolve(onToggleSave()).finally(() => {
+                  setIsTogglingSave(false);
+                });
+              }}
+              style={({ pressed }) => [
+                styles.heartHit,
+                pressed && styles.heartHitPressed,
+              ]}
+            >
+              <Image
+                accessibilityIgnoresInvertColors
+                accessibilityElementsHidden
+                importantForAccessibility="no-hide-descendants"
+                source={FOOD_MEAL_ROW_HEART_ICON}
+                style={[
+                  styles.heartIcon,
+                  isSaved ? styles.heartIconSaved : styles.heartIconUnsaved,
+                ]}
+                contentFit="contain"
+              />
+            </Pressable>
+          ) : (
+            <Image
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
+              source={FOOD_MEAL_ROW_HEART_ICON}
+              style={[styles.heartIcon, styles.heartIconUnsaved]}
+              contentFit="contain"
+            />
+          )}
         </View>
       </View>
     </View>
@@ -213,9 +256,23 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: APP_SHELL_MAIN_TEXT_COLOR,
   },
+  heartHit: {
+    width: ADD_HIT_SIZE,
+    height: HEART_ICON_SIZE + 8,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  heartHitPressed: {
+    opacity: 0.85,
+  },
   heartIcon: {
     width: HEART_ICON_SIZE,
     height: HEART_ICON_SIZE,
-    opacity: 0.85,
+  },
+  heartIconSaved: {
+    opacity: 1,
+  },
+  heartIconUnsaved: {
+    opacity: 0.35,
   },
 });

@@ -129,7 +129,7 @@ export const FOOD_MEALS_LIST_AREA_MIN_HEIGHT = 200;
 /** Food detail: meal row control — log this meal to eaten for the day. */
 export const FOOD_QUICK_ADD_MEAL_BUTTON = require("@/assets/backgrounds/quick-add-food.png");
 
-/** Decorative heart shown under the quick-add control on saved / recent meal rows. */
+/** Heart under the quick-add control; tap to save/unsave when wired. */
 export const FOOD_MEAL_ROW_HEART_ICON = require("@/assets/icons/small-heart.png");
 
 /** Food detail: wide action strip (`add-action.png`; same asset as other action “add” confirms). */

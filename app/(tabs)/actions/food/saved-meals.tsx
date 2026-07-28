@@ -8,12 +8,13 @@ import {
 import { FONT_FAMILY } from "@/constants/fonts";
 import { ActionsSubScreenLayout } from "@/features/actions/components/actions-sub-screen-layout";
 import { FoodMealListRow } from "@/features/actions/components/food-meal-list-row";
-import { FAKE_SAVED_MEALS } from "@/features/actions/food-meals-fake-data";
+import { listItemToFoodPayload } from "@/features/actions/food-meal-types";
+import { useFoodMeals } from "@/features/actions/food-meals-context";
 import { useHabitProgress } from "@/features/actions/habit-progress-context";
 
 export default function FoodSavedMealsScreen() {
   const { addFood } = useHabitProgress();
-  const meals = FAKE_SAVED_MEALS;
+  const { savedMeals, toggleSaveMeal } = useFoodMeals();
 
   return (
     <ActionsSubScreenLayout>
@@ -31,30 +32,33 @@ export default function FoodSavedMealsScreen() {
           darkColor={APP_SHELL_LABEL_COLOR}
           style={styles.body}
         >
-          Hold and press down on meal name to save/unsave.
+          Tap the heart to save or unsave a meal.
         </ThemedText>
         <View style={styles.list} accessibilityRole="list">
-          {meals.map((item, index) => (
-            <FoodMealListRow
-              key={`${item.name}-${item.vendor ?? index}`}
-              name={item.name}
-              calories={item.calories}
-              protein={item.protein}
-              carbs={item.carbs}
-              fat={item.fat}
-              showBottomBorder={index < meals.length - 1}
-              onQuickAdd={() =>
-                addFood({
-                  name: item.name,
-                  kcal: item.calories,
-                  proteinG: item.protein,
-                  carbsG: item.carbs,
-                  fatG: item.fat,
-                  portionSize: item.portionSize,
-                })
-              }
-            />
-          ))}
+          {savedMeals.length === 0 ? (
+            <ThemedText
+              lightColor={APP_SHELL_LABEL_COLOR}
+              darkColor={APP_SHELL_LABEL_COLOR}
+              style={styles.empty}
+            >
+              No saved meals yet. Heart a recent meal or save from custom meal.
+            </ThemedText>
+          ) : (
+            savedMeals.map((item, index) => (
+              <FoodMealListRow
+                key={item.savedId ?? `${item.name}-${index}`}
+                name={item.name}
+                calories={item.calories}
+                protein={item.protein}
+                carbs={item.carbs}
+                fat={item.fat}
+                showBottomBorder={index < savedMeals.length - 1}
+                isSaved={item.savedId != null}
+                onToggleSave={() => toggleSaveMeal(item)}
+                onQuickAdd={() => addFood(listItemToFoodPayload(item))}
+              />
+            ))
+          )}
         </View>
       </View>
     </ActionsSubScreenLayout>
@@ -76,6 +80,12 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILY,
     fontSize: 14,
     lineHeight: 20,
+  },
+  empty: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 8,
   },
   list: {
     alignSelf: "stretch",

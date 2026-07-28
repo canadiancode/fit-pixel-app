@@ -1,5 +1,6 @@
 import type { ImageSource } from "expo-image";
 
+import { SHOP_ITEM_IDS } from "./shop-catalog";
 import type {
   PixelItem,
   PixelItemId,
@@ -506,12 +507,12 @@ export const PIXEL_ITEM_BY_ID: Readonly<Record<PixelItemId, PixelItem>> =
   );
 
 /**
- * Every bundled `/assets/pixel` item — starter inventory for new users.
- * Shop / unlocks will add IDs beyond this set later.
+ * Day-1 starter inventory: full catalog minus level-gated shop offers.
+ * Unlocks append via `unlockItem` and persist in FileSystem JSON.
  */
-export const DEFAULT_PIXEL_INVENTORY: readonly PixelItemId[] = Object.keys(
-  PIXEL_ITEM_BY_ID,
-);
+export const DEFAULT_PIXEL_INVENTORY: readonly PixelItemId[] = (
+  Object.keys(PIXEL_ITEM_BY_ID) as PixelItemId[]
+).filter((id) => !SHOP_ITEM_IDS.has(id));
 
 export function getPixelItem(itemId: PixelItemId): PixelItem | undefined {
   return PIXEL_ITEM_BY_ID[itemId];

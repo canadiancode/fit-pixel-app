@@ -1,5 +1,11 @@
 export { DATABASE_NAME, DATABASE_VERSION } from "./constants";
-export { migrateDbIfNeeded, ensureDailySummarySchema, ensureXpSchema } from "./migrations";
+export {
+  migrateDbIfNeeded,
+  ensureDailySummarySchema,
+  ensureXpSchema,
+  ensureSavedMealsSchema,
+  ensurePrefsProfileSchema,
+} from "./migrations";
 export {
   DAILY_GOAL_LIMITS,
   DEFAULT_DAILY_GOALS,
@@ -51,11 +57,40 @@ export {
   setDayBoundary,
   type DayBoundary,
   type DayBoundaryUpdate,
+  type SetDayBoundaryOptions,
 } from "./day-boundary";
+export {
+  APP_THEME_CATALOG,
+  APP_THEME_IDS,
+  DEFAULT_APP_PREFS,
+  DEFAULT_THEME_ID,
+  getPrefs,
+  getThemeDefinition,
+  isAppThemeId,
+  PREFS_LIMITS,
+  setPrefs,
+  UNIT_SYSTEMS,
+  unlockTheme,
+  type AppPrefs,
+  type AppPrefsUpdate,
+  type AppThemeDefinition,
+  type AppThemeId,
+  type UnitSystem,
+} from "./prefs";
+export {
+  DEFAULT_APP_PROFILE,
+  getProfile,
+  PROFILE_DISPLAY_NAME_FALLBACK,
+  PROFILE_LIMITS,
+  setProfile,
+  type AppProfile,
+  type AppProfileUpdate,
+} from "./profile";
 export {
   aggregateHabitLogs,
   convertWaterAmount,
   convertWeightValue,
+  DEFAULT_RECENT_FOOD_MEALS_LIMIT,
   FOOD_MEAL_TYPES,
   getHabitLog,
   getHabitTotalsForDayKey,
@@ -65,6 +100,7 @@ export {
   HABIT_LOG_TYPES,
   insertHabitLog,
   listHabitLogsForDay,
+  listRecentFoodMeals,
   logActiveKcal,
   logFood,
   logSleep,
@@ -84,6 +120,7 @@ export {
   type HabitLogPayloadByType,
   type HabitLogSource,
   type HabitLogType,
+  type RecentFoodMeal,
   type SleepHabitPayload,
   type StepsHabitPayload,
   type TrainHabitPayload,
@@ -110,6 +147,17 @@ export {
   type PendingServerOpType,
 } from "./pending-ops";
 export type { LocalRecord } from "./types";
+export {
+  deleteSavedMeal,
+  findSavedMealByContent,
+  getSavedMeal,
+  listSavedMeals,
+  savedMealContentKey,
+  upsertSavedMeal,
+  type SavedMeal,
+  type SavedMealDeletePayload,
+  type SavedMealInput,
+} from "./saved-meals";
 export {
   applyXpAward,
   awardXp,

@@ -14,23 +14,27 @@ import {
   FOOD_SAVED_RECENT_MEALS_CARD_BACKGROUND,
   WATER_RIGHT_ARROW_ICON,
 } from "../constants";
+import { listItemToFoodPayload } from "../food-meal-types";
+import { useFoodMeals } from "../food-meals-context";
 import { FOOD_ACTION_HREFS } from "../food-routes";
-import { FAKE_SAVED_MEALS } from "../food-meals-fake-data";
 import { useHabitProgress } from "../habit-progress-context";
 import { FoodMealListRow } from "./food-meal-list-row";
 
 const SECTION_TITLE = "Saved meals";
 const SEE_ALL_LABEL = "See all";
 const EMPTY_LIST_MESSAGE = "No saved meals";
+/** Preview rows on the food hub card. */
+const HUB_PREVIEW_LIMIT = 3;
 
-/** Saved meals list shell; quick-add writes a food habit_log (catalog still fake). */
+/** Saved meals list; quick-add writes a food habit_log; heart toggles favorite. */
 export function FoodSavedMealsSection() {
   const { addFood } = useHabitProgress();
-  const meals = FAKE_SAVED_MEALS;
+  const { savedMeals, toggleSaveMeal } = useFoodMeals();
+  const meals = savedMeals.slice(0, HUB_PREVIEW_LIMIT);
   const summaryA11y =
-    meals.length === 0
+    savedMeals.length === 0
       ? EMPTY_LIST_MESSAGE
-      : `${meals.length} meal${meals.length === 1 ? "" : "s"}`;
+      : `${savedMeals.length} meal${savedMeals.length === 1 ? "" : "s"}`;
 
   return (
     <View
@@ -102,23 +106,16 @@ export function FoodSavedMealsSection() {
             ) : (
               meals.map((item, index) => (
                 <FoodMealListRow
-                  key={`${item.name}-${item.vendor ?? index}`}
+                  key={item.savedId ?? `${item.name}-${index}`}
                   name={item.name}
                   calories={item.calories}
                   protein={item.protein}
                   carbs={item.carbs}
                   fat={item.fat}
                   showBottomBorder={index < meals.length - 1}
-                  onQuickAdd={() =>
-                    addFood({
-                      name: item.name,
-                      kcal: item.calories,
-                      proteinG: item.protein,
-                      carbsG: item.carbs,
-                      fatG: item.fat,
-                      portionSize: item.portionSize,
-                    })
-                  }
+                  isSaved={item.savedId != null}
+                  onToggleSave={() => toggleSaveMeal(item)}
+                  onQuickAdd={() => addFood(listItemToFoodPayload(item))}
                 />
               ))
             )}
