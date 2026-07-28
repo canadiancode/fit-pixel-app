@@ -1,4 +1,5 @@
 import { clampActionBarPercent } from "@/lib/action-bar-progress";
+import { clampXpBarPercent } from "@/lib/xp-progress";
 import type { DailyGoals } from "@/lib/db";
 
 import { ACTION_BAR_CONTAINER, ACTION_ROW_ACCENT_COLORS } from "./constants";
@@ -67,7 +68,7 @@ export const ACTION_ROWS = [
 
 export type ActionRouteId = (typeof ACTION_ROWS)[number]["id"];
 
-/** Logged totals for today (Phase 2). Until then, omit or pass zeros. */
+/** Logged totals for today (from habit_logs aggregates). */
 export type ActionProgressTotals = {
   foodKcal?: number;
   waterAmount?: number;
@@ -118,7 +119,7 @@ export function getActionRowAccentColor(id: ActionRouteId): string {
 
 /**
  * Progress label + % from goals and optional logged totals.
- * Totals default to 0 until habit logs exist (Phase 2).
+ * Totals come from habit_logs aggregates (0 when none logged yet).
  */
 export function getActionRowProgressDisplay(
   id: ActionRouteId,
@@ -235,6 +236,29 @@ export function getActionRowFillPercent(
   return clampActionBarPercent(
     getActionRowProgressPercent(id, goals, totals),
   );
+}
+
+/**
+ * Overall Today's progress: mean of the six daily habit rows (excludes weight).
+ * Raw 0–100 for the header label.
+ */
+export function getTodaysProgressPercent(
+  goals: DailyGoals,
+  totals: ActionProgressTotals = {},
+): number {
+  let sum = 0;
+  for (const row of ACTION_ROWS_DAILY) {
+    sum += getActionRowProgressPercent(row.id, goals, totals);
+  }
+  return sum / ACTION_ROWS_DAILY.length;
+}
+
+/** Visual fill for the header XpLevelBar artwork. */
+export function getTodaysProgressFillPercent(
+  goals: DailyGoals,
+  totals?: ActionProgressTotals,
+): number {
+  return clampXpBarPercent(getTodaysProgressPercent(goals, totals));
 }
 
 export function getActionRowBarSources(row: (typeof ACTION_ROWS)[number]) {

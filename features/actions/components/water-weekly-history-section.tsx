@@ -8,6 +8,8 @@ import {
   APP_SHELL_MAIN_TEXT_COLOR,
 } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
+import { useDailyGoals } from "@/features/actions/daily-goals-context";
+import { useWeeklyHabitHistoryChart } from "@/features/actions/use-habit-history-chart";
 
 import { WATER_RIGHT_ARROW_ICON } from "../constants";
 
@@ -19,17 +21,11 @@ const WATER_WEEKLY_CHART_INCREMENT = 10;
 /** `true` = Y-axis from 0; `false` = Y-axis from data min (snapped to increment). */
 const WATER_WEEKLY_CHART_Y_DOMAIN_FROM_ZERO = false;
 
-/** Placeholder weekly series (mirrors `bar-chart.html`); replace with DB/API fetch. */
-export const FAKE_WATER_WEEKLY_CHART_INPUTS = {
-  userData: {
-    y: [89, 80, 75, 95, 69, 90, 95],
-    x: ["Mon", "Tues", "Wed", "Thu", "Fri", "Sat", "Sun"],
-  },
-  targetVal: 80,
-  theme: "blue" as const,
-};
-
 export function WaterWeeklyHistorySection() {
+  const { goals } = useDailyGoals();
+  const { userData } = useWeeklyHabitHistoryChart("waterAmount");
+  const targetSuffix = goals.waterUnit === "ml" ? "ml" : "oz";
+
   return (
     <View accessible accessibilityLabel={SECTION_TITLE} style={styles.section}>
       <View style={styles.headerRow}>
@@ -72,10 +68,10 @@ export function WaterWeeklyHistorySection() {
       </View>
       <BarChart
         increment={WATER_WEEKLY_CHART_INCREMENT}
-        targetLabelSuffix="oz"
-        targetVal={FAKE_WATER_WEEKLY_CHART_INPUTS.targetVal}
-        theme={FAKE_WATER_WEEKLY_CHART_INPUTS.theme}
-        userData={FAKE_WATER_WEEKLY_CHART_INPUTS.userData}
+        targetLabelSuffix={targetSuffix}
+        targetVal={goals.waterAmount}
+        theme="blue"
+        userData={userData}
         yDomainFromZero={WATER_WEEKLY_CHART_Y_DOMAIN_FROM_ZERO}
         accessibilityLabel="Water intake, last seven days"
       />

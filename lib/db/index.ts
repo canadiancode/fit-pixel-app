@@ -1,4 +1,5 @@
 export { DATABASE_NAME, DATABASE_VERSION } from "./constants";
+export { migrateDbIfNeeded, ensureDailySummarySchema, ensureXpSchema } from "./migrations";
 export {
   DAILY_GOAL_LIMITS,
   DEFAULT_DAILY_GOALS,
@@ -14,6 +15,30 @@ export {
   type WeightUnit,
 } from "./daily-goals";
 export {
+  computeGoalsMet,
+  DAILY_SUMMARY_GOAL_KEYS,
+  getDailySummary,
+  getMonthlyWeightSeries,
+  getTodayDailySummary,
+  getWeeklyMetricSeries,
+  invalidateDailySummary,
+  listDailySummariesForDayKeys,
+  listDayKeysEndingAt,
+  listMonthKeysEndingAt,
+  monthKeyFromDayKey,
+  monthShortLabelForMonthKey,
+  recomputeDailySummary,
+  shiftDayKey,
+  shiftMonthKey,
+  weekdayShortLabelForDayKey,
+  type DailySummary,
+  type DailySummaryGoalKey,
+  type DailySummaryTotalsOptions,
+  type HabitSummaryMetric,
+  type MonthlyWeightSeries,
+  type WeeklyMetricSeries,
+} from "./daily-summary";
+export {
   DAY_STARTS_AT_MINUTES_MAX,
   DAY_STARTS_AT_MINUTES_MIN,
   DEFAULT_DAY_STARTS_AT_MINUTES,
@@ -27,8 +52,45 @@ export {
   type DayBoundary,
   type DayBoundaryUpdate,
 } from "./day-boundary";
+export {
+  aggregateHabitLogs,
+  convertWaterAmount,
+  convertWeightValue,
+  FOOD_MEAL_TYPES,
+  getHabitLog,
+  getHabitTotalsForDayKey,
+  getTodayHabitTotals,
+  HABIT_LOG_LIMITS,
+  HABIT_LOG_SOURCES,
+  HABIT_LOG_TYPES,
+  insertHabitLog,
+  listHabitLogsForDay,
+  logActiveKcal,
+  logFood,
+  logSleep,
+  logSteps,
+  logTrain,
+  logWater,
+  logWeight,
+  waterHabitAmountLimits,
+  weightHabitValueLimits,
+  type ActiveKcalHabitPayload,
+  type FoodHabitPayload,
+  type FoodMealType,
+  type HabitDayTotals,
+  type HabitDayTotalsOptions,
+  type HabitLog,
+  type HabitLogInsertInput,
+  type HabitLogPayloadByType,
+  type HabitLogSource,
+  type HabitLogType,
+  type SleepHabitPayload,
+  type StepsHabitPayload,
+  type TrainHabitPayload,
+  type WaterHabitPayload,
+  type WeightHabitPayload,
+} from "./habit-log";
 export { newLocalRecord, nowIso, uuid } from "./ids";
-export { migrateDbIfNeeded } from "./migrations";
 export {
   acknowledgeOpSynced,
   enqueueOp,
@@ -48,3 +110,22 @@ export {
   type PendingServerOpType,
 } from "./pending-ops";
 export type { LocalRecord } from "./types";
+export {
+  applyXpAward,
+  awardXp,
+  claimGoalBonusSlot,
+  DAY_COMPLETE_BONUS_KEY,
+  getXpState,
+  hasGoalBonusBeenAwarded,
+  listRecentXpEvents,
+  maybeAwardGoalBonusesForDay,
+  XP_DAY_COMPLETE,
+  XP_EVENT_REASONS,
+  XP_PER_GOAL_MET,
+  XP_PER_HABIT_LOG,
+  type AwardXpInput,
+  type GoalBonusAwardResult,
+  type XpEvent,
+  type XpEventReason,
+  type XpState,
+} from "./xp";

@@ -13,13 +13,15 @@ import {
   FOOD_MEALS_LIST_AREA_MIN_HEIGHT,
   FOOD_SAVED_RECENT_MEALS_CARD_BACKGROUND,
 } from "../constants";
+import { useHabitProgress } from "../habit-progress-context";
 import { FoodMealListRow } from "./food-meal-list-row";
 
 const SECTION_TITLE = "Recent meals";
 const EMPTY_LIST_MESSAGE = "no recent meals";
 
-/** Recent meals list shell; wire to meal log / API when available. */
+/** Recent meals list shell; quick-add writes a food habit_log (catalog still fake). */
 export function FoodRecentMealsSection() {
+  const { addFood } = useHabitProgress();
   const meals = FAKE_RECENT_MEALS;
   const summaryA11y =
     meals.length === 0
@@ -72,6 +74,16 @@ export function FoodRecentMealsSection() {
                   carbs={item.carbs}
                   fat={item.fat}
                   showBottomBorder={index < meals.length - 1}
+                  onQuickAdd={() =>
+                    addFood({
+                      name: item.name,
+                      kcal: item.calories,
+                      proteinG: item.protein,
+                      carbsG: item.carbs,
+                      fatG: item.fat,
+                      portionSize: item.portionSize,
+                    })
+                  }
                 />
               ))
             )}

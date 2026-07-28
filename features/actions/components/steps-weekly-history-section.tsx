@@ -8,6 +8,8 @@ import {
   APP_SHELL_MAIN_TEXT_COLOR,
 } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
+import { useDailyGoals } from "@/features/actions/daily-goals-context";
+import { useWeeklyHabitHistoryChart } from "@/features/actions/use-habit-history-chart";
 
 import { WATER_RIGHT_ARROW_ICON } from "../constants";
 
@@ -19,17 +21,10 @@ const STEPS_WEEKLY_CHART_INCREMENT = 2_000;
 /** `true` = Y-axis from 0; `false` = Y-axis from data min (snapped to increment). */
 const STEPS_WEEKLY_CHART_Y_DOMAIN_FROM_ZERO = true;
 
-/** Placeholder weekly series (step counts); replace with DB/API fetch. */
-export const FAKE_STEPS_WEEKLY_CHART_INPUTS = {
-  userData: {
-    y: [8_200, 9_500, 11_200, 10_400, 9_800, 12_000, 10_000],
-    x: ["Mon", "Tues", "Wed", "Thu", "Fri", "Sat", "Sun"],
-  },
-  targetVal: 10_000,
-  theme: "blue" as const,
-};
-
 export function StepsWeeklyHistorySection() {
+  const { goals } = useDailyGoals();
+  const { userData } = useWeeklyHabitHistoryChart("steps");
+
   return (
     <View accessible accessibilityLabel={SECTION_TITLE} style={styles.section}>
       <View style={styles.headerRow}>
@@ -72,10 +67,10 @@ export function StepsWeeklyHistorySection() {
       </View>
       <BarChart
         increment={STEPS_WEEKLY_CHART_INCREMENT}
-        targetLabel={`${FAKE_STEPS_WEEKLY_CHART_INPUTS.targetVal.toLocaleString("en-US")} STEPS`}
-        targetVal={FAKE_STEPS_WEEKLY_CHART_INPUTS.targetVal}
-        theme={FAKE_STEPS_WEEKLY_CHART_INPUTS.theme}
-        userData={FAKE_STEPS_WEEKLY_CHART_INPUTS.userData}
+        targetLabel={`${goals.steps.toLocaleString("en-US")} STEPS`}
+        targetVal={goals.steps}
+        theme="blue"
+        userData={userData}
         yDomainFromZero={STEPS_WEEKLY_CHART_Y_DOMAIN_FROM_ZERO}
         accessibilityLabel="Steps, last seven days"
       />

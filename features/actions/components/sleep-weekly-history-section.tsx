@@ -8,6 +8,8 @@ import {
   APP_SHELL_MAIN_TEXT_COLOR,
 } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
+import { useDailyGoals } from "@/features/actions/daily-goals-context";
+import { useWeeklyHabitHistoryChart } from "@/features/actions/use-habit-history-chart";
 
 import { WATER_RIGHT_ARROW_ICON } from "../constants";
 
@@ -18,17 +20,10 @@ const SLEEP_WEEKLY_CHART_INCREMENT = 1;
 
 const SLEEP_WEEKLY_CHART_Y_DOMAIN_FROM_ZERO = true;
 
-/** Placeholder weekly series (hours slept); replace with DB/API fetch. */
-export const FAKE_SLEEP_WEEKLY_CHART_INPUTS = {
-  userData: {
-    y: [7, 8, 6, 8, 7, 9, 8],
-    x: ["Mon", "Tues", "Wed", "Thu", "Fri", "Sat", "Sun"],
-  },
-  targetVal: 8,
-  theme: "blue" as const,
-};
-
 export function SleepWeeklyHistorySection() {
+  const { goals } = useDailyGoals();
+  const { userData } = useWeeklyHabitHistoryChart("sleepHours");
+
   return (
     <View accessible accessibilityLabel={SECTION_TITLE} style={styles.section}>
       <View style={styles.headerRow}>
@@ -71,10 +66,10 @@ export function SleepWeeklyHistorySection() {
       </View>
       <BarChart
         increment={SLEEP_WEEKLY_CHART_INCREMENT}
-        targetLabel={`${String(FAKE_SLEEP_WEEKLY_CHART_INPUTS.targetVal)}H`}
-        targetVal={FAKE_SLEEP_WEEKLY_CHART_INPUTS.targetVal}
-        theme={FAKE_SLEEP_WEEKLY_CHART_INPUTS.theme}
-        userData={FAKE_SLEEP_WEEKLY_CHART_INPUTS.userData}
+        targetLabel={`${String(goals.sleepHours)}H`}
+        targetVal={goals.sleepHours}
+        theme="blue"
+        userData={userData}
         yDomainFromZero={SLEEP_WEEKLY_CHART_Y_DOMAIN_FROM_ZERO}
         accessibilityLabel="Sleep hours, last seven days"
       />

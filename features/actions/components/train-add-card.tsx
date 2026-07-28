@@ -1,32 +1,55 @@
 import { Image } from "expo-image";
+import { useCallback, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import { APP_SHELL_MAIN_TEXT_COLOR } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
+import { useHabitProgress } from "@/features/actions/habit-progress-context";
 
 import {
-    TRAIN_ADD_CARD_BACKGROUND,
-    TRAIN_ADD_TIME_BUTTON_BACKGROUND,
-    TRAIN_BULK_ADD_BACKGROUND,
-    TRAIN_BULK_DURATION_OPTIONS,
-    TRAIN_SERVING_MINUTES,
-    WATER_ADD_ICON,
-    WATER_SUBTRACT_ICON,
+  TRAIN_ADD_CARD_BACKGROUND,
+  TRAIN_ADD_TIME_BUTTON_BACKGROUND,
+  TRAIN_BULK_ADD_BACKGROUND,
+  TRAIN_BULK_DURATION_OPTIONS,
+  TRAIN_SERVING_MINUTES,
+  WATER_ADD_ICON,
+  WATER_SUBTRACT_ICON,
 } from "../constants";
 
 const TRAIN_ADD_CARD_TITLE = "Add time";
 const TRAIN_ADD_TIME_BUTTON_LABEL = "Add time";
+const SERVING_STEP_MIN = 5;
 
 export function TrainAddCard() {
-  /** Replace with state when the stepper updates serving size. */
-  const servingMinutes: number = TRAIN_SERVING_MINUTES;
+  const { addTrain } = useHabitProgress();
+  const [servingMinutes, setServingMinutes] =
+    useState<number>(TRAIN_SERVING_MINUTES);
+  const [isSaving, setIsSaving] = useState(false);
+
   const servingSign = servingMinutes < 0 ? "-" : "+";
   const servingAmountDisplay = `${servingSign}${Math.abs(servingMinutes)}M`;
   const servingA11y =
     servingMinutes === 0
       ? "0 minutes"
       : `${servingMinutes > 0 ? "Plus" : "Minus"} ${Math.abs(servingMinutes)} minutes`;
+
+  const adjustServing = useCallback((delta: number) => {
+    setServingMinutes((current) => current + delta);
+  }, []);
+
+  const commitMinutes = useCallback(
+    async (durationMin: number) => {
+      if (durationMin === 0 || isSaving) return;
+      setIsSaving(true);
+      try {
+        await addTrain({ durationMin });
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [addTrain, isSaving],
+  );
 
   return (
     <View
@@ -59,6 +82,8 @@ export function TrainAddCard() {
               accessibilityRole="button"
               accessibilityLabel="Decrease training time amount"
               hitSlop={8}
+              disabled={isSaving}
+              onPress={() => adjustServing(-SERVING_STEP_MIN)}
               style={({ pressed }) => [
                 styles.stepperColumn,
                 pressed && styles.stepperPressed,
@@ -84,6 +109,8 @@ export function TrainAddCard() {
               accessibilityRole="button"
               accessibilityLabel="Increase training time amount"
               hitSlop={8}
+              disabled={isSaving}
+              onPress={() => adjustServing(SERVING_STEP_MIN)}
               style={({ pressed }) => [
                 styles.stepperColumn,
                 pressed && styles.stepperPressed,
@@ -104,6 +131,10 @@ export function TrainAddCard() {
                   key={opt.minutes}
                   accessibilityRole="button"
                   accessibilityLabel={`Add ${opt.minutes} minutes of training`}
+                  disabled={isSaving}
+                  onPress={() => {
+                    void commitMinutes(opt.minutes);
+                  }}
                   style={({ pressed }) => [
                     styles.bulkColumn,
                     pressed && styles.stepperPressed,
@@ -132,6 +163,10 @@ export function TrainAddCard() {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Add training time to today's total"
+            disabled={isSaving || servingMinutes === 0}
+            onPress={() => {
+              void commitMinutes(servingMinutes);
+            }}
             style={({ pressed }) => [
               styles.addTimeButton,
               pressed && styles.stepperPressed,

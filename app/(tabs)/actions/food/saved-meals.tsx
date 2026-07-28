@@ -9,8 +9,10 @@ import { FONT_FAMILY } from "@/constants/fonts";
 import { ActionsSubScreenLayout } from "@/features/actions/components/actions-sub-screen-layout";
 import { FoodMealListRow } from "@/features/actions/components/food-meal-list-row";
 import { FAKE_SAVED_MEALS } from "@/features/actions/food-meals-fake-data";
+import { useHabitProgress } from "@/features/actions/habit-progress-context";
 
 export default function FoodSavedMealsScreen() {
+  const { addFood } = useHabitProgress();
   const meals = FAKE_SAVED_MEALS;
 
   return (
@@ -41,6 +43,16 @@ export default function FoodSavedMealsScreen() {
               carbs={item.carbs}
               fat={item.fat}
               showBottomBorder={index < meals.length - 1}
+              onQuickAdd={() =>
+                addFood({
+                  name: item.name,
+                  kcal: item.calories,
+                  proteinG: item.protein,
+                  carbsG: item.carbs,
+                  fatG: item.fat,
+                  portionSize: item.portionSize,
+                })
+              }
             />
           ))}
         </View>

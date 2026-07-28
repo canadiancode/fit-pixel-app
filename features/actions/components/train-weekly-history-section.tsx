@@ -8,6 +8,8 @@ import {
   APP_SHELL_MAIN_TEXT_COLOR,
 } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
+import { useDailyGoals } from "@/features/actions/daily-goals-context";
+import { useWeeklyHabitHistoryChart } from "@/features/actions/use-habit-history-chart";
 
 import { WATER_RIGHT_ARROW_ICON } from "../constants";
 
@@ -19,17 +21,10 @@ const TRAIN_WEEKLY_CHART_INCREMENT = 15;
 /** `true` = Y-axis from 0; `false` = Y-axis from data min (snapped to increment). */
 const TRAIN_WEEKLY_CHART_Y_DOMAIN_FROM_ZERO = true;
 
-/** Placeholder weekly series (training minutes); replace with DB/API fetch. */
-export const FAKE_TRAIN_WEEKLY_CHART_INPUTS = {
-  userData: {
-    y: [45, 55, 40, 70, 50, 65, 60],
-    x: ["Mon", "Tues", "Wed", "Thu", "Fri", "Sat", "Sun"],
-  },
-  targetVal: 60,
-  theme: "blue" as const,
-};
-
 export function TrainWeeklyHistorySection() {
+  const { goals } = useDailyGoals();
+  const { userData } = useWeeklyHabitHistoryChart("trainMinutes");
+
   return (
     <View accessible accessibilityLabel={SECTION_TITLE} style={styles.section}>
       <View style={styles.headerRow}>
@@ -73,9 +68,9 @@ export function TrainWeeklyHistorySection() {
       <BarChart
         increment={TRAIN_WEEKLY_CHART_INCREMENT}
         targetLabelSuffix="M"
-        targetVal={FAKE_TRAIN_WEEKLY_CHART_INPUTS.targetVal}
-        theme={FAKE_TRAIN_WEEKLY_CHART_INPUTS.theme}
-        userData={FAKE_TRAIN_WEEKLY_CHART_INPUTS.userData}
+        targetVal={goals.trainMinutes}
+        theme="blue"
+        userData={userData}
         yDomainFromZero={TRAIN_WEEKLY_CHART_Y_DOMAIN_FROM_ZERO}
         accessibilityLabel="Training time, last seven days"
       />

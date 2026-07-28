@@ -1,4 +1,6 @@
 import { Image } from "expo-image";
+import { useFocusEffect } from "expo-router";
+import { useCallback } from "react";
 import { StyleSheet, View } from "react-native";
 
 import { FloatingShellSurface } from "@/components/floating-shell-surface";
@@ -8,9 +10,9 @@ import {
   APP_SHELL_MAIN_TEXT_COLOR,
   APP_SHELL_SECONDARY_BACKGROUND,
 } from "@/constants/app-colors";
+import { useXpState } from "@/features/xp/xp-state-context";
 import { useDashboardHealthMetrics } from "@/hooks/use-dashboard-health-metrics";
 import {
-  CURRENT_XP,
   getNextPixelLevel,
   getPixelLevel,
   getXpBarFillPercent,
@@ -22,11 +24,6 @@ const CELL_HEADING_FONT_FAMILY = "PixeloidSans";
 /** Inset from tile edge; includes shell gutter + padding inside the rect card. */
 const METRIC_ICON_CORNER_INSET = 20;
 const METRIC_ICON_CORNER_SIZE = 25;
-
-const XP_BAR_FILL_PERCENT = getXpBarFillPercent();
-const PIXEL_LEVEL = getPixelLevel();
-const NEXT_PIXEL_LEVEL = getNextPixelLevel();
-const XP_REMAINING_TO_NEXT_LEVEL = getXpRemainingToNextLevel();
 
 const EM_DASH = "\u2014";
 
@@ -41,6 +38,19 @@ function formatGroupedInt(value: number, connected: boolean): string {
 /** Health + XP metric cards for the My Pixel dashboard. */
 export function PixelDashboardMetrics() {
   const { metrics, connectivity } = useDashboardHealthMetrics();
+  const { xp, refreshXp } = useXpState();
+
+  useFocusEffect(
+    useCallback(() => {
+      void refreshXp();
+    }, [refreshXp]),
+  );
+
+  const lifetimeXp = xp.lifetimeXp;
+  const pixelLevel = getPixelLevel(lifetimeXp);
+  const nextPixelLevel = getNextPixelLevel(lifetimeXp);
+  const xpBarFillPercent = getXpBarFillPercent(lifetimeXp);
+  const xpRemainingToNextLevel = getXpRemainingToNextLevel(lifetimeXp);
 
   return (
     <View style={styles.root}>
@@ -366,7 +376,7 @@ export function PixelDashboardMetrics() {
                 darkColor={APP_SHELL_MAIN_TEXT_COLOR}
                 style={styles.xpHeaderText}
               >
-                Level {PIXEL_LEVEL}
+                Level {pixelLevel}
               </ThemedText>
             </View>
             <ThemedText
@@ -374,11 +384,11 @@ export function PixelDashboardMetrics() {
               darkColor={APP_SHELL_MAIN_TEXT_COLOR}
               style={styles.xpHeaderText}
             >
-              {CURRENT_XP.toLocaleString("en-US")}XP
+              {lifetimeXp.toLocaleString("en-US")}XP
             </ThemedText>
           </View>
           <XpLevelBar
-            fillPercent={XP_BAR_FILL_PERCENT}
+            fillPercent={xpBarFillPercent}
             style={styles.xpBarRow}
           />
           <View style={styles.xpFooterRow}>
@@ -387,7 +397,7 @@ export function PixelDashboardMetrics() {
               darkColor={APP_SHELL_MAIN_TEXT_COLOR}
               style={styles.xpFooterText}
             >
-              {XP_REMAINING_TO_NEXT_LEVEL}XP to level {NEXT_PIXEL_LEVEL}
+              {xpRemainingToNextLevel}XP to level {nextPixelLevel}
             </ThemedText>
           </View>
         </View>

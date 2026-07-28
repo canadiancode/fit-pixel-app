@@ -20,6 +20,7 @@ import {
 } from "@/constants/app-colors";
 import { APP_SHELL_PADDING } from "@/constants/app-shell";
 import { FONT_FAMILY } from "@/constants/fonts";
+import { XpStateProvider } from "@/features/xp/xp-state-context";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { DATABASE_NAME, migrateDbIfNeeded } from "@/lib/db";
 
@@ -69,32 +70,34 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={navigationTheme}>
       <SQLiteProvider databaseName={DATABASE_NAME} onInit={migrateDbIfNeeded}>
-        <View
-          style={{
-            flex: 1,
-            flexDirection: "column",
-            paddingTop: 0,
-            paddingHorizontal: APP_SHELL_PADDING,
-            paddingBottom: 0,
-            backgroundColor: APP_SHELL_PRIMARY_BACKGROUND,
-          }}
-        >
+        <XpStateProvider>
           <View
             style={{
               flex: 1,
-              backgroundColor: APP_SHELL_SECONDARY_BACKGROUND,
+              flexDirection: "column",
+              paddingTop: 0,
+              paddingHorizontal: APP_SHELL_PADDING,
+              paddingBottom: 0,
+              backgroundColor: APP_SHELL_PRIMARY_BACKGROUND,
             }}
           >
-            <Stack>
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen
-                name="modal"
-                options={{ presentation: "modal", title: "Modal" }}
-              />
-            </Stack>
+            <View
+              style={{
+                flex: 1,
+                backgroundColor: APP_SHELL_SECONDARY_BACKGROUND,
+              }}
+            >
+              <Stack>
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen
+                  name="modal"
+                  options={{ presentation: "modal", title: "Modal" }}
+                />
+              </Stack>
+            </View>
+            <StatusBar style="auto" />
           </View>
-          <StatusBar style="auto" />
-        </View>
+        </XpStateProvider>
       </SQLiteProvider>
     </ThemeProvider>
   );

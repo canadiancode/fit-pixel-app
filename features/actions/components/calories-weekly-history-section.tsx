@@ -8,6 +8,8 @@ import {
   APP_SHELL_MAIN_TEXT_COLOR,
 } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
+import { useDailyGoals } from "@/features/actions/daily-goals-context";
+import { useWeeklyHabitHistoryChart } from "@/features/actions/use-habit-history-chart";
 
 import { WATER_RIGHT_ARROW_ICON } from "../constants";
 
@@ -17,17 +19,10 @@ const CALORIES_WEEKLY_CHART_INCREMENT = 100;
 
 const CALORIES_WEEKLY_CHART_Y_DOMAIN_FROM_ZERO = true;
 
-/** Placeholder weekly series (active energy kcal); replace with DB/API fetch. */
-export const FAKE_CALORIES_WEEKLY_CHART_INPUTS = {
-  userData: {
-    y: [720, 810, 760, 900, 820, 850, 800],
-    x: ["Mon", "Tues", "Wed", "Thu", "Fri", "Sat", "Sun"],
-  },
-  targetVal: 800,
-  theme: "blue" as const,
-};
-
 export function CaloriesWeeklyHistorySection() {
+  const { goals } = useDailyGoals();
+  const { userData } = useWeeklyHabitHistoryChart("activeKcal");
+
   return (
     <View accessible accessibilityLabel={SECTION_TITLE} style={styles.section}>
       <View style={styles.headerRow}>
@@ -70,10 +65,10 @@ export function CaloriesWeeklyHistorySection() {
       </View>
       <BarChart
         increment={CALORIES_WEEKLY_CHART_INCREMENT}
-        targetLabel={`${String(FAKE_CALORIES_WEEKLY_CHART_INPUTS.targetVal)} KCAL`}
-        targetVal={FAKE_CALORIES_WEEKLY_CHART_INPUTS.targetVal}
-        theme={FAKE_CALORIES_WEEKLY_CHART_INPUTS.theme}
-        userData={FAKE_CALORIES_WEEKLY_CHART_INPUTS.userData}
+        targetLabel={`${String(goals.activeKcal)} KCAL`}
+        targetVal={goals.activeKcal}
+        theme="blue"
+        userData={userData}
         yDomainFromZero={CALORIES_WEEKLY_CHART_Y_DOMAIN_FROM_ZERO}
         accessibilityLabel="Calories burned, last seven days"
       />

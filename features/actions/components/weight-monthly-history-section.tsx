@@ -8,27 +8,23 @@ import {
   APP_SHELL_MAIN_TEXT_COLOR,
 } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
+import { useDailyGoals } from "@/features/actions/daily-goals-context";
+import { useMonthlyWeightHistoryChart } from "@/features/actions/use-habit-history-chart";
 
 import { WATER_RIGHT_ARROW_ICON } from "../constants";
 
 const SECTION_TITLE = "History";
 const VIEW_HISTORY_LABEL = "View history";
-/** Y-axis tick step for the monthly weight chart (lbs). */
+/** Y-axis tick step for the monthly weight chart. */
 const WEIGHT_MONTHLY_CHART_INCREMENT = 20;
 
 const WEIGHT_MONTHLY_CHART_Y_DOMAIN_FROM_ZERO = true;
 
-/** Placeholder monthly series (lbs); x-axis uses month abbreviations. Replace with DB/API fetch. */
-export const FAKE_WEIGHT_MONTHLY_CHART_INPUTS = {
-  userData: {
-    y: [163, 159, 151, 143, 145, 131, 123],
-    x: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul"],
-  },
-  targetVal: 123,
-  theme: "blue" as const,
-};
-
 export function WeightMonthlyHistorySection() {
+  const { goals } = useDailyGoals();
+  const { userData } = useMonthlyWeightHistoryChart();
+  const unitLabel = goals.weightUnit === "kg" ? "KG" : "LBS";
+
   return (
     <View accessible accessibilityLabel={SECTION_TITLE} style={styles.section}>
       <View style={styles.headerRow}>
@@ -71,10 +67,10 @@ export function WeightMonthlyHistorySection() {
       </View>
       <BarChart
         increment={WEIGHT_MONTHLY_CHART_INCREMENT}
-        targetLabel={`${String(FAKE_WEIGHT_MONTHLY_CHART_INPUTS.targetVal)} LBS`}
-        targetVal={FAKE_WEIGHT_MONTHLY_CHART_INPUTS.targetVal}
-        theme={FAKE_WEIGHT_MONTHLY_CHART_INPUTS.theme}
-        userData={FAKE_WEIGHT_MONTHLY_CHART_INPUTS.userData}
+        targetLabel={`${String(goals.weightGoal)} ${unitLabel}`}
+        targetVal={goals.weightGoal}
+        theme="blue"
+        userData={userData}
         yDomainFromZero={WEIGHT_MONTHLY_CHART_Y_DOMAIN_FROM_ZERO}
         accessibilityLabel="Weight by month"
       />

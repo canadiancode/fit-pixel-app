@@ -9,6 +9,8 @@ import {
   APP_SHELL_MAIN_TEXT_COLOR,
 } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
+import { useDailyGoals } from "@/features/actions/daily-goals-context";
+import { useWeeklyHabitHistoryChart } from "@/features/actions/use-habit-history-chart";
 
 import { WATER_RIGHT_ARROW_ICON } from "../constants";
 import { FOOD_ACTION_HREFS } from "../food-routes";
@@ -20,18 +22,11 @@ export const FOOD_DAILY_CHART_INCREMENT = 500;
 
 export const FOOD_DAILY_CHART_Y_DOMAIN_FROM_ZERO = true;
 
-/** Placeholder daily series (kcal per day, Mon–Sun); replace with DB/API fetch. */
-export const FAKE_FOOD_DAILY_CHART_INPUTS = {
-  userData: {
-    y: [2_350, 2_420, 2_280, 2_500, 2_460, 2_380, 2_450],
-    x: ["Mon", "Tues", "Wed", "Thu", "Fri", "Sat", "Sun"],
-  },
-  targetVal: 2_500,
-  theme: "blue" as const,
-};
-
 /** Last seven days of food energy (daily kcal), same shell as calories weekly history. */
 export function FoodDailyHistorySection() {
+  const { goals } = useDailyGoals();
+  const { userData } = useWeeklyHabitHistoryChart("foodKcal");
+
   return (
     <View accessible accessibilityLabel={SECTION_TITLE} style={styles.section}>
       <View style={styles.headerRow}>
@@ -75,10 +70,10 @@ export function FoodDailyHistorySection() {
       </View>
       <BarChart
         increment={FOOD_DAILY_CHART_INCREMENT}
-        targetLabel={`${FAKE_FOOD_DAILY_CHART_INPUTS.targetVal.toLocaleString("en-US")} KCAL`}
-        targetVal={FAKE_FOOD_DAILY_CHART_INPUTS.targetVal}
-        theme={FAKE_FOOD_DAILY_CHART_INPUTS.theme}
-        userData={FAKE_FOOD_DAILY_CHART_INPUTS.userData}
+        targetLabel={`${goals.foodKcal.toLocaleString("en-US")} KCAL`}
+        targetVal={goals.foodKcal}
+        theme="blue"
+        userData={userData}
         yDomainFromZero={FOOD_DAILY_CHART_Y_DOMAIN_FROM_ZERO}
         accessibilityLabel="Food energy, last seven days"
       />

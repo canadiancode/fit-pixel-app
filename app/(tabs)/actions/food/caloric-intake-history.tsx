@@ -6,12 +6,16 @@ import { APP_SHELL_LABEL_COLOR, APP_SHELL_MAIN_TEXT_COLOR } from "@/constants/ap
 import { FONT_FAMILY } from "@/constants/fonts";
 import { ActionsSubScreenLayout } from "@/features/actions/components/actions-sub-screen-layout";
 import {
-  FAKE_FOOD_DAILY_CHART_INPUTS,
   FOOD_DAILY_CHART_INCREMENT,
   FOOD_DAILY_CHART_Y_DOMAIN_FROM_ZERO,
 } from "@/features/actions/components/food-daily-history-section";
+import { useDailyGoals } from "@/features/actions/daily-goals-context";
+import { useWeeklyHabitHistoryChart } from "@/features/actions/use-habit-history-chart";
 
 export default function FoodCaloricIntakeHistoryScreen() {
+  const { goals } = useDailyGoals();
+  const { userData } = useWeeklyHabitHistoryChart("foodKcal");
+
   return (
     <ActionsSubScreenLayout>
       <View style={styles.block}>
@@ -28,15 +32,15 @@ export default function FoodCaloricIntakeHistoryScreen() {
           darkColor={APP_SHELL_LABEL_COLOR}
           style={styles.body}
         >
-          Longer-range history and filters can live here; chart below reuses the home preview
-          data for now.
+          Longer-range history and filters can live here; chart below shows the last seven
+          days from local daily summaries.
         </ThemedText>
         <BarChart
           increment={FOOD_DAILY_CHART_INCREMENT}
-          targetLabel={`${FAKE_FOOD_DAILY_CHART_INPUTS.targetVal.toLocaleString("en-US")} KCAL`}
-          targetVal={FAKE_FOOD_DAILY_CHART_INPUTS.targetVal}
-          theme={FAKE_FOOD_DAILY_CHART_INPUTS.theme}
-          userData={FAKE_FOOD_DAILY_CHART_INPUTS.userData}
+          targetLabel={`${goals.foodKcal.toLocaleString("en-US")} KCAL`}
+          targetVal={goals.foodKcal}
+          theme="blue"
+          userData={userData}
           yDomainFromZero={FOOD_DAILY_CHART_Y_DOMAIN_FROM_ZERO}
           accessibilityLabel="Food energy, last seven days"
         />

@@ -16,14 +16,16 @@ import {
 } from "../constants";
 import { FOOD_ACTION_HREFS } from "../food-routes";
 import { FAKE_SAVED_MEALS } from "../food-meals-fake-data";
+import { useHabitProgress } from "../habit-progress-context";
 import { FoodMealListRow } from "./food-meal-list-row";
 
 const SECTION_TITLE = "Saved meals";
 const SEE_ALL_LABEL = "See all";
 const EMPTY_LIST_MESSAGE = "No saved meals";
 
-/** Saved meals list shell; wire to persisted meals when available. */
+/** Saved meals list shell; quick-add writes a food habit_log (catalog still fake). */
 export function FoodSavedMealsSection() {
+  const { addFood } = useHabitProgress();
   const meals = FAKE_SAVED_MEALS;
   const summaryA11y =
     meals.length === 0
@@ -107,6 +109,16 @@ export function FoodSavedMealsSection() {
                   carbs={item.carbs}
                   fat={item.fat}
                   showBottomBorder={index < meals.length - 1}
+                  onQuickAdd={() =>
+                    addFood({
+                      name: item.name,
+                      kcal: item.calories,
+                      proteinG: item.protein,
+                      carbsG: item.carbs,
+                      fatG: item.fat,
+                      portionSize: item.portionSize,
+                    })
+                  }
                 />
               ))
             )}

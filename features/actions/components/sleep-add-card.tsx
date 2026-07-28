@@ -1,9 +1,11 @@
 import { Image } from "expo-image";
+import { useCallback, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import { APP_SHELL_MAIN_TEXT_COLOR } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
+import { useHabitProgress } from "@/features/actions/habit-progress-context";
 
 import {
   SLEEP_ADD_CARD_BACKGROUND,
@@ -17,16 +19,37 @@ import {
 
 const SLEEP_ADD_CARD_TITLE = "Add sleep";
 const SLEEP_ADD_BUTTON_LABEL = "Add sleep";
+const SERVING_STEP_MIN = 15;
 
 export function SleepAddCard() {
-  /** Replace with state when the stepper updates serving size. */
-  const servingMinutes: number = SLEEP_SERVING_MINUTES;
+  const { addSleep } = useHabitProgress();
+  const [servingMinutes, setServingMinutes] =
+    useState<number>(SLEEP_SERVING_MINUTES);
+  const [isSaving, setIsSaving] = useState(false);
+
   const servingSign = servingMinutes < 0 ? "-" : "+";
   const servingAmountDisplay = `${servingSign}${Math.abs(servingMinutes)}M`;
   const servingA11y =
     servingMinutes === 0
       ? "0 minutes"
       : `${servingMinutes > 0 ? "Plus" : "Minus"} ${Math.abs(servingMinutes)} minutes`;
+
+  const adjustServing = useCallback((delta: number) => {
+    setServingMinutes((current) => current + delta);
+  }, []);
+
+  const commitMinutes = useCallback(
+    async (durationMin: number) => {
+      if (durationMin === 0 || isSaving) return;
+      setIsSaving(true);
+      try {
+        await addSleep({ durationMin });
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [addSleep, isSaving],
+  );
 
   return (
     <View
@@ -59,6 +82,8 @@ export function SleepAddCard() {
               accessibilityRole="button"
               accessibilityLabel="Decrease sleep duration amount"
               hitSlop={8}
+              disabled={isSaving}
+              onPress={() => adjustServing(-SERVING_STEP_MIN)}
               style={({ pressed }) => [
                 styles.stepperColumn,
                 pressed && styles.stepperPressed,
@@ -84,6 +109,8 @@ export function SleepAddCard() {
               accessibilityRole="button"
               accessibilityLabel="Increase sleep duration amount"
               hitSlop={8}
+              disabled={isSaving}
+              onPress={() => adjustServing(SERVING_STEP_MIN)}
               style={({ pressed }) => [
                 styles.stepperColumn,
                 pressed && styles.stepperPressed,
@@ -104,6 +131,10 @@ export function SleepAddCard() {
                   key={opt.minutes}
                   accessibilityRole="button"
                   accessibilityLabel={`Add ${String(opt.minutes)} minutes of sleep`}
+                  disabled={isSaving}
+                  onPress={() => {
+                    void commitMinutes(opt.minutes);
+                  }}
                   style={({ pressed }) => [
                     styles.bulkColumn,
                     pressed && styles.stepperPressed,
@@ -132,6 +163,10 @@ export function SleepAddCard() {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Add sleep to today's total"
+            disabled={isSaving || servingMinutes === 0}
+            onPress={() => {
+              void commitMinutes(servingMinutes);
+            }}
             style={({ pressed }) => [
               styles.addButton,
               pressed && styles.stepperPressed,

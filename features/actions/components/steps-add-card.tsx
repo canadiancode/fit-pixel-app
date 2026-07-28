@@ -1,9 +1,11 @@
 import { Image } from "expo-image";
+import { useCallback, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import { APP_SHELL_MAIN_TEXT_COLOR } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
+import { useHabitProgress } from "@/features/actions/habit-progress-context";
 
 import {
   STEPS_ADD_CARD_BACKGROUND,
@@ -17,6 +19,7 @@ import {
 
 const STEPS_ADD_CARD_TITLE = "Add steps";
 const STEPS_ADD_STEPS_BUTTON_LABEL = "Add steps";
+const SERVING_STEP = 100;
 
 function formatStepsDelta(n: number): string {
   const sign = n < 0 ? "-" : "+";
@@ -24,13 +27,32 @@ function formatStepsDelta(n: number): string {
 }
 
 export function StepsAddCard() {
-  /** Replace with state when the stepper updates serving size. */
-  const servingSteps: number = STEPS_SERVING_AMOUNT;
+  const { addSteps } = useHabitProgress();
+  const [servingSteps, setServingSteps] = useState(STEPS_SERVING_AMOUNT);
+  const [isSaving, setIsSaving] = useState(false);
+
   const servingAmountDisplay = formatStepsDelta(servingSteps);
   const servingA11y =
     servingSteps === 0
       ? "0 steps"
       : `${servingSteps > 0 ? "Plus" : "Minus"} ${Math.abs(servingSteps).toLocaleString("en-US")} steps`;
+
+  const adjustServing = useCallback((delta: number) => {
+    setServingSteps((current) => current + delta);
+  }, []);
+
+  const commitSteps = useCallback(
+    async (steps: number) => {
+      if (steps === 0 || isSaving) return;
+      setIsSaving(true);
+      try {
+        await addSteps({ steps });
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [addSteps, isSaving],
+  );
 
   return (
     <View
@@ -63,6 +85,8 @@ export function StepsAddCard() {
               accessibilityRole="button"
               accessibilityLabel="Decrease step amount"
               hitSlop={8}
+              disabled={isSaving}
+              onPress={() => adjustServing(-SERVING_STEP)}
               style={({ pressed }) => [
                 styles.stepperColumn,
                 pressed && styles.stepperPressed,
@@ -88,6 +112,8 @@ export function StepsAddCard() {
               accessibilityRole="button"
               accessibilityLabel="Increase step amount"
               hitSlop={8}
+              disabled={isSaving}
+              onPress={() => adjustServing(SERVING_STEP)}
               style={({ pressed }) => [
                 styles.stepperColumn,
                 pressed && styles.stepperPressed,
@@ -108,6 +134,10 @@ export function StepsAddCard() {
                   key={opt.amount}
                   accessibilityRole="button"
                   accessibilityLabel={`Add ${opt.amount.toLocaleString("en-US")} steps`}
+                  disabled={isSaving}
+                  onPress={() => {
+                    void commitSteps(opt.amount);
+                  }}
                   style={({ pressed }) => [
                     styles.bulkColumn,
                     pressed && styles.stepperPressed,
@@ -136,6 +166,10 @@ export function StepsAddCard() {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Add steps to today's total"
+            disabled={isSaving || servingSteps === 0}
+            onPress={() => {
+              void commitSteps(servingSteps);
+            }}
             style={({ pressed }) => [
               styles.addStepsButton,
               pressed && styles.stepperPressed,

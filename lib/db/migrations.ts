@@ -7,18 +7,77 @@ import { DEFAULT_DAY_STARTS_AT_MINUTES } from "./day-boundary/types";
 import { nowIso } from "./ids";
 
 /**
+ * Idempotent daily_summary cache (v6). Safe on every launch / read path.
+ */
+export async function ensureDailySummarySchema(
+  db: SQLiteDatabase,
+): Promise<void> {
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS daily_summary (
+      dayKey TEXT PRIMARY KEY NOT NULL,
+      foodKcal REAL NOT NULL DEFAULT 0,
+      waterAmount REAL NOT NULL DEFAULT 0,
+      trainMinutes REAL NOT NULL DEFAULT 0,
+      sleepHours REAL NOT NULL DEFAULT 0,
+      steps INTEGER NOT NULL DEFAULT 0,
+      activeKcal REAL NOT NULL DEFAULT 0,
+      weight REAL,
+      waterUnit TEXT NOT NULL CHECK (waterUnit IN ('oz', 'ml')),
+      weightUnit TEXT NOT NULL CHECK (weightUnit IN ('lb', 'kg')),
+      goalsMet_json TEXT NOT NULL DEFAULT '[]',
+      updatedAt TEXT NOT NULL
+    );
+  `);
+}
+
+/**
+ * Idempotent XP schema (v7). Safe to call on every launch — repairs Fast Refresh
+ * / onInit-skip cases where user_version is ahead but tables were never created.
+ */
+export async function ensureXpSchema(db: SQLiteDatabase): Promise<void> {
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS xp_state (
+      id INTEGER PRIMARY KEY NOT NULL CHECK (id = 1),
+      lifetimeXp INTEGER NOT NULL DEFAULT 0 CHECK (lifetimeXp >= 0),
+      level INTEGER NOT NULL DEFAULT 0 CHECK (level >= 0),
+      updatedAt TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS xp_events (
+      id TEXT PRIMARY KEY NOT NULL,
+      amount INTEGER NOT NULL CHECK (amount > 0),
+      reason TEXT NOT NULL CHECK (reason IN (
+        'habit_log', 'goal_met', 'day_complete'
+      )),
+      relatedEntityId TEXT,
+      dayKey TEXT,
+      createdAt TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_xp_events_created
+      ON xp_events (createdAt);
+    CREATE TABLE IF NOT EXISTS goal_bonus_awarded (
+      dayKey TEXT NOT NULL,
+      goalKey TEXT NOT NULL,
+      xpEventId TEXT NOT NULL,
+      createdAt TEXT NOT NULL,
+      PRIMARY KEY (dayKey, goalKey)
+    );
+  `);
+  await db.runAsync(
+    `INSERT OR IGNORE INTO xp_state (id, lifetimeXp, level, updatedAt)
+     VALUES (1, 0, 0, ?)`,
+    nowIso(),
+  );
+}
+
+/**
  * Versioned schema upgrades via `PRAGMA user_version`.
- * Domain tables (habit logs, XP) land in later phases.
+ * daily_summary is a derived cache only. XP is local UX until server authority.
  */
 export async function migrateDbIfNeeded(db: SQLiteDatabase): Promise<void> {
   const row = await db.getFirstAsync<{ user_version: number }>(
     "PRAGMA user_version",
   );
   let currentVersion = row?.user_version ?? 0;
-
-  if (currentVersion >= DATABASE_VERSION) {
-    return;
-  }
 
   if (currentVersion === 0) {
     await db.execAsync(`
@@ -101,6 +160,44 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase): Promise<void> {
     );
     currentVersion = 4;
   }
+
+  if (currentVersion === 4) {
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS habit_logs (
+        id TEXT PRIMARY KEY NOT NULL,
+        type TEXT NOT NULL CHECK (type IN (
+          'water', 'food', 'train', 'sleep', 'weight', 'steps', 'active_kcal'
+        )),
+        timestamp TEXT NOT NULL,
+        createdAt TEXT NOT NULL,
+        source TEXT NOT NULL CHECK (source IN ('manual', 'healthkit', 'import')),
+        notes TEXT,
+        dayKey TEXT NOT NULL,
+        payload_json TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_habit_logs_day_type
+        ON habit_logs (dayKey, type);
+      CREATE INDEX IF NOT EXISTS idx_habit_logs_timestamp
+        ON habit_logs (timestamp);
+    `);
+    currentVersion = 5;
+  }
+
+  if (currentVersion === 5) {
+    await ensureDailySummarySchema(db);
+    currentVersion = 6;
+  }
+
+  if (currentVersion === 6) {
+    // Local XP prototype — cheatable; do not treat as sync truth.
+    await ensureXpSchema(db);
+    currentVersion = 7;
+  }
+
+  // Always repair derived/XP tables — Fast Refresh can skip onInit while
+  // stamping user_version ahead of CREATE TABLE.
+  await ensureDailySummarySchema(db);
+  await ensureXpSchema(db);
 
   await db.execAsync(`PRAGMA user_version = ${DATABASE_VERSION}`);
 }

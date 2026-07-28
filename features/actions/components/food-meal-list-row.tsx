@@ -1,4 +1,5 @@
 import { Image } from "expo-image";
+import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
@@ -27,6 +28,8 @@ type Props = {
   fat: number;
   /** When false, omit bottom border (e.g. last row in a list). */
   showBottomBorder: boolean;
+  /** Logs this meal into today's food total. */
+  onQuickAdd?: () => void | Promise<unknown>;
 };
 
 const MEAL_NAME_FONT_SIZE = 12;
@@ -41,7 +44,9 @@ export function FoodMealListRow({
   carbs,
   fat,
   showBottomBorder,
+  onQuickAdd,
 }: Props) {
+  const [isSaving, setIsSaving] = useState(false);
   const caloriesLabel = `Calories: ${calories.toLocaleString("en-US")}`;
   const proteinLabel = `Protein: ${protein}g`;
   const carbsLabel = `Carbs: ${carbs}g`;
@@ -98,8 +103,13 @@ export function FoodMealListRow({
             accessibilityRole="button"
             accessibilityLabel={`Add ${name}, ${caloriesLabel}, ${macrosA11y}, to today`}
             hitSlop={8}
+            disabled={isSaving || onQuickAdd == null}
             onPress={() => {
-              // TODO: log meal to today's eaten list
+              if (onQuickAdd == null || isSaving) return;
+              setIsSaving(true);
+              void Promise.resolve(onQuickAdd()).finally(() => {
+                setIsSaving(false);
+              });
             }}
             style={({ pressed }) => [
               styles.addHit,

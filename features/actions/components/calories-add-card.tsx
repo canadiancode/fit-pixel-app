@@ -1,9 +1,11 @@
 import { Image } from "expo-image";
+import { useCallback, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import { APP_SHELL_MAIN_TEXT_COLOR } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
+import { useHabitProgress } from "@/features/actions/habit-progress-context";
 
 import {
   CALORIES_ADD_CALORIES_BUTTON_BACKGROUND,
@@ -17,6 +19,7 @@ import {
 
 const CALORIES_ADD_CARD_TITLE = "Add calories";
 const CALORIES_ADD_BUTTON_LABEL = "Add calories";
+const SERVING_STEP_KCAL = 10;
 
 function formatKcalDelta(n: number): string {
   const sign = n < 0 ? "-" : "+";
@@ -24,13 +27,32 @@ function formatKcalDelta(n: number): string {
 }
 
 export function CaloriesAddCard() {
-  /** Replace with state when the stepper updates serving size. */
-  const servingKcal: number = CALORIES_SERVING_KCAL;
+  const { addActiveKcal } = useHabitProgress();
+  const [servingKcal, setServingKcal] = useState(CALORIES_SERVING_KCAL);
+  const [isSaving, setIsSaving] = useState(false);
+
   const servingAmountDisplay = `${formatKcalDelta(servingKcal)}\u00A0KCAL`;
   const servingA11y =
     servingKcal === 0
       ? "0 kilocalories"
       : `${servingKcal > 0 ? "Plus" : "Minus"} ${Math.abs(servingKcal)} kilocalories`;
+
+  const adjustServing = useCallback((delta: number) => {
+    setServingKcal((current) => current + delta);
+  }, []);
+
+  const commitKcal = useCallback(
+    async (kcal: number) => {
+      if (kcal === 0 || isSaving) return;
+      setIsSaving(true);
+      try {
+        await addActiveKcal({ kcal });
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [addActiveKcal, isSaving],
+  );
 
   return (
     <View
@@ -63,6 +85,8 @@ export function CaloriesAddCard() {
               accessibilityRole="button"
               accessibilityLabel="Decrease calorie amount"
               hitSlop={8}
+              disabled={isSaving}
+              onPress={() => adjustServing(-SERVING_STEP_KCAL)}
               style={({ pressed }) => [
                 styles.stepperSide,
                 pressed && styles.stepperPressed,
@@ -91,6 +115,8 @@ export function CaloriesAddCard() {
               accessibilityRole="button"
               accessibilityLabel="Increase calorie amount"
               hitSlop={8}
+              disabled={isSaving}
+              onPress={() => adjustServing(SERVING_STEP_KCAL)}
               style={({ pressed }) => [
                 styles.stepperSide,
                 pressed && styles.stepperPressed,
@@ -111,6 +137,10 @@ export function CaloriesAddCard() {
                   key={opt.kcal}
                   accessibilityRole="button"
                   accessibilityLabel={`Add ${String(opt.kcal)} kilocalories`}
+                  disabled={isSaving}
+                  onPress={() => {
+                    void commitKcal(opt.kcal);
+                  }}
                   style={({ pressed }) => [
                     styles.bulkColumn,
                     pressed && styles.stepperPressed,
@@ -139,6 +169,10 @@ export function CaloriesAddCard() {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Add calories to today's total"
+            disabled={isSaving || servingKcal === 0}
+            onPress={() => {
+              void commitKcal(servingKcal);
+            }}
             style={({ pressed }) => [
               styles.addButton,
               pressed && styles.stepperPressed,

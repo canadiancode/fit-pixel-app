@@ -6,19 +6,14 @@ import {
   APP_SHELL_MAIN_TEXT_COLOR,
   APP_SHELL_PRIMARY_BACKGROUND,
 } from "@/constants/app-colors";
-
 import {
   TAB_HEADER_CONTENT_HEIGHT,
   TAB_HEADER_ROW_LAYOUT,
 } from "@/constants/app-shell";
-import {
-  ACTIONS_DAILY_PROGRESS_FILL_PERCENT,
-  ACTIONS_DAILY_PROGRESS_LABEL_PERCENT,
-} from "@/features/actions/constants";
+import { useTodaysProgress } from "@/features/actions/use-action-progress";
 
 export function ActionsHeader() {
-  const fillPercent = ACTIONS_DAILY_PROGRESS_FILL_PERCENT;
-  const progressPercent = ACTIONS_DAILY_PROGRESS_LABEL_PERCENT;
+  const { fillPercent, progressPercent } = useTodaysProgress();
 
   return (
     <View style={styles.headerRow}>

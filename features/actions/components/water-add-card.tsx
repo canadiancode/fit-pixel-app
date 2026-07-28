@@ -1,9 +1,11 @@
 import { Image } from "expo-image";
+import { useCallback, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import { APP_SHELL_MAIN_TEXT_COLOR } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
+import { useHabitProgress } from "@/features/actions/habit-progress-context";
 
 import {
   WATER_ADD_CARD_BACKGROUND,
@@ -17,16 +19,36 @@ import {
 
 const WATER_ADD_CARD_TITLE = "Add water";
 const WATER_ADD_WATER_BUTTON_LABEL = "ADD WATER";
+const SERVING_STEP_OZ = 1;
 
 export function WaterAddCard() {
-  /** Replace with state when the stepper updates serving size. */
-  const servingOz: number = WATER_SERVING_OZ;
+  const { addWater } = useHabitProgress();
+  const [servingOz, setServingOz] = useState<number>(WATER_SERVING_OZ);
+  const [isSaving, setIsSaving] = useState(false);
+
   const servingSign = servingOz < 0 ? "-" : "+";
   const servingAmountDisplay = `${servingSign}${Math.abs(servingOz)}oz`;
   const servingA11y =
     servingOz === 0
       ? "0 ounces"
       : `${servingOz > 0 ? "Plus" : "Minus"} ${Math.abs(servingOz)} ounces`;
+
+  const adjustServing = useCallback((delta: number) => {
+    setServingOz((current) => current + delta);
+  }, []);
+
+  const commitAmount = useCallback(
+    async (amountOz: number) => {
+      if (amountOz === 0 || isSaving) return;
+      setIsSaving(true);
+      try {
+        await addWater({ amount: amountOz, unit: "oz" });
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [addWater, isSaving],
+  );
 
   return (
     <View
@@ -59,6 +81,8 @@ export function WaterAddCard() {
               accessibilityRole="button"
               accessibilityLabel="Decrease water amount"
               hitSlop={8}
+              disabled={isSaving}
+              onPress={() => adjustServing(-SERVING_STEP_OZ)}
               style={({ pressed }) => [
                 styles.stepperColumn,
                 pressed && styles.stepperPressed,
@@ -84,6 +108,8 @@ export function WaterAddCard() {
               accessibilityRole="button"
               accessibilityLabel="Increase water amount"
               hitSlop={8}
+              disabled={isSaving}
+              onPress={() => adjustServing(SERVING_STEP_OZ)}
               style={({ pressed }) => [
                 styles.stepperColumn,
                 pressed && styles.stepperPressed,
@@ -104,6 +130,10 @@ export function WaterAddCard() {
                   key={oz}
                   accessibilityRole="button"
                   accessibilityLabel={`Add ${oz} ounces of water`}
+                  disabled={isSaving}
+                  onPress={() => {
+                    void commitAmount(oz);
+                  }}
                   style={({ pressed }) => [
                     styles.bulkColumn,
                     pressed && styles.stepperPressed,
@@ -132,6 +162,10 @@ export function WaterAddCard() {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Add water to today's total"
+            disabled={isSaving || servingOz === 0}
+            onPress={() => {
+              void commitAmount(servingOz);
+            }}
             style={({ pressed }) => [
               styles.addWaterButton,
               pressed && styles.stepperPressed,

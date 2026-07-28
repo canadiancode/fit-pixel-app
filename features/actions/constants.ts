@@ -143,10 +143,6 @@ export const ACTION_CARD_PLUS_ICON = require("@/assets/icons/plus-alt.png");
 
 export const ACTION_BAR_CONTAINER = require("@/assets/bars/action-bar-container.png");
 
-/** Placeholder for Today's progress bar until summed from action rows. */
-export const ACTIONS_DAILY_PROGRESS_FILL_PERCENT = 45;
-export const ACTIONS_DAILY_PROGRESS_LABEL_PERCENT = 45;
-
 /** Current-value accent on each action row progress label (matches bar colors). */
 export const ACTION_ROW_ACCENT_COLORS = {
   food: "#FF5C5C",

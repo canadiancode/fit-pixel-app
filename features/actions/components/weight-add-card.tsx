@@ -1,26 +1,64 @@
 import { Image } from "expo-image";
+import { useCallback, useEffect, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import { APP_SHELL_MAIN_TEXT_COLOR } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
+import { useDailyGoals } from "@/features/actions/daily-goals-context";
+import { useHabitProgress } from "@/features/actions/habit-progress-context";
 
 import {
   WATER_ADD_ICON,
   WATER_SUBTRACT_ICON,
   WEIGHT_ADD_CARD_BACKGROUND,
   WEIGHT_ADD_WEIGHT_BUTTON_BACKGROUND,
+  WEIGHT_SERVING_LBS,
 } from "../constants";
 
 const WEIGHT_ADD_CARD_TITLE = "Input weight";
 const WEIGHT_ADD_BUTTON_LABEL = "Input weight";
-const WEIGHT_DISPLAY_VALUE = "123 LBS";
 
 export function WeightAddCard() {
+  const { goals } = useDailyGoals();
+  const { totals, isHydrated, addWeight } = useHabitProgress();
+  const unitLabel = goals.weightUnit === "kg" ? "KG" : "LBS";
+  const step =
+    goals.weightUnit === "kg" ? Math.max(0.5, WEIGHT_SERVING_LBS * 0.5) : 1;
+
+  const [value, setValue] = useState(goals.weightGoal);
+  const [isSaving, setIsSaving] = useState(false);
+  const [seeded, setSeeded] = useState(false);
+
+  useEffect(() => {
+    if (!isHydrated || seeded) return;
+    setValue(totals.weight ?? goals.weightGoal);
+    setSeeded(true);
+  }, [goals.weightGoal, isHydrated, seeded, totals.weight]);
+
+  const displayValue = `${Math.round(value * 10) / 10} ${unitLabel}`;
+
+  const adjustValue = useCallback(
+    (delta: number) => {
+      setValue((current) => Math.round((current + delta) * 10) / 10);
+    },
+    [],
+  );
+
+  const commitWeight = useCallback(async () => {
+    if (isSaving) return;
+    setIsSaving(true);
+    try {
+      await addWeight({ value, unit: goals.weightUnit });
+    } finally {
+      setIsSaving(false);
+    }
+  }, [addWeight, goals.weightUnit, isSaving, value]);
+
   return (
     <View
       accessible
-      accessibilityLabel={`${WEIGHT_ADD_CARD_TITLE}. ${WEIGHT_DISPLAY_VALUE}`}
+      accessibilityLabel={`${WEIGHT_ADD_CARD_TITLE}. ${displayValue}`}
       style={styles.card}
     >
       <View
@@ -48,6 +86,8 @@ export function WeightAddCard() {
               accessibilityRole="button"
               accessibilityLabel="Decrease weight log amount"
               hitSlop={8}
+              disabled={isSaving}
+              onPress={() => adjustValue(-step)}
               style={({ pressed }) => [
                 styles.stepperColumn,
                 pressed && styles.stepperPressed,
@@ -66,13 +106,15 @@ export function WeightAddCard() {
                 darkColor={APP_SHELL_MAIN_TEXT_COLOR}
                 style={styles.servingLabel}
               >
-                {WEIGHT_DISPLAY_VALUE}
+                {displayValue}
               </ThemedText>
             </View>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Increase weight log amount"
               hitSlop={8}
+              disabled={isSaving}
+              onPress={() => adjustValue(step)}
               style={({ pressed }) => [
                 styles.stepperColumn,
                 pressed && styles.stepperPressed,
@@ -89,6 +131,10 @@ export function WeightAddCard() {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Input weight to log"
+            disabled={isSaving}
+            onPress={() => {
+              void commitWeight();
+            }}
             style={({ pressed }) => [
               styles.addButton,
               pressed && styles.stepperPressed,
