@@ -11,6 +11,8 @@ import {
   APP_SHELL_PRIMARY_BACKGROUND,
   APP_SHELL_SECONDARY_BACKGROUND,
 } from "@/constants/app-colors";
+import { DailyGoalsProvider } from "@/features/actions/daily-goals-context";
+import { HabitProgressProvider } from "@/features/actions/habit-progress-context";
 
 const TAB_ICON_SIZE = 28;
 
@@ -76,92 +78,96 @@ export default function TabLayout() {
       : Math.max(0, insets.bottom - TAB_BAR_BOTTOM_INSET_REDUCTION_NATIVE);
 
   return (
-    <Tabs
-      layout={({ children }) => (
-        <View
-          style={{
-            flex: 1,
-            backgroundColor: APP_SHELL_PRIMARY_BACKGROUND,
+    <DailyGoalsProvider>
+      <HabitProgressProvider>
+        <Tabs
+          layout={({ children }) => (
+            <View
+              style={{
+                flex: 1,
+                backgroundColor: APP_SHELL_PRIMARY_BACKGROUND,
+              }}
+            >
+              {children}
+            </View>
+          )}
+          screenOptions={{
+            tabBarActiveTintColor: APP_SHELL_MAIN_TEXT_COLOR,
+            tabBarInactiveTintColor: APP_SHELL_LABEL_COLOR,
+            headerShown: false,
+            tabBarButton: HapticTab,
+            tabBarLabelStyle: { fontSize: 6 },
+            tabBarIconStyle: { marginBottom: TAB_BAR_ICON_LABEL_GAP },
+            // Styles the wrapper that parents the `role="tablist"` row in BottomTabBar.
+            // Explicit `height` is required for a taller bar; `getTabBarHeight` reads it from here.
+            tabBarStyle: {
+              backgroundColor: APP_SHELL_SECONDARY_BACKGROUND,
+              borderRadius: 15,
+              overflow: "hidden",
+              height:
+                UIKIT_TAB_BAR_BODY +
+                TAB_BAR_EXTRA_HEIGHT +
+                TAB_BAR_EDGE_PADDING * 2 +
+                tabBarBottomInset,
+              paddingTop: TAB_BAR_EDGE_PADDING,
+              paddingHorizontal: TAB_BAR_EDGE_PADDING + horizontalInset,
+              paddingBottom: TAB_BAR_EDGE_PADDING + tabBarBottomInset,
+            },
           }}
         >
-          {children}
-        </View>
-      )}
-      screenOptions={{
-        tabBarActiveTintColor: APP_SHELL_MAIN_TEXT_COLOR,
-        tabBarInactiveTintColor: APP_SHELL_LABEL_COLOR,
-        headerShown: false,
-        tabBarButton: HapticTab,
-        tabBarLabelStyle: { fontSize: 6 },
-        tabBarIconStyle: { marginBottom: TAB_BAR_ICON_LABEL_GAP },
-        // Styles the wrapper that parents the `role="tablist"` row in BottomTabBar.
-        // Explicit `height` is required for a taller bar; `getTabBarHeight` reads it from here.
-        tabBarStyle: {
-          backgroundColor: APP_SHELL_SECONDARY_BACKGROUND,
-          borderRadius: 15,
-          overflow: "hidden",
-          height:
-            UIKIT_TAB_BAR_BODY +
-            TAB_BAR_EXTRA_HEIGHT +
-            TAB_BAR_EDGE_PADDING * 2 +
-            tabBarBottomInset,
-          paddingTop: TAB_BAR_EDGE_PADDING,
-          paddingHorizontal: TAB_BAR_EDGE_PADDING + horizontalInset,
-          paddingBottom: TAB_BAR_EDGE_PADDING + tabBarBottomInset,
-        },
-      }}
-    >
-      <Tabs.Screen
-        name="index"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="pixel"
-        options={{
-          title: "My Pixel",
-          tabBarItemStyle: tabItemFirst,
-          tabBarIcon: ({ focused }) =>
-            tabBarImageIcon(require("@/assets/icons/character.png"), focused),
-        }}
-      />
-      <Tabs.Screen
-        name="map"
-        options={{
-          title: "Map",
-          tabBarItemStyle: tabItemMiddle,
-          tabBarIcon: ({ focused }) =>
-            tabBarImageIcon(require("@/assets/icons/map.png"), focused),
-        }}
-      />
-      <Tabs.Screen
-        name="actions"
-        options={{
-          title: "Actions",
-          tabBarItemStyle: tabItemMiddle,
-          tabBarIcon: ({ focused }) =>
-            tabBarImageIcon(require("@/assets/icons/plus.png"), focused),
-        }}
-      />
-      <Tabs.Screen
-        name="chat"
-        options={{
-          title: "Chat",
-          tabBarItemStyle: tabItemMiddle,
-          tabBarIcon: ({ focused }) =>
-            tabBarImageIcon(require("@/assets/icons/world.png"), focused),
-        }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: "Settings",
-          tabBarItemStyle: tabItemLast,
-          tabBarIcon: ({ focused }) =>
-            tabBarImageIcon(require("@/assets/icons/gear.png"), focused),
-        }}
-      />
-    </Tabs>
+          <Tabs.Screen
+            name="index"
+            options={{
+              href: null,
+            }}
+          />
+          <Tabs.Screen
+            name="pixel"
+            options={{
+              title: "My Pixel",
+              tabBarItemStyle: tabItemFirst,
+              tabBarIcon: ({ focused }) =>
+                tabBarImageIcon(require("@/assets/icons/character.png"), focused),
+            }}
+          />
+          <Tabs.Screen
+            name="map"
+            options={{
+              title: "Map",
+              tabBarItemStyle: tabItemMiddle,
+              tabBarIcon: ({ focused }) =>
+                tabBarImageIcon(require("@/assets/icons/map.png"), focused),
+            }}
+          />
+          <Tabs.Screen
+            name="actions"
+            options={{
+              title: "Actions",
+              tabBarItemStyle: tabItemMiddle,
+              tabBarIcon: ({ focused }) =>
+                tabBarImageIcon(require("@/assets/icons/plus.png"), focused),
+            }}
+          />
+          <Tabs.Screen
+            name="chat"
+            options={{
+              title: "Chat",
+              tabBarItemStyle: tabItemMiddle,
+              tabBarIcon: ({ focused }) =>
+                tabBarImageIcon(require("@/assets/icons/world.png"), focused),
+            }}
+          />
+          <Tabs.Screen
+            name="settings"
+            options={{
+              title: "Settings",
+              tabBarItemStyle: tabItemLast,
+              tabBarIcon: ({ focused }) =>
+                tabBarImageIcon(require("@/assets/icons/gear.png"), focused),
+            }}
+          />
+        </Tabs>
+      </HabitProgressProvider>
+    </DailyGoalsProvider>
   );
 }

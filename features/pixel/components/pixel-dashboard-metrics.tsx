@@ -1,7 +1,7 @@
 import { Image } from "expo-image";
-import { useFocusEffect } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { useCallback } from "react";
-import { StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 
 import { FloatingShellSurface } from "@/components/floating-shell-surface";
 import { ThemedText } from "@/components/themed-text";
@@ -10,6 +10,8 @@ import {
   APP_SHELL_MAIN_TEXT_COLOR,
   APP_SHELL_SECONDARY_BACKGROUND,
 } from "@/constants/app-colors";
+import { useDailyGoals } from "@/features/actions/daily-goals-context";
+import { useHabitProgress } from "@/features/actions/habit-progress-context";
 import { useXpState } from "@/features/xp/xp-state-context";
 import { useDashboardHealthMetrics } from "@/hooks/use-dashboard-health-metrics";
 import {
@@ -27,23 +29,43 @@ const METRIC_ICON_CORNER_SIZE = 25;
 
 const EM_DASH = "\u2014";
 
-function formatIntMetric(value: number, connected: boolean): string {
-  return connected ? String(value) : EM_DASH;
+function formatIntMetric(value: number, active: boolean): string {
+  return active ? String(Math.round(value)) : EM_DASH;
 }
 
-function formatGroupedInt(value: number, connected: boolean): string {
-  return connected ? value.toLocaleString("en-US") : EM_DASH;
+function formatGroupedInt(value: number, active: boolean): string {
+  return active ? Math.round(value).toLocaleString("en-US") : EM_DASH;
+}
+
+function sleepPartsFromHours(hours: number): { h: number; m: number } {
+  if (!Number.isFinite(hours) || hours <= 0) {
+    return { h: 0, m: 0 };
+  }
+  const totalMinutes = Math.round(hours * 60);
+  return {
+    h: Math.floor(Math.abs(totalMinutes) / 60),
+    m: Math.abs(totalMinutes) % 60,
+  };
+}
+
+type ActionMetricRoute = "weight" | "steps" | "calories" | "sleep" | "water";
+
+function pushActionRoute(id: ActionMetricRoute) {
+  router.push(`/(tabs)/actions/${id}`);
 }
 
 /** Health + XP metric cards for the My Pixel dashboard. */
 export function PixelDashboardMetrics() {
   const { metrics, connectivity } = useDashboardHealthMetrics();
+  const { goals } = useDailyGoals();
+  const { totals, isHydrated, refreshTotals } = useHabitProgress();
   const { xp, refreshXp } = useXpState();
 
   useFocusEffect(
     useCallback(() => {
       void refreshXp();
-    }, [refreshXp]),
+      void refreshTotals();
+    }, [refreshXp, refreshTotals]),
   );
 
   const lifetimeXp = xp.lifetimeXp;
@@ -52,357 +74,387 @@ export function PixelDashboardMetrics() {
   const xpBarFillPercent = getXpBarFillPercent(lifetimeXp);
   const xpRemainingToNextLevel = getXpRemainingToNextLevel(lifetimeXp);
 
+  const weightActive = isHydrated && totals.weight !== undefined;
+  const waterUnitLabel = goals.waterUnit === "ml" ? "ML" : "OZ";
+  const weightUnitLabel = goals.weightUnit === "kg" ? "KG" : "LBS";
+  const sleep = sleepPartsFromHours(totals.sleepHours ?? 0);
+
   return (
     <View style={styles.root}>
-    <View style={styles.row}>
-      <View style={styles.metricTileWrapper}>
-        <FloatingShellSurface
-          gutterColor={APP_SHELL_SECONDARY_BACKGROUND}
-          tileSource={require("@/assets/backgrounds/red-rect-card.png")}
-        />
-        <View style={styles.metricTileOverlay} pointerEvents="none">
-          <View style={styles.metricTileBody}>
-            <ThemedText
-              lightColor={APP_SHELL_MAIN_TEXT_COLOR}
-              darkColor={APP_SHELL_MAIN_TEXT_COLOR}
-              style={styles.metricTileTitle}
-              numberOfLines={1}
-            >
-              Resting HR
-            </ThemedText>
-            <View style={styles.metricValueRow}>
+      <View style={styles.row}>
+        <View style={styles.metricTileWrapper}>
+          <FloatingShellSurface
+            gutterColor={APP_SHELL_SECONDARY_BACKGROUND}
+            tileSource={require("@/assets/backgrounds/red-rect-card.png")}
+          />
+          <View style={styles.metricTileOverlay} pointerEvents="none">
+            <View style={styles.metricTileBody}>
               <ThemedText
                 lightColor={APP_SHELL_MAIN_TEXT_COLOR}
                 darkColor={APP_SHELL_MAIN_TEXT_COLOR}
-                style={styles.metricTileValue}
+                style={styles.metricTileTitle}
+                numberOfLines={1}
               >
-                {formatIntMetric(
-                  metrics.restingHeartRateBpm,
-                  connectivity.restingHeartRateBpm,
-                )}
+                Resting HR
               </ThemedText>
-              {connectivity.restingHeartRateBpm ? (
-                <ThemedText
-                  lightColor={APP_SHELL_MAIN_TEXT_COLOR}
-                  darkColor={APP_SHELL_MAIN_TEXT_COLOR}
-                  style={styles.metricTileUnit}
-                >
-                  BPM
-                </ThemedText>
-              ) : null}
-            </View>
-          </View>
-          <Image
-            source={require("@/assets/icons/heart.png")}
-            style={[
-              styles.metricIconCorner,
-              !connectivity.restingHeartRateBpm &&
-                styles.metricIconCornerInactive,
-            ]}
-            contentFit="contain"
-          />
-        </View>
-      </View>
-      <View style={styles.metricTileWrapper}>
-        <FloatingShellSurface
-          gutterColor={APP_SHELL_SECONDARY_BACKGROUND}
-          tileSource={require("@/assets/backgrounds/grey-rect-card.png")}
-        />
-        <View style={styles.metricTileOverlay} pointerEvents="none">
-          <View style={styles.metricTileBody}>
-            <ThemedText
-              lightColor={APP_SHELL_MAIN_TEXT_COLOR}
-              darkColor={APP_SHELL_MAIN_TEXT_COLOR}
-              style={styles.metricTileTitle}
-              numberOfLines={1}
-            >
-              Weight
-            </ThemedText>
-            <View style={styles.metricValueRow}>
-              <ThemedText
-                lightColor={APP_SHELL_MAIN_TEXT_COLOR}
-                darkColor={APP_SHELL_MAIN_TEXT_COLOR}
-                style={styles.metricTileValue}
-              >
-                {formatIntMetric(metrics.weightLbs, connectivity.weightLbs)}
-              </ThemedText>
-              {connectivity.weightLbs ? (
-                <ThemedText
-                  lightColor={APP_SHELL_MAIN_TEXT_COLOR}
-                  darkColor={APP_SHELL_MAIN_TEXT_COLOR}
-                  style={styles.metricTileUnit}
-                >
-                  LBS
-                </ThemedText>
-              ) : null}
-            </View>
-          </View>
-          <Image
-            source={require("@/assets/icons/scale.png")}
-            style={[
-              styles.metricIconCorner,
-              !connectivity.weightLbs && styles.metricIconCornerInactive,
-            ]}
-            contentFit="contain"
-          />
-        </View>
-      </View>
-    </View>
-    <View style={styles.row}>
-      <View style={styles.metricTileWrapper}>
-        <FloatingShellSurface
-          gutterColor={APP_SHELL_SECONDARY_BACKGROUND}
-          tileSource={require("@/assets/backgrounds/yellow-rect-card.png")}
-        />
-        <View style={styles.metricTileOverlay} pointerEvents="none">
-          <View style={styles.metricTileBody}>
-            <ThemedText
-              lightColor={APP_SHELL_MAIN_TEXT_COLOR}
-              darkColor={APP_SHELL_MAIN_TEXT_COLOR}
-              style={styles.metricTileTitle}
-              numberOfLines={1}
-            >
-              Steps
-            </ThemedText>
-            <View style={styles.metricValueRow}>
-              <ThemedText
-                lightColor={APP_SHELL_MAIN_TEXT_COLOR}
-                darkColor={APP_SHELL_MAIN_TEXT_COLOR}
-                style={styles.metricTileValue}
-              >
-                {formatGroupedInt(metrics.steps, connectivity.steps)}
-              </ThemedText>
-              {connectivity.steps ? (
-                <ThemedText
-                  lightColor={APP_SHELL_MAIN_TEXT_COLOR}
-                  darkColor={APP_SHELL_MAIN_TEXT_COLOR}
-                  style={styles.metricTileUnit}
-                >
-                  STEPS
-                </ThemedText>
-              ) : null}
-            </View>
-          </View>
-          <Image
-            source={require("@/assets/icons/lightning.png")}
-            style={[
-              styles.metricIconCorner,
-              !connectivity.steps && styles.metricIconCornerInactive,
-            ]}
-            contentFit="contain"
-          />
-        </View>
-      </View>
-      <View style={styles.metricTileWrapper}>
-        <FloatingShellSurface
-          gutterColor={APP_SHELL_SECONDARY_BACKGROUND}
-          tileSource={require("@/assets/backgrounds/orange-rect-card.png")}
-        />
-        <View style={styles.metricTileOverlay} pointerEvents="none">
-          <View style={styles.metricTileBody}>
-            <ThemedText
-              lightColor={APP_SHELL_MAIN_TEXT_COLOR}
-              darkColor={APP_SHELL_MAIN_TEXT_COLOR}
-              style={styles.metricTileTitle}
-              numberOfLines={1}
-            >
-              Calories
-            </ThemedText>
-            <View style={styles.metricValueRow}>
-              <ThemedText
-                lightColor={APP_SHELL_MAIN_TEXT_COLOR}
-                darkColor={APP_SHELL_MAIN_TEXT_COLOR}
-                style={styles.metricTileValue}
-              >
-                {formatGroupedInt(
-                  metrics.activeEnergyKcal,
-                  connectivity.activeEnergyKcal,
-                )}
-              </ThemedText>
-              {connectivity.activeEnergyKcal ? (
-                <ThemedText
-                  lightColor={APP_SHELL_MAIN_TEXT_COLOR}
-                  darkColor={APP_SHELL_MAIN_TEXT_COLOR}
-                  style={styles.metricTileUnit}
-                >
-                  KCAL
-                </ThemedText>
-              ) : null}
-            </View>
-          </View>
-          <Image
-            source={require("@/assets/icons/fire.png")}
-            style={[
-              styles.metricIconCorner,
-              !connectivity.activeEnergyKcal &&
-                styles.metricIconCornerInactive,
-            ]}
-            contentFit="contain"
-          />
-        </View>
-      </View>
-    </View>
-    <View style={styles.row}>
-      <View style={styles.metricTileWrapper}>
-        <FloatingShellSurface
-          gutterColor={APP_SHELL_SECONDARY_BACKGROUND}
-          tileSource={require("@/assets/backgrounds/purple-rect-card.png")}
-        />
-        <View style={styles.metricTileOverlay} pointerEvents="none">
-          <View style={styles.metricTileBody}>
-            <ThemedText
-              lightColor={APP_SHELL_MAIN_TEXT_COLOR}
-              darkColor={APP_SHELL_MAIN_TEXT_COLOR}
-              style={styles.metricTileTitle}
-              numberOfLines={1}
-            >
-              Sleep
-            </ThemedText>
-            <View style={styles.metricValueRow}>
-              {connectivity.sleep ? (
-                <>
-                  <ThemedText
-                    lightColor={APP_SHELL_MAIN_TEXT_COLOR}
-                    darkColor={APP_SHELL_MAIN_TEXT_COLOR}
-                    style={styles.metricTileValue}
-                  >
-                    {metrics.sleepHours}
-                  </ThemedText>
-                  <ThemedText
-                    lightColor={APP_SHELL_MAIN_TEXT_COLOR}
-                    darkColor={APP_SHELL_MAIN_TEXT_COLOR}
-                    style={styles.metricTileUnit}
-                  >
-                    H
-                  </ThemedText>
-                  <ThemedText
-                    lightColor={APP_SHELL_MAIN_TEXT_COLOR}
-                    darkColor={APP_SHELL_MAIN_TEXT_COLOR}
-                    style={styles.metricTileValue}
-                  >
-                    {metrics.sleepMinutes}
-                  </ThemedText>
-                  <ThemedText
-                    lightColor={APP_SHELL_MAIN_TEXT_COLOR}
-                    darkColor={APP_SHELL_MAIN_TEXT_COLOR}
-                    style={styles.metricTileUnit}
-                  >
-                    M
-                  </ThemedText>
-                </>
-              ) : (
+              <View style={styles.metricValueRow}>
                 <ThemedText
                   lightColor={APP_SHELL_MAIN_TEXT_COLOR}
                   darkColor={APP_SHELL_MAIN_TEXT_COLOR}
                   style={styles.metricTileValue}
                 >
-                  {EM_DASH}
+                  {formatIntMetric(
+                    metrics.restingHeartRateBpm,
+                    connectivity.restingHeartRateBpm,
+                  )}
                 </ThemedText>
-              )}
+                {connectivity.restingHeartRateBpm ? (
+                  <ThemedText
+                    lightColor={APP_SHELL_MAIN_TEXT_COLOR}
+                    darkColor={APP_SHELL_MAIN_TEXT_COLOR}
+                    style={styles.metricTileUnit}
+                  >
+                    BPM
+                  </ThemedText>
+                ) : null}
+              </View>
             </View>
+            <Image
+              source={require("@/assets/icons/heart.png")}
+              style={[
+                styles.metricIconCorner,
+                !connectivity.restingHeartRateBpm &&
+                  styles.metricIconCornerInactive,
+              ]}
+              contentFit="contain"
+            />
           </View>
-          <Image
-            source={require("@/assets/icons/purple-moon.png")}
-            style={[
-              styles.metricIconCorner,
-              !connectivity.sleep && styles.metricIconCornerInactive,
-            ]}
-            contentFit="contain"
-          />
         </View>
-      </View>
-      <View style={styles.metricTileWrapper}>
-        <FloatingShellSurface
-          gutterColor={APP_SHELL_SECONDARY_BACKGROUND}
-          tileSource={require("@/assets/backgrounds/light-blue-rect-card.png")}
-        />
-        <View style={styles.metricTileOverlay} pointerEvents="none">
-          <View style={styles.metricTileBody}>
-            <ThemedText
-              lightColor={APP_SHELL_MAIN_TEXT_COLOR}
-              darkColor={APP_SHELL_MAIN_TEXT_COLOR}
-              style={styles.metricTileTitle}
-              numberOfLines={1}
-            >
-              Water
-            </ThemedText>
-            <View style={styles.metricValueRow}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Weight"
+          style={styles.metricTileWrapper}
+          onPress={() => pushActionRoute("weight")}
+        >
+          <FloatingShellSurface
+            gutterColor={APP_SHELL_SECONDARY_BACKGROUND}
+            tileSource={require("@/assets/backgrounds/grey-rect-card.png")}
+          />
+          <View style={styles.metricTileOverlay} pointerEvents="none">
+            <View style={styles.metricTileBody}>
               <ThemedText
                 lightColor={APP_SHELL_MAIN_TEXT_COLOR}
                 darkColor={APP_SHELL_MAIN_TEXT_COLOR}
-                style={styles.metricTileValue}
+                style={styles.metricTileTitle}
+                numberOfLines={1}
               >
-                {formatIntMetric(metrics.waterOz, connectivity.waterOz)}
+                Weight
               </ThemedText>
-              {connectivity.waterOz ? (
+              <View style={styles.metricValueRow}>
                 <ThemedText
                   lightColor={APP_SHELL_MAIN_TEXT_COLOR}
                   darkColor={APP_SHELL_MAIN_TEXT_COLOR}
-                  style={styles.metricTileUnit}
+                  style={styles.metricTileValue}
                 >
-                  OZ
+                  {formatIntMetric(totals.weight ?? 0, weightActive)}
                 </ThemedText>
-              ) : null}
+                {weightActive ? (
+                  <ThemedText
+                    lightColor={APP_SHELL_MAIN_TEXT_COLOR}
+                    darkColor={APP_SHELL_MAIN_TEXT_COLOR}
+                    style={styles.metricTileUnit}
+                  >
+                    {weightUnitLabel}
+                  </ThemedText>
+                ) : null}
+              </View>
             </View>
+            <Image
+              source={require("@/assets/icons/scale.png")}
+              style={[
+                styles.metricIconCorner,
+                !weightActive && styles.metricIconCornerInactive,
+              ]}
+              contentFit="contain"
+            />
           </View>
-          <Image
-            source={require("@/assets/icons/water-drop.png")}
-            style={[
-              styles.metricIconCorner,
-              !connectivity.waterOz && styles.metricIconCornerInactive,
-            ]}
-            contentFit="contain"
-          />
-        </View>
+        </Pressable>
       </View>
-    </View>
-    <View style={[styles.row, styles.rowFull]}>
-      <View style={styles.xpTileWrapper}>
-        <FloatingShellSurface
-          gutterColor={APP_SHELL_SECONDARY_BACKGROUND}
-          tileSource={require("@/assets/backgrounds/blue-rect-card.png")}
-        />
-        <View style={styles.xpTileOverlay} pointerEvents="none">
-          <View style={styles.xpHeaderRow}>
-            <View style={styles.xpHeaderLeft}>
-              <Image
-                accessibilityIgnoresInvertColors
-                source={require("@/assets/icons/star.png")}
-                style={styles.xpHeaderStar}
-                contentFit="contain"
-              />
+      <View style={styles.row}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Steps"
+          style={styles.metricTileWrapper}
+          onPress={() => pushActionRoute("steps")}
+        >
+          <FloatingShellSurface
+            gutterColor={APP_SHELL_SECONDARY_BACKGROUND}
+            tileSource={require("@/assets/backgrounds/yellow-rect-card.png")}
+          />
+          <View style={styles.metricTileOverlay} pointerEvents="none">
+            <View style={styles.metricTileBody}>
+              <ThemedText
+                lightColor={APP_SHELL_MAIN_TEXT_COLOR}
+                darkColor={APP_SHELL_MAIN_TEXT_COLOR}
+                style={styles.metricTileTitle}
+                numberOfLines={1}
+              >
+                Steps
+              </ThemedText>
+              <View style={styles.metricValueRow}>
+                <ThemedText
+                  lightColor={APP_SHELL_MAIN_TEXT_COLOR}
+                  darkColor={APP_SHELL_MAIN_TEXT_COLOR}
+                  style={styles.metricTileValue}
+                >
+                  {formatGroupedInt(totals.steps ?? 0, isHydrated)}
+                </ThemedText>
+                {isHydrated ? (
+                  <ThemedText
+                    lightColor={APP_SHELL_MAIN_TEXT_COLOR}
+                    darkColor={APP_SHELL_MAIN_TEXT_COLOR}
+                    style={styles.metricTileUnit}
+                  >
+                    STEPS
+                  </ThemedText>
+                ) : null}
+              </View>
+            </View>
+            <Image
+              source={require("@/assets/icons/lightning.png")}
+              style={[
+                styles.metricIconCorner,
+                !isHydrated && styles.metricIconCornerInactive,
+              ]}
+              contentFit="contain"
+            />
+          </View>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Calories"
+          style={styles.metricTileWrapper}
+          onPress={() => pushActionRoute("calories")}
+        >
+          <FloatingShellSurface
+            gutterColor={APP_SHELL_SECONDARY_BACKGROUND}
+            tileSource={require("@/assets/backgrounds/orange-rect-card.png")}
+          />
+          <View style={styles.metricTileOverlay} pointerEvents="none">
+            <View style={styles.metricTileBody}>
+              <ThemedText
+                lightColor={APP_SHELL_MAIN_TEXT_COLOR}
+                darkColor={APP_SHELL_MAIN_TEXT_COLOR}
+                style={styles.metricTileTitle}
+                numberOfLines={1}
+              >
+                Calories
+              </ThemedText>
+              <View style={styles.metricValueRow}>
+                <ThemedText
+                  lightColor={APP_SHELL_MAIN_TEXT_COLOR}
+                  darkColor={APP_SHELL_MAIN_TEXT_COLOR}
+                  style={styles.metricTileValue}
+                >
+                  {formatGroupedInt(totals.activeKcal ?? 0, isHydrated)}
+                </ThemedText>
+                {isHydrated ? (
+                  <ThemedText
+                    lightColor={APP_SHELL_MAIN_TEXT_COLOR}
+                    darkColor={APP_SHELL_MAIN_TEXT_COLOR}
+                    style={styles.metricTileUnit}
+                  >
+                    KCAL
+                  </ThemedText>
+                ) : null}
+              </View>
+            </View>
+            <Image
+              source={require("@/assets/icons/fire.png")}
+              style={[
+                styles.metricIconCorner,
+                !isHydrated && styles.metricIconCornerInactive,
+              ]}
+              contentFit="contain"
+            />
+          </View>
+        </Pressable>
+      </View>
+      <View style={styles.row}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Sleep"
+          style={styles.metricTileWrapper}
+          onPress={() => pushActionRoute("sleep")}
+        >
+          <FloatingShellSurface
+            gutterColor={APP_SHELL_SECONDARY_BACKGROUND}
+            tileSource={require("@/assets/backgrounds/purple-rect-card.png")}
+          />
+          <View style={styles.metricTileOverlay} pointerEvents="none">
+            <View style={styles.metricTileBody}>
+              <ThemedText
+                lightColor={APP_SHELL_MAIN_TEXT_COLOR}
+                darkColor={APP_SHELL_MAIN_TEXT_COLOR}
+                style={styles.metricTileTitle}
+                numberOfLines={1}
+              >
+                Sleep
+              </ThemedText>
+              <View style={styles.metricValueRow}>
+                {isHydrated ? (
+                  <>
+                    <ThemedText
+                      lightColor={APP_SHELL_MAIN_TEXT_COLOR}
+                      darkColor={APP_SHELL_MAIN_TEXT_COLOR}
+                      style={styles.metricTileValue}
+                    >
+                      {sleep.h}
+                    </ThemedText>
+                    <ThemedText
+                      lightColor={APP_SHELL_MAIN_TEXT_COLOR}
+                      darkColor={APP_SHELL_MAIN_TEXT_COLOR}
+                      style={styles.metricTileUnit}
+                    >
+                      H
+                    </ThemedText>
+                    {sleep.m > 0 ? (
+                      <>
+                        <ThemedText
+                          lightColor={APP_SHELL_MAIN_TEXT_COLOR}
+                          darkColor={APP_SHELL_MAIN_TEXT_COLOR}
+                          style={styles.metricTileValue}
+                        >
+                          {sleep.m}
+                        </ThemedText>
+                        <ThemedText
+                          lightColor={APP_SHELL_MAIN_TEXT_COLOR}
+                          darkColor={APP_SHELL_MAIN_TEXT_COLOR}
+                          style={styles.metricTileUnit}
+                        >
+                          M
+                        </ThemedText>
+                      </>
+                    ) : null}
+                  </>
+                ) : (
+                  <ThemedText
+                    lightColor={APP_SHELL_MAIN_TEXT_COLOR}
+                    darkColor={APP_SHELL_MAIN_TEXT_COLOR}
+                    style={styles.metricTileValue}
+                  >
+                    {EM_DASH}
+                  </ThemedText>
+                )}
+              </View>
+            </View>
+            <Image
+              source={require("@/assets/icons/purple-moon.png")}
+              style={[
+                styles.metricIconCorner,
+                !isHydrated && styles.metricIconCornerInactive,
+              ]}
+              contentFit="contain"
+            />
+          </View>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Water"
+          style={styles.metricTileWrapper}
+          onPress={() => pushActionRoute("water")}
+        >
+          <FloatingShellSurface
+            gutterColor={APP_SHELL_SECONDARY_BACKGROUND}
+            tileSource={require("@/assets/backgrounds/light-blue-rect-card.png")}
+          />
+          <View style={styles.metricTileOverlay} pointerEvents="none">
+            <View style={styles.metricTileBody}>
+              <ThemedText
+                lightColor={APP_SHELL_MAIN_TEXT_COLOR}
+                darkColor={APP_SHELL_MAIN_TEXT_COLOR}
+                style={styles.metricTileTitle}
+                numberOfLines={1}
+              >
+                Water
+              </ThemedText>
+              <View style={styles.metricValueRow}>
+                <ThemedText
+                  lightColor={APP_SHELL_MAIN_TEXT_COLOR}
+                  darkColor={APP_SHELL_MAIN_TEXT_COLOR}
+                  style={styles.metricTileValue}
+                >
+                  {formatIntMetric(totals.waterAmount ?? 0, isHydrated)}
+                </ThemedText>
+                {isHydrated ? (
+                  <ThemedText
+                    lightColor={APP_SHELL_MAIN_TEXT_COLOR}
+                    darkColor={APP_SHELL_MAIN_TEXT_COLOR}
+                    style={styles.metricTileUnit}
+                  >
+                    {waterUnitLabel}
+                  </ThemedText>
+                ) : null}
+              </View>
+            </View>
+            <Image
+              source={require("@/assets/icons/water-drop.png")}
+              style={[
+                styles.metricIconCorner,
+                !isHydrated && styles.metricIconCornerInactive,
+              ]}
+              contentFit="contain"
+            />
+          </View>
+        </Pressable>
+      </View>
+      <View style={[styles.row, styles.rowFull]}>
+        <View style={styles.xpTileWrapper}>
+          <FloatingShellSurface
+            gutterColor={APP_SHELL_SECONDARY_BACKGROUND}
+            tileSource={require("@/assets/backgrounds/blue-rect-card.png")}
+          />
+          <View style={styles.xpTileOverlay} pointerEvents="none">
+            <View style={styles.xpHeaderRow}>
+              <View style={styles.xpHeaderLeft}>
+                <Image
+                  accessibilityIgnoresInvertColors
+                  source={require("@/assets/icons/star.png")}
+                  style={styles.xpHeaderStar}
+                  contentFit="contain"
+                />
+                <ThemedText
+                  lightColor={APP_SHELL_MAIN_TEXT_COLOR}
+                  darkColor={APP_SHELL_MAIN_TEXT_COLOR}
+                  style={styles.xpHeaderText}
+                >
+                  Level {pixelLevel}
+                </ThemedText>
+              </View>
               <ThemedText
                 lightColor={APP_SHELL_MAIN_TEXT_COLOR}
                 darkColor={APP_SHELL_MAIN_TEXT_COLOR}
                 style={styles.xpHeaderText}
               >
-                Level {pixelLevel}
+                {lifetimeXp.toLocaleString("en-US")}XP
               </ThemedText>
             </View>
-            <ThemedText
-              lightColor={APP_SHELL_MAIN_TEXT_COLOR}
-              darkColor={APP_SHELL_MAIN_TEXT_COLOR}
-              style={styles.xpHeaderText}
-            >
-              {lifetimeXp.toLocaleString("en-US")}XP
-            </ThemedText>
-          </View>
-          <XpLevelBar
-            fillPercent={xpBarFillPercent}
-            style={styles.xpBarRow}
-          />
-          <View style={styles.xpFooterRow}>
-            <ThemedText
-              lightColor={APP_SHELL_MAIN_TEXT_COLOR}
-              darkColor={APP_SHELL_MAIN_TEXT_COLOR}
-              style={styles.xpFooterText}
-            >
-              {xpRemainingToNextLevel}XP to level {nextPixelLevel}
-            </ThemedText>
+            <XpLevelBar
+              fillPercent={xpBarFillPercent}
+              style={styles.xpBarRow}
+            />
+            <View style={styles.xpFooterRow}>
+              <ThemedText
+                lightColor={APP_SHELL_MAIN_TEXT_COLOR}
+                darkColor={APP_SHELL_MAIN_TEXT_COLOR}
+                style={styles.xpFooterText}
+              >
+                {xpRemainingToNextLevel}XP to level {nextPixelLevel}
+              </ThemedText>
+            </View>
           </View>
         </View>
       </View>
-    </View>
     </View>
   );
 }
@@ -479,9 +531,8 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   /**
-   * "Inactive" treatment when the corresponding HealthKit metric hasn't connected.
-   * Reads as low-contrast / desaturated, equivalent intent to `filter: contrast(0.5)`,
-   * but uses opacity for portable behavior across RN versions and platforms.
+   * Inactive treatment when the metric isn't ready yet (or weight has no log).
+   * Reads as low-contrast / desaturated via opacity for portable RN behavior.
    */
   metricIconCornerInactive: {
     opacity: 0.4,

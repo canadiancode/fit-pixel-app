@@ -11,9 +11,7 @@ import {
   TAB_SCREEN_STACK_CHROME_LAYOUT,
 } from "@/constants/app-shell";
 import { ActionsHeader } from "@/features/actions/components/actions-header";
-import { DailyGoalsProvider } from "@/features/actions/daily-goals-context";
 import { FoodMealsProvider } from "@/features/actions/food-meals-context";
-import { HabitProgressProvider } from "@/features/actions/habit-progress-context";
 
 /** Keeps stack base as `index` so pushes to child routes resolve (see Expo Router settings). */
 export const unstable_settings = {
@@ -22,31 +20,27 @@ export const unstable_settings = {
 
 export default function ActionsLayout() {
   return (
-    <DailyGoalsProvider>
-      <HabitProgressProvider>
-        <FoodMealsProvider>
-          <ThemedView
-            lightColor={APP_SHELL_PRIMARY_BACKGROUND}
-            darkColor={APP_SHELL_PRIMARY_BACKGROUND}
-            style={styles.screenRoot}
-          >
-            <ActionsHeader />
-            <View style={styles.stackChrome}>
-              <Stack
-                screenOptions={{
-                  headerShown: false,
-                  animation: "slide_from_right",
-                  contentStyle: {
-                    flex: 1,
-                    backgroundColor: APP_SHELL_SECONDARY_BACKGROUND,
-                  },
-                }}
-              />
-            </View>
-          </ThemedView>
-        </FoodMealsProvider>
-      </HabitProgressProvider>
-    </DailyGoalsProvider>
+    <FoodMealsProvider>
+      <ThemedView
+        lightColor={APP_SHELL_PRIMARY_BACKGROUND}
+        darkColor={APP_SHELL_PRIMARY_BACKGROUND}
+        style={styles.screenRoot}
+      >
+        <ActionsHeader />
+        <View style={styles.stackChrome}>
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              animation: "slide_from_right",
+              contentStyle: {
+                flex: 1,
+                backgroundColor: APP_SHELL_SECONDARY_BACKGROUND,
+              },
+            }}
+          />
+        </View>
+      </ThemedView>
+    </FoodMealsProvider>
   );
 }
 
