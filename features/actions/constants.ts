@@ -18,6 +18,9 @@ export const WATER_BULK_ADD_BACKGROUND = require("@/assets/backgrounds/bulk-add-
 /** Full-width confirm control on the water detail screen. */
 export const WATER_ADD_WATER_BUTTON_BACKGROUND = require("@/assets/backgrounds/add-action.png");
 
+/** Red confirm control when the serving delta is negative (subtract). */
+export const WATER_SUBTRACT_ACTION_BUTTON_BACKGROUND = require("@/assets/backgrounds/remove-action.png");
+
 /** Quick-add serving sizes (oz) on the water detail screen. */
 export const WATER_BULK_SERVING_OPTIONS_OZ = [8, 12, 16, 24] as const;
 
@@ -27,6 +30,8 @@ export const TRAIN_ADD_CARD_BACKGROUND = WATER_ADD_CARD_BACKGROUND;
 export const TRAIN_ACTION_CARD_ICON = require("@/assets/icons/dumbbell.png");
 export const TRAIN_ADD_TIME_BUTTON_BACKGROUND =
   WATER_ADD_WATER_BUTTON_BACKGROUND;
+export const TRAIN_SUBTRACT_TIME_BUTTON_BACKGROUND =
+  WATER_SUBTRACT_ACTION_BUTTON_BACKGROUND;
 export const TRAIN_BULK_ADD_BACKGROUND = WATER_BULK_ADD_BACKGROUND;
 
 /** Default increment when logging training time on the detail screen (minutes). */
@@ -46,6 +51,8 @@ export const STEPS_ADD_CARD_BACKGROUND = WATER_ADD_CARD_BACKGROUND;
 export const STEPS_ACTION_CARD_ICON = require("@/assets/icons/lightning.png");
 export const STEPS_ADD_STEPS_BUTTON_BACKGROUND =
   WATER_ADD_WATER_BUTTON_BACKGROUND;
+export const STEPS_SUBTRACT_STEPS_BUTTON_BACKGROUND =
+  WATER_SUBTRACT_ACTION_BUTTON_BACKGROUND;
 export const STEPS_BULK_ADD_BACKGROUND = WATER_BULK_ADD_BACKGROUND;
 
 /** Default increment when logging steps on the detail screen. */
@@ -65,6 +72,8 @@ export const CALORIES_ADD_CARD_BACKGROUND = WATER_ADD_CARD_BACKGROUND;
 export const CALORIES_ACTION_CARD_ICON = require("@/assets/icons/fire.png");
 export const CALORIES_ADD_CALORIES_BUTTON_BACKGROUND =
   WATER_ADD_WATER_BUTTON_BACKGROUND;
+export const CALORIES_SUBTRACT_CALORIES_BUTTON_BACKGROUND =
+  WATER_SUBTRACT_ACTION_BUTTON_BACKGROUND;
 export const CALORIES_BULK_ADD_BACKGROUND = WATER_BULK_ADD_BACKGROUND;
 
 /** Default increment when logging calories on the detail screen (kcal). */
@@ -103,6 +112,8 @@ export const SLEEP_ADD_CARD_BACKGROUND = WATER_ADD_CARD_BACKGROUND;
 export const SLEEP_ACTION_CARD_ICON = require("@/assets/icons/purple-moon.png");
 export const SLEEP_ADD_SLEEP_BUTTON_BACKGROUND =
   WATER_ADD_WATER_BUTTON_BACKGROUND;
+export const SLEEP_SUBTRACT_SLEEP_BUTTON_BACKGROUND =
+  WATER_SUBTRACT_ACTION_BUTTON_BACKGROUND;
 export const SLEEP_BULK_ADD_BACKGROUND = WATER_BULK_ADD_BACKGROUND;
 
 /** Default increment when logging sleep duration on the detail screen (minutes). */

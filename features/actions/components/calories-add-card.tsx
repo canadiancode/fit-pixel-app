@@ -14,6 +14,7 @@ import {
   CALORIES_BULK_ADD_BACKGROUND,
   CALORIES_BULK_KCAL_OPTIONS,
   CALORIES_SERVING_KCAL,
+  CALORIES_SUBTRACT_CALORIES_BUTTON_BACKGROUND,
   WATER_ADD_ICON,
   WATER_SUBTRACT_ICON,
 } from "../constants";
@@ -32,11 +33,23 @@ export function CaloriesAddCard() {
   const [servingKcal, setServingKcal] = useState(CALORIES_SERVING_KCAL);
   const [isSaving, setIsSaving] = useState(false);
 
+  const isSubtract = servingKcal < 0;
+  const absKcal = Math.abs(servingKcal);
+  const commitButtonLabel = isSubtract
+    ? `Subtract ${absKcal}`
+    : CALORIES_ADD_BUTTON_LABEL;
+  const commitButtonBackground = isSubtract
+    ? CALORIES_SUBTRACT_CALORIES_BUTTON_BACKGROUND
+    : CALORIES_ADD_CALORIES_BUTTON_BACKGROUND;
+  const commitA11y = isSubtract
+    ? `Subtract ${absKcal} kilocalories from today's total`
+    : "Add calories to today's total";
+
   const servingAmountDisplay = `${formatKcalDelta(servingKcal)}\u00A0KCAL`;
   const servingA11y =
     servingKcal === 0
       ? "0 kilocalories"
-      : `${servingKcal > 0 ? "Plus" : "Minus"} ${Math.abs(servingKcal)} kilocalories`;
+      : `${servingKcal > 0 ? "Plus" : "Minus"} ${absKcal} kilocalories`;
 
   const adjustServing = useCallback((delta: number) => {
     setServingKcal((current) => current + delta);
@@ -180,7 +193,7 @@ export function CaloriesAddCard() {
           </View>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Add calories to today's total"
+            accessibilityLabel={commitA11y}
             disabled={isSaving || servingKcal === 0}
             onPress={() => {
               void commitKcal(servingKcal);
@@ -194,7 +207,7 @@ export function CaloriesAddCard() {
               <Image
                 accessibilityElementsHidden
                 importantForAccessibility="no-hide-descendants"
-                source={CALORIES_ADD_CALORIES_BUTTON_BACKGROUND}
+                source={commitButtonBackground}
                 style={StyleSheet.absoluteFillObject}
                 contentFit="fill"
               />
@@ -203,7 +216,7 @@ export function CaloriesAddCard() {
                 darkColor={APP_SHELL_MAIN_TEXT_COLOR}
                 style={styles.addButtonLabel}
               >
-                {CALORIES_ADD_BUTTON_LABEL}
+                {commitButtonLabel}
               </ThemedText>
             </View>
           </Pressable>

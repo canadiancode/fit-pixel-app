@@ -16,8 +16,10 @@
       },
       "infoPlist": {
         "NSHealthShareUsageDescription": "Fit Pixel reads metrics such as heart rate, activity, sleep, and weight from Apple Health to show them on your dashboard.",
-        "NSHealthUpdateUsageDescription": "Fit Pixel can save health or workout data you choose to write to Apple Health."
-      }
+        "NSHealthUpdateUsageDescription": "Fit Pixel can save health or workout data you choose to write to Apple Health.",
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "config": {}
     },
     "android": {
       "adaptiveIcon": {
@@ -37,7 +39,6 @@
       "expo-dev-client",
       "expo-router",
       "expo-sqlite",
-
       [
         "@kingstinct/react-native-healthkit",
         {
@@ -67,6 +68,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": false
+    },
+    "extra": {
+      "fatSecretClientId": "0b111e3e93644caebe82d6d75127e519",
+      "router": {},
+      "eas": {
+        "projectId": "7f505789-0d91-4bca-bf37-180106e354fb"
+      }
     }
   }
 }

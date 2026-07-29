@@ -14,6 +14,7 @@ import {
   STEPS_BULK_ADD_BACKGROUND,
   STEPS_BULK_AMOUNT_OPTIONS,
   STEPS_SERVING_AMOUNT,
+  STEPS_SUBTRACT_STEPS_BUTTON_BACKGROUND,
   WATER_ADD_ICON,
   WATER_SUBTRACT_ICON,
 } from "../constants";
@@ -32,11 +33,23 @@ export function StepsAddCard() {
   const [servingSteps, setServingSteps] = useState(STEPS_SERVING_AMOUNT);
   const [isSaving, setIsSaving] = useState(false);
 
+  const isSubtract = servingSteps < 0;
+  const absStepsLabel = Math.abs(servingSteps).toLocaleString("en-US");
+  const commitButtonLabel = isSubtract
+    ? `Subtract ${absStepsLabel}`
+    : STEPS_ADD_STEPS_BUTTON_LABEL;
+  const commitButtonBackground = isSubtract
+    ? STEPS_SUBTRACT_STEPS_BUTTON_BACKGROUND
+    : STEPS_ADD_STEPS_BUTTON_BACKGROUND;
+  const commitA11y = isSubtract
+    ? `Subtract ${absStepsLabel} steps from today's total`
+    : "Add steps to today's total";
+
   const servingAmountDisplay = formatStepsDelta(servingSteps);
   const servingA11y =
     servingSteps === 0
       ? "0 steps"
-      : `${servingSteps > 0 ? "Plus" : "Minus"} ${Math.abs(servingSteps).toLocaleString("en-US")} steps`;
+      : `${servingSteps > 0 ? "Plus" : "Minus"} ${absStepsLabel} steps`;
 
   const adjustServing = useCallback((delta: number) => {
     setServingSteps((current) => current + delta);
@@ -177,7 +190,7 @@ export function StepsAddCard() {
           </View>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Add steps to today's total"
+            accessibilityLabel={commitA11y}
             disabled={isSaving || servingSteps === 0}
             onPress={() => {
               void commitSteps(servingSteps);
@@ -191,7 +204,7 @@ export function StepsAddCard() {
               <Image
                 accessibilityElementsHidden
                 importantForAccessibility="no-hide-descendants"
-                source={STEPS_ADD_STEPS_BUTTON_BACKGROUND}
+                source={commitButtonBackground}
                 style={StyleSheet.absoluteFillObject}
                 contentFit="fill"
               />
@@ -200,7 +213,7 @@ export function StepsAddCard() {
                 darkColor={APP_SHELL_MAIN_TEXT_COLOR}
                 style={styles.addStepsButtonLabel}
               >
-                {STEPS_ADD_STEPS_BUTTON_LABEL}
+                {commitButtonLabel}
               </ThemedText>
             </View>
           </Pressable>

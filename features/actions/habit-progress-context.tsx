@@ -12,6 +12,7 @@ import {
 import { useDailyGoals } from "@/features/actions/daily-goals-context";
 import type { ActionProgressTotals } from "@/features/actions/data";
 import { useXpState } from "@/features/xp/xp-state-context";
+import { useDashboardHealthMetrics } from "@/hooks/use-dashboard-health-metrics";
 import {
   getTodayHabitTotals,
   logActiveKcal,
@@ -29,8 +30,19 @@ import {
   type WeightUnit,
 } from "@/lib/db";
 
+/** HealthKit day values for Actions; `null` when that metric is not connected. */
+export type ConnectedHealthDay = {
+  steps: number | null;
+  activeKcal: number | null;
+};
+
 type HabitProgressContextValue = {
+  /** Today's progress totals (manual SQLite + connected HealthKit for steps/kcal). */
   totals: ActionProgressTotals;
+  /** SQLite habit_logs aggregates only (no HealthKit merge). */
+  manualTotals: ActionProgressTotals;
+  /** Live HealthKit steps / active kcal when connected. */
+  connectedHealth: ConnectedHealthDay;
   /** False until today's aggregates have been read once. */
   isHydrated: boolean;
   refreshTotals: () => Promise<void>;
@@ -89,19 +101,52 @@ function toActionTotals(
   };
 }
 
+function mergeConnectedHealth(
+  manual: ActionProgressTotals,
+  connected: ConnectedHealthDay,
+): ActionProgressTotals {
+  return {
+    ...manual,
+    steps: (manual.steps ?? 0) + (connected.steps ?? 0),
+    activeKcal: (manual.activeKcal ?? 0) + (connected.activeKcal ?? 0),
+  };
+}
+
 export function HabitProgressProvider({ children }: { children: ReactNode }) {
   const db = useSQLiteContext();
   const { goals, isHydrated: goalsHydrated } = useDailyGoals();
   const { refreshXp } = useXpState();
-  const [totals, setTotals] = useState<ActionProgressTotals>(EMPTY_TOTALS);
+  const { metrics, connectivity } = useDashboardHealthMetrics();
+  const [manualTotals, setManualTotals] =
+    useState<ActionProgressTotals>(EMPTY_TOTALS);
   const [isHydrated, setIsHydrated] = useState(false);
+
+  const connectedHealth = useMemo<ConnectedHealthDay>(
+    () => ({
+      steps: connectivity.steps ? metrics.steps : null,
+      activeKcal: connectivity.activeEnergyKcal
+        ? metrics.activeEnergyKcal
+        : null,
+    }),
+    [
+      connectivity.steps,
+      connectivity.activeEnergyKcal,
+      metrics.steps,
+      metrics.activeEnergyKcal,
+    ],
+  );
+
+  const totals = useMemo(
+    () => mergeConnectedHealth(manualTotals, connectedHealth),
+    [manualTotals, connectedHealth],
+  );
 
   const refreshTotals = useCallback(async () => {
     const day = await getTodayHabitTotals(db, {
       waterUnit: goals.waterUnit,
       weightUnit: goals.weightUnit,
     });
-    setTotals(toActionTotals(day));
+    setManualTotals(toActionTotals(day));
   }, [db, goals.waterUnit, goals.weightUnit]);
 
   const afterHabitLog = useCallback(
@@ -128,7 +173,7 @@ export function HabitProgressProvider({ children }: { children: ReactNode }) {
           weightUnit: goals.weightUnit,
         });
         if (!cancelled) {
-          setTotals(toActionTotals(day));
+          setManualTotals(toActionTotals(day));
         }
       } finally {
         if (!cancelled) {
@@ -233,6 +278,8 @@ export function HabitProgressProvider({ children }: { children: ReactNode }) {
   const value = useMemo<HabitProgressContextValue>(
     () => ({
       totals,
+      manualTotals,
+      connectedHealth,
       isHydrated,
       refreshTotals,
       addWater,
@@ -245,6 +292,8 @@ export function HabitProgressProvider({ children }: { children: ReactNode }) {
     }),
     [
       totals,
+      manualTotals,
+      connectedHealth,
       isHydrated,
       refreshTotals,
       addWater,

@@ -6,6 +6,9 @@ import {
   APP_SHELL_MAIN_TEXT_COLOR,
 } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
+import { useHabitProgress } from "@/features/actions/habit-progress-context";
+
+const EM_DASH = "\u2014";
 
 type ActionManualConnectedSectionProps = {
   /** Shown under “Manual input”. */
@@ -40,20 +43,38 @@ export function ActionManualConnectedSection({
   );
 }
 
-const PLACEHOLDER_N = 5000;
-const n = PLACEHOLDER_N.toLocaleString("en-US");
-
-/** Placeholder until manual vs HealthKit (or similar) totals are wired. */
-export function StepsManualConnectedSection() {
-  return <ActionManualConnectedSection manualValueLabel={`${n} steps`} />;
+function formatInt(n: number): string {
+  return Math.round(n).toLocaleString("en-US");
 }
 
-/** Placeholder until manual vs HealthKit (or similar) totals are wired. */
-export function CaloriesManualConnectedSection() {
+function formatConnectedInt(value: number | null, unitLabel: string): string {
+  if (value == null) return EM_DASH;
+  return `${formatInt(value)} ${unitLabel}`;
+}
+
+export function StepsManualConnectedSection() {
+  const { manualTotals, connectedHealth } = useHabitProgress();
+  const manualSteps = manualTotals.steps ?? 0;
+
   return (
     <ActionManualConnectedSection
-      manualValueLabel="0 KCAL"
-      connectedValueLabel="800 KCAL"
+      manualValueLabel={`${formatInt(manualSteps)} steps`}
+      connectedValueLabel={formatConnectedInt(connectedHealth.steps, "steps")}
+    />
+  );
+}
+
+export function CaloriesManualConnectedSection() {
+  const { manualTotals, connectedHealth } = useHabitProgress();
+  const manualKcal = manualTotals.activeKcal ?? 0;
+
+  return (
+    <ActionManualConnectedSection
+      manualValueLabel={`${formatInt(manualKcal)} KCAL`}
+      connectedValueLabel={formatConnectedInt(
+        connectedHealth.activeKcal,
+        "KCAL",
+      )}
     />
   );
 }

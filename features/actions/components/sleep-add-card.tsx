@@ -15,6 +15,7 @@ import {
   SLEEP_BULK_ADD_BACKGROUND,
   SLEEP_BULK_DURATION_OPTIONS,
   SLEEP_SERVING_MINUTES,
+  SLEEP_SUBTRACT_SLEEP_BUTTON_BACKGROUND,
   WATER_ADD_ICON,
   WATER_SUBTRACT_ICON,
 } from "../constants";
@@ -23,14 +24,35 @@ const SLEEP_ADD_CARD_TITLE = "Add sleep";
 const SLEEP_ADD_BUTTON_LABEL = "Add sleep";
 const SERVING_STEP_MIN = 5;
 
+function formatSleepAbsLabel(totalMinutes: number): string {
+  const abs = Math.abs(totalMinutes);
+  const h = Math.floor(abs / 60);
+  const m = abs % 60;
+  if (h === 0) return `${m}M`;
+  if (m === 0) return `${h}H`;
+  return `${h}H${m}M`;
+}
+
 export function SleepAddCard() {
   const { addSleep } = useHabitProgress();
   const [servingMinutes, setServingMinutes] =
     useState<number>(SLEEP_SERVING_MINUTES);
   const [isSaving, setIsSaving] = useState(false);
 
-  const servingSign = servingMinutes < 0 ? "-" : "+";
+  const isSubtract = servingMinutes < 0;
   const absMinutes = Math.abs(servingMinutes);
+  const absSleepLabel = formatSleepAbsLabel(servingMinutes);
+  const commitButtonLabel = isSubtract
+    ? `Subtract ${absSleepLabel}`
+    : SLEEP_ADD_BUTTON_LABEL;
+  const commitButtonBackground = isSubtract
+    ? SLEEP_SUBTRACT_SLEEP_BUTTON_BACKGROUND
+    : SLEEP_ADD_SLEEP_BUTTON_BACKGROUND;
+  const commitA11y = isSubtract
+    ? `Subtract ${absSleepLabel} from today's total`
+    : "Add sleep to today's total";
+
+  const servingSign = servingMinutes < 0 ? "-" : "+";
   const servingA11y =
     servingMinutes === 0
       ? "0 minutes"
@@ -187,7 +209,7 @@ export function SleepAddCard() {
           </View>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Add sleep to today's total"
+            accessibilityLabel={commitA11y}
             disabled={isSaving || servingMinutes === 0}
             onPress={() => {
               void commitMinutes(servingMinutes);
@@ -201,7 +223,7 @@ export function SleepAddCard() {
               <Image
                 accessibilityElementsHidden
                 importantForAccessibility="no-hide-descendants"
-                source={SLEEP_ADD_SLEEP_BUTTON_BACKGROUND}
+                source={commitButtonBackground}
                 style={StyleSheet.absoluteFillObject}
                 contentFit="fill"
               />
@@ -210,7 +232,7 @@ export function SleepAddCard() {
                 darkColor={APP_SHELL_MAIN_TEXT_COLOR}
                 style={styles.addButtonLabel}
               >
-                {SLEEP_ADD_BUTTON_LABEL}
+                {commitButtonLabel}
               </ThemedText>
             </View>
           </Pressable>

@@ -14,6 +14,7 @@ import {
   TRAIN_BULK_ADD_BACKGROUND,
   TRAIN_BULK_DURATION_OPTIONS,
   TRAIN_SERVING_MINUTES,
+  TRAIN_SUBTRACT_TIME_BUTTON_BACKGROUND,
   WATER_ADD_ICON,
   WATER_SUBTRACT_ICON,
 } from "../constants";
@@ -28,12 +29,24 @@ export function TrainAddCard() {
     useState<number>(TRAIN_SERVING_MINUTES);
   const [isSaving, setIsSaving] = useState(false);
 
+  const isSubtract = servingMinutes < 0;
+  const absMinutes = Math.abs(servingMinutes);
+  const commitButtonLabel = isSubtract
+    ? `Subtract ${absMinutes}M`
+    : TRAIN_ADD_TIME_BUTTON_LABEL;
+  const commitButtonBackground = isSubtract
+    ? TRAIN_SUBTRACT_TIME_BUTTON_BACKGROUND
+    : TRAIN_ADD_TIME_BUTTON_BACKGROUND;
+  const commitA11y = isSubtract
+    ? `Subtract ${absMinutes} minutes from today's total`
+    : "Add training time to today's total";
+
   const servingSign = servingMinutes < 0 ? "-" : "+";
-  const servingAmountDisplay = `${servingSign}${Math.abs(servingMinutes)}M`;
+  const servingAmountDisplay = `${servingSign}${absMinutes}M`;
   const servingA11y =
     servingMinutes === 0
       ? "0 minutes"
-      : `${servingMinutes > 0 ? "Plus" : "Minus"} ${Math.abs(servingMinutes)} minutes`;
+      : `${servingMinutes > 0 ? "Plus" : "Minus"} ${absMinutes} minutes`;
 
   const adjustServing = useCallback((delta: number) => {
     setServingMinutes((current) => current + delta);
@@ -174,7 +187,7 @@ export function TrainAddCard() {
           </View>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Add training time to today's total"
+            accessibilityLabel={commitA11y}
             disabled={isSaving || servingMinutes === 0}
             onPress={() => {
               void commitMinutes(servingMinutes);
@@ -188,7 +201,7 @@ export function TrainAddCard() {
               <Image
                 accessibilityElementsHidden
                 importantForAccessibility="no-hide-descendants"
-                source={TRAIN_ADD_TIME_BUTTON_BACKGROUND}
+                source={commitButtonBackground}
                 style={StyleSheet.absoluteFillObject}
                 contentFit="fill"
               />
@@ -197,7 +210,7 @@ export function TrainAddCard() {
                 darkColor={APP_SHELL_MAIN_TEXT_COLOR}
                 style={styles.addTimeButtonLabel}
               >
-                {TRAIN_ADD_TIME_BUTTON_LABEL}
+                {commitButtonLabel}
               </ThemedText>
             </View>
           </Pressable>

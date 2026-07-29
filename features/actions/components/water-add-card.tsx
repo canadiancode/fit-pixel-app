@@ -15,6 +15,7 @@ import {
   WATER_BULK_ADD_BACKGROUND,
   WATER_BULK_SERVING_OPTIONS_OZ,
   WATER_SERVING_OZ,
+  WATER_SUBTRACT_ACTION_BUTTON_BACKGROUND,
   WATER_SUBTRACT_ICON,
 } from "../constants";
 
@@ -27,12 +28,24 @@ export function WaterAddCard() {
   const [servingOz, setServingOz] = useState<number>(WATER_SERVING_OZ);
   const [isSaving, setIsSaving] = useState(false);
 
+  const isSubtract = servingOz < 0;
+  const absOz = Math.abs(servingOz);
+  const commitButtonLabel = isSubtract
+    ? `Subtract ${absOz}oz`
+    : WATER_ADD_WATER_BUTTON_LABEL;
+  const commitButtonBackground = isSubtract
+    ? WATER_SUBTRACT_ACTION_BUTTON_BACKGROUND
+    : WATER_ADD_WATER_BUTTON_BACKGROUND;
+  const commitA11y = isSubtract
+    ? `Subtract ${absOz} ounces from today's total`
+    : "Add water to today's total";
+
   const servingSign = servingOz < 0 ? "-" : "+";
-  const servingAmountDisplay = `${servingSign}${Math.abs(servingOz)}oz`;
+  const servingAmountDisplay = `${servingSign}${absOz}oz`;
   const servingA11y =
     servingOz === 0
       ? "0 ounces"
-      : `${servingOz > 0 ? "Plus" : "Minus"} ${Math.abs(servingOz)} ounces`;
+      : `${servingOz > 0 ? "Plus" : "Minus"} ${absOz} ounces`;
 
   const adjustServing = useCallback((delta: number) => {
     setServingOz((current) => current + delta);
@@ -173,7 +186,7 @@ export function WaterAddCard() {
           </View>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Add water to today's total"
+            accessibilityLabel={commitA11y}
             disabled={isSaving || servingOz === 0}
             onPress={() => {
               void commitAmount(servingOz);
@@ -187,7 +200,7 @@ export function WaterAddCard() {
               <Image
                 accessibilityElementsHidden
                 importantForAccessibility="no-hide-descendants"
-                source={WATER_ADD_WATER_BUTTON_BACKGROUND}
+                source={commitButtonBackground}
                 style={StyleSheet.absoluteFillObject}
                 contentFit="fill"
               />
@@ -196,7 +209,7 @@ export function WaterAddCard() {
                 darkColor={APP_SHELL_MAIN_TEXT_COLOR}
                 style={styles.addWaterButtonLabel}
               >
-                {WATER_ADD_WATER_BUTTON_LABEL}
+                {commitButtonLabel}
               </ThemedText>
             </View>
           </Pressable>
