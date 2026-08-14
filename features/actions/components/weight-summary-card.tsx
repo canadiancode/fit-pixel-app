@@ -10,7 +10,7 @@ import { WEIGHT_ACTION_CARD_ICON } from "../constants";
 import { getActionRow, getActionRowBarSources } from "../data";
 import { useActionProgress } from "../use-action-progress";
 
-const WEIGHT_CARD_TITLE = "Today's progress";
+const WEIGHT_CARD_TITLE = "Current weight";
 
 export function WeightSummaryCard() {
   const weightRow = getActionRow("weight");

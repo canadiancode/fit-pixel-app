@@ -76,6 +76,7 @@ export type ActionProgressTotals = {
   sleepHours?: number;
   steps?: number;
   activeKcal?: number;
+  /** Latest known weight (carries across days; not a daily reset). */
   weight?: number;
 };
 
@@ -248,8 +249,8 @@ export function getActionRowFillPercent(
 }
 
 /**
- * Overall Today's progress: mean of the six daily habit rows (excludes weight).
- * Raw 0–100 for the header label.
+ * Overall Today's progress: mean of the six daily habit rows.
+ * Excludes weight — it is long-term and does not reset daily.
  */
 export function getTodaysProgressPercent(
   goals: DailyGoals,

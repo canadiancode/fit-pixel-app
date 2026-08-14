@@ -16,7 +16,8 @@ export type BarChartYScale = {
  *   proportional to absolute values. When `false`, the floor is the data minimum (snapped
  *   down to `increment`), matching the original `bar-chart.html` behavior.
  * @param targetVal When set, included in the domain so the goal line stays inside the plot
- *   (at the top when series values are empty or all below the target).
+ *   (at the top when series values are empty or all below the target). When omitted, a
+ *   zero-range domain (empty or all-zero series) expands by one `increment`.
  */
 export function generateMarkers(
   yValues: readonly number[],
@@ -28,12 +29,21 @@ export function generateMarkers(
     throw new Error("Bar chart increment must be positive");
   }
 
+  const hasTarget = targetVal !== undefined && Number.isFinite(targetVal);
   const domainValues =
     targetVal !== undefined && Number.isFinite(targetVal)
       ? [...yValues, targetVal]
       : yValues;
 
   if (domainValues.length === 0) {
+    if (!hasTarget) {
+      return {
+        markerValues: [0, increment],
+        lowestMarker: 0,
+        highestMarker: increment,
+        range: increment,
+      };
+    }
     return {
       markerValues: [0],
       lowestMarker: 0,
@@ -47,7 +57,10 @@ export function generateMarkers(
   const lowestMarker = yDomainFromZero
     ? 0
     : Math.floor(lowestVal / increment) * increment;
-  const highestMarker = Math.ceil(highestVal / increment) * increment;
+  let highestMarker = Math.ceil(highestVal / increment) * increment;
+  if (!hasTarget && highestMarker === lowestMarker) {
+    highestMarker += increment;
+  }
   const markers: number[] = [];
   for (let i = lowestMarker; i <= highestMarker; i += increment) {
     markers.push(i);

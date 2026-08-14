@@ -47,7 +47,7 @@ function assertMaxLength(
 }
 
 /**
- * Accept empty, @handles, or http(s) URLs. Reject other URL schemes
+ * Accept empty, @handles, or https URLs. Reject http and other schemes
  * (javascript:, data:, etc.).
  */
 function sanitizeSocialLink(
@@ -63,14 +63,24 @@ function sanitizeSocialLink(
   }
   assertMaxLength(field, trimmed, PROFILE_LIMITS.socialMax);
 
-  const lower = trimmed.toLowerCase();
-  if (lower.includes("://")) {
-    if (!lower.startsWith("https://") && !lower.startsWith("http://")) {
-      throw new Error(`${field} URLs must use http or https`);
-    }
+  if (trimmed.startsWith("@") && !trimmed.includes("://")) {
+    return trimmed;
   }
 
-  return trimmed;
+  const lower = trimmed.toLowerCase();
+  if (lower.startsWith("https://")) {
+    try {
+      const url = new URL(trimmed);
+      if (url.protocol !== "https:") {
+        throw new Error("not https");
+      }
+    } catch {
+      throw new Error(`${field} must be a valid https URL`);
+    }
+    return trimmed;
+  }
+
+  throw new Error(`${field} must be an @handle or https URL`);
 }
 
 function sanitizeOptionalText(

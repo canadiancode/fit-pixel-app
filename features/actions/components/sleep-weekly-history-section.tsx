@@ -1,4 +1,5 @@
 import { Image } from "expo-image";
+import { router } from "expo-router";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { BarChart } from "@/components/charts/bar-chart";
@@ -13,13 +14,14 @@ import { useWeeklyHabitHistoryChart } from "@/features/actions/use-habit-history
 import { formatSleepDurationLabel } from "@/features/actions/data";
 
 import { WATER_RIGHT_ARROW_ICON } from "../constants";
+import { SLEEP_ACTION_HREFS } from "../sleep-routes";
 
 const SECTION_TITLE = "History";
 const VIEW_HISTORY_LABEL = "View history";
 /** Y-axis tick step for the weekly sleep chart (hours). */
-const SLEEP_WEEKLY_CHART_INCREMENT = 1;
+export const SLEEP_WEEKLY_CHART_INCREMENT = 1;
 
-const SLEEP_WEEKLY_CHART_Y_DOMAIN_FROM_ZERO = true;
+export const SLEEP_WEEKLY_CHART_Y_DOMAIN_FROM_ZERO = true;
 
 export function SleepWeeklyHistorySection() {
   const { goals } = useDailyGoals();
@@ -40,6 +42,7 @@ export function SleepWeeklyHistorySection() {
           accessibilityRole="button"
           accessibilityLabel={VIEW_HISTORY_LABEL}
           hitSlop={8}
+          onPress={() => router.push(SLEEP_ACTION_HREFS.history)}
           style={({ pressed }) => [
             styles.viewHistoryControl,
             pressed && styles.viewHistoryPressed,

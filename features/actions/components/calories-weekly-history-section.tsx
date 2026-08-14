@@ -1,4 +1,5 @@
 import { Image } from "expo-image";
+import { router } from "expo-router";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { BarChart } from "@/components/charts/bar-chart";
@@ -12,12 +13,13 @@ import { useDailyGoals } from "@/features/actions/daily-goals-context";
 import { useWeeklyHabitHistoryChart } from "@/features/actions/use-habit-history-chart";
 
 import { WATER_RIGHT_ARROW_ICON } from "../constants";
+import { CALORIES_ACTION_HREFS } from "../calories-routes";
 
 const SECTION_TITLE = "History";
 const VIEW_HISTORY_LABEL = "View history";
-const CALORIES_WEEKLY_CHART_INCREMENT = 100;
+export const CALORIES_WEEKLY_CHART_INCREMENT = 100;
 
-const CALORIES_WEEKLY_CHART_Y_DOMAIN_FROM_ZERO = true;
+export const CALORIES_WEEKLY_CHART_Y_DOMAIN_FROM_ZERO = true;
 
 export function CaloriesWeeklyHistorySection() {
   const { goals } = useDailyGoals();
@@ -38,6 +40,7 @@ export function CaloriesWeeklyHistorySection() {
           accessibilityRole="button"
           accessibilityLabel={VIEW_HISTORY_LABEL}
           hitSlop={8}
+          onPress={() => router.push(CALORIES_ACTION_HREFS.history)}
           style={({ pressed }) => [
             styles.viewHistoryControl,
             pressed && styles.viewHistoryPressed,

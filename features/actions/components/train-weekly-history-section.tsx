@@ -1,4 +1,5 @@
 import { Image } from "expo-image";
+import { router } from "expo-router";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { BarChart } from "@/components/charts/bar-chart";
@@ -12,14 +13,15 @@ import { useDailyGoals } from "@/features/actions/daily-goals-context";
 import { useWeeklyHabitHistoryChart } from "@/features/actions/use-habit-history-chart";
 
 import { WATER_RIGHT_ARROW_ICON } from "../constants";
+import { TRAIN_ACTION_HREFS } from "../train-routes";
 
 const SECTION_TITLE = "History";
 const VIEW_HISTORY_LABEL = "View history";
 /** Y-axis tick step for the weekly training chart (minutes). */
-const TRAIN_WEEKLY_CHART_INCREMENT = 15;
+export const TRAIN_WEEKLY_CHART_INCREMENT = 15;
 
 /** `true` = Y-axis from 0; `false` = Y-axis from data min (snapped to increment). */
-const TRAIN_WEEKLY_CHART_Y_DOMAIN_FROM_ZERO = true;
+export const TRAIN_WEEKLY_CHART_Y_DOMAIN_FROM_ZERO = true;
 
 export function TrainWeeklyHistorySection() {
   const { goals } = useDailyGoals();
@@ -40,6 +42,7 @@ export function TrainWeeklyHistorySection() {
           accessibilityRole="button"
           accessibilityLabel={VIEW_HISTORY_LABEL}
           hitSlop={8}
+          onPress={() => router.push(TRAIN_ACTION_HREFS.history)}
           style={({ pressed }) => [
             styles.viewHistoryControl,
             pressed && styles.viewHistoryPressed,

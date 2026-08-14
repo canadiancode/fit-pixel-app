@@ -67,6 +67,49 @@ export async function getTodayHabitTotals(
   return getHabitTotalsForDayKey(db, dayKey, options);
 }
 
+/**
+ * Most recent weight log in any day, converted to `weightUnit`.
+ * Weight is long-term — it carries forward rather than resetting daily.
+ */
+export async function getLatestWeightValue(
+  db: SQLiteDatabase,
+  weightUnit: WeightUnit,
+): Promise<number | undefined> {
+  type WeightRow = {
+    payload_json: string;
+  };
+
+  const rows = await db.getAllAsync<WeightRow>(
+    `SELECT payload_json
+     FROM habit_logs
+     WHERE type = 'weight'
+     ORDER BY timestamp DESC, createdAt DESC
+     LIMIT 8`,
+  );
+
+  for (const row of rows) {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(row.payload_json);
+    } catch {
+      continue;
+    }
+    if (parsed == null || typeof parsed !== "object" || Array.isArray(parsed)) {
+      continue;
+    }
+    const payload = parsed as WeightHabitPayload;
+    if (
+      typeof payload.value !== "number" ||
+      !Number.isFinite(payload.value) ||
+      (payload.unit !== "lb" && payload.unit !== "kg")
+    ) {
+      continue;
+    }
+    return convertWeightValue(payload.value, payload.unit, weightUnit);
+  }
+  return undefined;
+}
+
 export function aggregateHabitLogs(
   logs: HabitLog[],
   options: HabitDayTotalsOptions,

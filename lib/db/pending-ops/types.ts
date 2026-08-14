@@ -22,6 +22,7 @@ export const PENDING_SERVER_OP_STATUSES = [
   "pending",
   "synced",
   "failed",
+  "rejected",
 ] as const;
 
 export type PendingServerOpStatus =

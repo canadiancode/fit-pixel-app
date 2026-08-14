@@ -35,7 +35,7 @@ export const DEFAULT_APP_PROFILE = {
   bio: "",
   homeGymId: null as string | null,
   homeGymName: null as string | null,
-  profileVisible: true,
+  profileVisible: false,
   instagram: null as string | null,
   tiktok: null as string | null,
   youtube: null as string | null,

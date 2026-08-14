@@ -20,10 +20,12 @@ import {
 } from "@/constants/app-colors";
 import { APP_SHELL_PADDING } from "@/constants/app-shell";
 import { FONT_FAMILY } from "@/constants/fonts";
+import { AuthProvider, useAuth } from "@/features/auth/auth-context";
 import { PrefsProfileProvider } from "@/features/settings/prefs-profile-context";
 import { XpStateProvider } from "@/features/xp/xp-state-context";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { DATABASE_NAME, migrateDbIfNeeded } from "@/lib/db";
+import { SyncDrainProvider } from "@/lib/sync/sync-drain-provider";
 
 SplashScreen.preventAutoHideAsync();
 const CELL_HEADING_FONT_FAMILY = "PixeloidSans";
@@ -38,6 +40,45 @@ const navigationFonts = {
 export const unstable_settings = {
   anchor: "(tabs)",
 };
+
+function AuthedAppShell() {
+  const { dataEpoch } = useAuth();
+
+  return (
+    <XpStateProvider key={dataEpoch}>
+      <PrefsProfileProvider key={dataEpoch}>
+        <SyncDrainProvider>
+          <View
+            style={{
+              flex: 1,
+              flexDirection: "column",
+              paddingTop: 0,
+              paddingHorizontal: APP_SHELL_PADDING,
+              paddingBottom: 0,
+              backgroundColor: APP_SHELL_PRIMARY_BACKGROUND,
+            }}
+          >
+            <View
+              style={{
+                flex: 1,
+                backgroundColor: APP_SHELL_SECONDARY_BACKGROUND,
+              }}
+            >
+              <Stack>
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen
+                  name="modal"
+                  options={{ presentation: "modal", title: "Modal" }}
+                />
+              </Stack>
+            </View>
+            <StatusBar style="auto" />
+          </View>
+        </SyncDrainProvider>
+      </PrefsProfileProvider>
+    </XpStateProvider>
+  );
+}
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -71,36 +112,9 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={navigationTheme}>
       <SQLiteProvider databaseName={DATABASE_NAME} onInit={migrateDbIfNeeded}>
-        <XpStateProvider>
-          <PrefsProfileProvider>
-            <View
-              style={{
-                flex: 1,
-                flexDirection: "column",
-                paddingTop: 0,
-                paddingHorizontal: APP_SHELL_PADDING,
-                paddingBottom: 0,
-                backgroundColor: APP_SHELL_PRIMARY_BACKGROUND,
-              }}
-            >
-              <View
-                style={{
-                  flex: 1,
-                  backgroundColor: APP_SHELL_SECONDARY_BACKGROUND,
-                }}
-              >
-                <Stack>
-                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                  <Stack.Screen
-                    name="modal"
-                    options={{ presentation: "modal", title: "Modal" }}
-                  />
-                </Stack>
-              </View>
-              <StatusBar style="auto" />
-            </View>
-          </PrefsProfileProvider>
-        </XpStateProvider>
+        <AuthProvider>
+          <AuthedAppShell />
+        </AuthProvider>
       </SQLiteProvider>
     </ThemeProvider>
   );

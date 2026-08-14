@@ -1,7 +1,10 @@
 import { useMemo, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 
-import { getBarChartTheme } from "@/components/charts/bar-chart-themes";
+import {
+  getBarChartTheme,
+  type BarChartThemeTokens,
+} from "@/components/charts/bar-chart-themes";
 import type {
   BarChartThemeId,
   BarChartUserData,
@@ -41,12 +44,15 @@ const BAR_BORDER_WIDTH = 1;
 const X_LABEL_MIN_WIDTH = 40;
 const BAR_WIDTH_PERCENT = 0.05;
 const BAR_MIN_WIDTH = 25;
+/** Minimum column slot so x labels stay one line when the series is long. */
+const MIN_CATEGORY_SLOT_WIDTH = X_LABEL_MIN_WIDTH;
 /** Vertical gap between the goal line and the target value label (text sits above the line). */
 const TARGET_VALUE_GAP_ABOVE_LINE_PX = 2;
 
 export type BarChartProps = {
   userData: BarChartUserData;
-  targetVal: number;
+  /** Goal line value. Omit to hide the target line and label. */
+  targetVal?: number;
   increment: number;
   theme: BarChartThemeId;
   /** Appended to the on-chart target label (e.g. `" oz"` → `90 oz`). Ignored when `targetLabel` is set. */
@@ -67,7 +73,7 @@ export type BarChartProps = {
  */
 export function buildBarChartLayout(
   userData: BarChartUserData,
-  targetVal: number,
+  targetVal: number | undefined,
   increment: number,
   yDomainFromZero = false,
 ) {
@@ -76,6 +82,102 @@ export function buildBarChartLayout(
   const yValues = userData.y.slice(0, count);
   const scale = generateMarkers(yValues, increment, yDomainFromZero, targetVal);
   return { xLabels, yValues, scale, targetVal, count };
+}
+
+type PlotGuidesProps = {
+  markerValues: number[];
+  innerHeight: number;
+  lowestMarker: number;
+  highestMarker: number;
+  targetBottomPx?: number;
+  targetLabelText?: string;
+  tokens: BarChartThemeTokens;
+};
+
+function PlotGuides({
+  markerValues,
+  innerHeight,
+  lowestMarker,
+  highestMarker,
+  targetBottomPx,
+  targetLabelText,
+  tokens,
+}: PlotGuidesProps) {
+  const showTarget =
+    targetBottomPx !== undefined && targetLabelText !== undefined;
+  return (
+    <>
+      <View
+        pointerEvents="none"
+        style={[styles.plotGuideLayer, { height: innerHeight, zIndex: 1 }]}
+      >
+        {markerValues.map((markerValue) => (
+          <View
+            key={`grid-${String(markerValue)}`}
+            collapsable={false}
+            style={[
+              styles.chartMarkerBar,
+              {
+                bottom: bottomPxForValue(
+                  markerValue,
+                  innerHeight,
+                  lowestMarker,
+                  highestMarker,
+                ),
+                borderTopColor: tokens.gridLine,
+              },
+            ]}
+          />
+        ))}
+      </View>
+      {showTarget ? (
+        <View
+          pointerEvents="none"
+          style={[styles.plotGuideLayer, { height: innerHeight, zIndex: 3 }]}
+        >
+          <View
+            collapsable={false}
+            style={[
+              styles.chartTargetBar,
+              {
+                bottom: targetBottomPx,
+                borderTopColor: tokens.targetLine,
+              },
+            ]}
+          />
+          <Text
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+            style={[
+              styles.plotTargetLabel,
+              {
+                bottom: targetBottomPx + TARGET_VALUE_GAP_ABOVE_LINE_PX,
+                color: APP_SHELL_MAIN_TEXT_COLOR,
+              },
+            ]}
+          >
+            {targetLabelText}
+          </Text>
+        </View>
+      ) : null}
+    </>
+  );
+}
+
+function barColumnStyle(
+  heightPx: number,
+  barWidth: number,
+  tokens: BarChartThemeTokens,
+) {
+  return {
+    width: barWidth,
+    height: Math.max(0, heightPx),
+    backgroundColor: tokens.barFill,
+    borderColor: tokens.barBorder,
+    borderWidth: BAR_BORDER_WIDTH,
+    borderTopLeftRadius: BAR_BORDER_RADIUS,
+    borderTopRightRadius: BAR_BORDER_RADIUS,
+  };
 }
 
 export function BarChart({
@@ -101,25 +203,37 @@ export function BarChart({
 
   const innerHeight =
     BAR_CHART_PLOT_HEIGHT - DATA_PADDING_TOP - DATA_PADDING_BOTTOM;
-  const targetBottomPx = bottomPxForValue(
-    targetVal,
-    innerHeight,
-    lowestMarker,
-    highestMarker,
-  );
-  const barWidth = Math.max(
-    BAR_MIN_WIDTH,
-    plotWidth > 0 ? plotWidth * BAR_WIDTH_PERCENT : BAR_MIN_WIDTH,
-  );
+  const targetValue =
+    targetVal !== undefined && Number.isFinite(targetVal) ? targetVal : undefined;
+  const hasTarget = targetValue !== undefined;
+  const targetBottomPx = hasTarget
+    ? bottomPxForValue(targetValue, innerHeight, lowestMarker, highestMarker)
+    : undefined;
+  const estimatedPlotMin =
+    CHART_MIN_WIDTH - Y_AXIS_WIDTH - CHART_OUTER_PADDING * 2;
+  const measuredPlot = plotWidth > 0 ? plotWidth : estimatedPlotMin;
+  const needsScroll = count * MIN_CATEGORY_SLOT_WIDTH > measuredPlot + 0.5;
+  const contentWidth = needsScroll
+    ? count * MIN_CATEGORY_SLOT_WIDTH
+    : plotWidth;
+  const barWidth = needsScroll
+    ? BAR_MIN_WIDTH
+    : Math.max(
+        BAR_MIN_WIDTH,
+        plotWidth > 0 ? plotWidth * BAR_WIDTH_PERCENT : BAR_MIN_WIDTH,
+      );
 
-  const targetLabelText =
-    targetLabelOverride ??
-    `${String(targetVal)}${targetLabelSuffix ?? ""}`;
+  const targetLabelText = hasTarget
+    ? (targetLabelOverride ??
+      `${String(targetValue)}${targetLabelSuffix ?? ""}`)
+    : undefined;
 
   const accessibilityLabel =
     accessibilityLabelProp ??
     (count > 0
-      ? `Bar chart, ${String(count)} columns, target ${targetLabelText}`
+      ? hasTarget
+        ? `Bar chart, ${String(count)} columns, target ${targetLabelText}`
+        : `Bar chart, ${String(count)} columns`
       : "Bar chart, no data");
 
   if (__DEV__ && userData.x.length !== userData.y.length) {
@@ -128,12 +242,57 @@ export function BarChart({
     );
   }
 
+  const guides = (
+    <PlotGuides
+      markerValues={markerValues}
+      innerHeight={innerHeight}
+      lowestMarker={lowestMarker}
+      highestMarker={highestMarker}
+      targetBottomPx={targetBottomPx}
+      targetLabelText={targetLabelText}
+      tokens={tokens}
+    />
+  );
+
+  const bars = count === 0
+    ? null
+    : yValues.map((yValue, index) => {
+        const hPct = percentHeightFromBottom(
+          yValue,
+          lowestMarker,
+          highestMarker,
+        );
+        const heightPx = (hPct / 100) * innerHeight;
+        if (!needsScroll) {
+          return (
+            <View
+              key={`bar-${xLabels[index] ?? String(index)}-${String(index)}`}
+              style={barColumnStyle(heightPx, barWidth, tokens)}
+            />
+          );
+        }
+        return (
+          <View
+            key={`bar-${xLabels[index] ?? String(index)}-${String(index)}`}
+            style={styles.scrollSlot}
+          >
+            <View style={barColumnStyle(heightPx, barWidth, tokens)} />
+          </View>
+        );
+      });
+
+  const onPlotLayout = (width: number) => {
+    if (width !== plotWidth) {
+      setPlotWidth(width);
+    }
+  };
+
   return (
     <View
       accessibilityLabel={accessibilityLabel}
       accessibilityRole="image"
       importantForAccessibility="yes"
-      pointerEvents="none"
+      pointerEvents={needsScroll ? "auto" : "none"}
       style={styles.outer}
     >
       <View style={styles.chartRow}>
@@ -155,136 +314,106 @@ export function BarChart({
 
         <View
           onLayout={(e) => {
-            const w = e.nativeEvent.layout.width;
-            if (w !== plotWidth) {
-              setPlotWidth(w);
-            }
+            onPlotLayout(e.nativeEvent.layout.width);
           }}
           style={styles.plotColumn}
         >
-          <View
-            style={[
-              styles.dataArea,
-              {
-                height: BAR_CHART_PLOT_HEIGHT,
-                paddingTop: DATA_PADDING_TOP,
-                paddingBottom: DATA_PADDING_BOTTOM,
-              },
-            ]}
-          >
-            {/* Grid markers: same placement as `.chart-marker-bar` in `bar-chart.html`. */}
-            <View
-              pointerEvents="none"
-              style={[
-                styles.plotGuideLayer,
-                { height: innerHeight, zIndex: 1 },
-              ]}
-            >
-              {markerValues.map((markerValue) => (
-                <View
-                  key={`grid-${String(markerValue)}`}
-                  collapsable={false}
-                  style={[
-                    styles.chartMarkerBar,
-                    {
-                      bottom: bottomPxForValue(
-                        markerValue,
-                        innerHeight,
-                        lowestMarker,
-                        highestMarker,
-                      ),
-                      borderTopColor: tokens.gridLine,
-                    },
-                  ]}
-                />
-              ))}
-            </View>
-
-            <View style={styles.barsRow}>
-              {count === 0
-                ? null
-                : yValues.map((yValue, index) => {
-                    const hPct = percentHeightFromBottom(
-                      yValue,
-                      lowestMarker,
-                      highestMarker,
-                    );
-                    const heightPx = (hPct / 100) * innerHeight;
-                    return (
-                      <View
-                        key={`bar-${xLabels[index] ?? String(index)}-${String(index)}`}
+          {needsScroll ? (
+            <>
+              <ScrollView
+                horizontal
+                nestedScrollEnabled
+                directionalLockEnabled
+                showsHorizontalScrollIndicator
+                style={styles.plotScroll}
+              >
+                <View style={{ width: contentWidth }}>
+                  <View
+                    style={[
+                      styles.dataArea,
+                      {
+                        width: contentWidth,
+                        height: BAR_CHART_PLOT_HEIGHT,
+                        paddingTop: DATA_PADDING_TOP,
+                        paddingBottom: DATA_PADDING_BOTTOM,
+                      },
+                    ]}
+                  >
+                    <View style={[styles.barsRow, styles.scrollBarsRow, { width: contentWidth }]}>
+                      {bars}
+                    </View>
+                  </View>
+                  <View style={[styles.scrollXValues, { width: contentWidth }]}>
+                    {xLabels.map((label, index) => (
+                      <Text
+                        key={`x-${String(index)}-${label}`}
+                        numberOfLines={1}
                         style={[
-                          {
-                            width: barWidth,
-                            height: Math.max(0, heightPx),
-                            backgroundColor: tokens.barFill,
-                            borderColor: tokens.barBorder,
-                            borderWidth: BAR_BORDER_WIDTH,
-                            borderTopLeftRadius: BAR_BORDER_RADIUS,
-                            borderTopRightRadius: BAR_BORDER_RADIUS,
-                          },
+                          styles.xAxisLabel,
+                          styles.scrollXLabel,
+                          { color: tokens.axisText },
                         ]}
-                      />
-                    );
-                  })}
-            </View>
-
-            {/* Target: same as `.chart-target-bar`; own layer above bars so it stays visible. */}
-            <View
-              pointerEvents="none"
-              style={[
-                styles.plotGuideLayer,
-                { height: innerHeight, zIndex: 3 },
-              ]}
-            >
+                      >
+                        {label}
+                      </Text>
+                    ))}
+                  </View>
+                </View>
+              </ScrollView>
               <View
-                collapsable={false}
+                pointerEvents="none"
                 style={[
-                  styles.chartTargetBar,
+                  styles.stickyGuides,
                   {
-                    bottom: targetBottomPx,
-                    borderTopColor: tokens.targetLine,
-                  },
-                ]}
-              />
-              <Text
-                accessibilityElementsHidden
-                importantForAccessibility="no-hide-descendants"
-                style={[
-                  styles.plotTargetLabel,
-                  {
-                    bottom: targetBottomPx + TARGET_VALUE_GAP_ABOVE_LINE_PX,
-                    color: APP_SHELL_MAIN_TEXT_COLOR,
+                    height: BAR_CHART_PLOT_HEIGHT,
+                    paddingTop: DATA_PADDING_TOP,
+                    paddingBottom: DATA_PADDING_BOTTOM,
                   },
                 ]}
               >
-                {targetLabelText}
-              </Text>
-            </View>
-          </View>
-        </View>
-      </View>
-
-      <View style={styles.xAxisRow}>
-        <View style={{ width: Y_AXIS_WIDTH }} />
-        <View style={styles.xValues}>
-          {xLabels.map((label, index) => (
-            <Text
-              key={`x-${String(index)}-${label}`}
-              numberOfLines={1}
+                {guides}
+              </View>
+            </>
+          ) : (
+            <View
               style={[
-                styles.xAxisLabel,
+                styles.dataArea,
                 {
-                  color: tokens.axisText,
-                  minWidth: X_LABEL_MIN_WIDTH,
+                  height: BAR_CHART_PLOT_HEIGHT,
+                  paddingTop: DATA_PADDING_TOP,
+                  paddingBottom: DATA_PADDING_BOTTOM,
                 },
               ]}
             >
-              {label}
-            </Text>
-          ))}
+              {guides}
+              <View style={styles.barsRow}>{bars}</View>
+            </View>
+          )}
         </View>
       </View>
+
+      {needsScroll ? null : (
+        <View style={styles.xAxisRow}>
+          <View style={{ width: Y_AXIS_WIDTH }} />
+          <View style={styles.xValues}>
+            {xLabels.map((label, index) => (
+              <Text
+                key={`x-${String(index)}-${label}`}
+                numberOfLines={1}
+                style={[
+                  styles.xAxisLabel,
+                  {
+                    color: tokens.axisText,
+                    minWidth: X_LABEL_MIN_WIDTH,
+                  },
+                ]}
+              >
+                {label}
+              </Text>
+            ))}
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -300,6 +429,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     width: "100%",
     minHeight: BAR_CHART_PLOT_HEIGHT,
+    alignItems: "flex-start",
   },
   yAxis: {
     flexDirection: "column-reverse",
@@ -327,6 +457,18 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     minHeight: BAR_CHART_PLOT_HEIGHT,
+    position: "relative",
+    overflow: "hidden",
+  },
+  plotScroll: {
+    height: BAR_CHART_PLOT_HEIGHT + X_AXIS_HEIGHT,
+  },
+  stickyGuides: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    zIndex: 4,
   },
   dataArea: {
     position: "relative",
@@ -380,6 +522,14 @@ const styles = StyleSheet.create({
     flex: 1,
     zIndex: 2,
   },
+  scrollBarsRow: {
+    justifyContent: "flex-start",
+  },
+  scrollSlot: {
+    width: MIN_CATEGORY_SLOT_WIDTH,
+    alignItems: "center",
+    justifyContent: "flex-end",
+  },
   xAxisRow: {
     flexDirection: "row",
     width: "100%",
@@ -395,10 +545,18 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     minWidth: 0,
   },
+  scrollXValues: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    height: X_AXIS_HEIGHT,
+  },
   xAxisLabel: {
     textAlign: "center",
     fontFamily: FONT_FAMILY,
     fontSize: 10,
     lineHeight: 12,
+  },
+  scrollXLabel: {
+    width: MIN_CATEGORY_SLOT_WIDTH,
   },
 });

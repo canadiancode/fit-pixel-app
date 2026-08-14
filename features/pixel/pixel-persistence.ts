@@ -1,4 +1,5 @@
 import {
+  deleteAsync,
   documentDirectory,
   getInfoAsync,
   readAsStringAsync,
@@ -157,5 +158,19 @@ export async function savePixelPersistedState(
     await writeAsStringAsync(uri, JSON.stringify(payload));
   } catch {
     // Ignore write failures — in-memory state remains the source of truth this session.
+  }
+}
+
+/** Remove on-device pixel cosmetics after sign-out. */
+export async function deletePixelPersistedState(): Promise<void> {
+  try {
+    const uri = getStateUri();
+    if (uri == null) return;
+    const info = await getInfoAsync(uri);
+    if (info.exists) {
+      await deleteAsync(uri, { idempotent: true });
+    }
+  } catch {
+    // Best-effort wipe.
   }
 }

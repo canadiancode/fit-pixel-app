@@ -23,6 +23,7 @@ export {
 export {
   aggregateHabitLogs,
   getHabitTotalsForDayKey,
+  getLatestWeightValue,
   getTodayHabitTotals,
   type HabitDayTotals,
   type HabitDayTotalsOptions,

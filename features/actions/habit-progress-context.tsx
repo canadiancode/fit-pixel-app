@@ -14,6 +14,7 @@ import type { ActionProgressTotals } from "@/features/actions/data";
 import { useXpState } from "@/features/xp/xp-state-context";
 import { useDashboardHealthMetrics } from "@/hooks/use-dashboard-health-metrics";
 import {
+  getLatestWeightValue,
   getTodayHabitTotals,
   logActiveKcal,
   logFood,
@@ -89,7 +90,9 @@ const EMPTY_TOTALS: ActionProgressTotals = {};
 
 function toActionTotals(
   day: Awaited<ReturnType<typeof getTodayHabitTotals>>,
+  latestWeight?: number,
 ): ActionProgressTotals {
+  const weight = latestWeight ?? day.weight;
   return {
     foodKcal: day.foodKcal,
     waterAmount: day.waterAmount,
@@ -97,7 +100,8 @@ function toActionTotals(
     sleepHours: day.sleepHours,
     steps: day.steps,
     activeKcal: day.activeKcal,
-    ...(day.weight !== undefined ? { weight: day.weight } : {}),
+    // Weight carries forward across days (latest log), unlike daily habits.
+    ...(weight !== undefined ? { weight } : {}),
   };
 }
 
@@ -142,11 +146,14 @@ export function HabitProgressProvider({ children }: { children: ReactNode }) {
   );
 
   const refreshTotals = useCallback(async () => {
-    const day = await getTodayHabitTotals(db, {
-      waterUnit: goals.waterUnit,
-      weightUnit: goals.weightUnit,
-    });
-    setManualTotals(toActionTotals(day));
+    const [day, latestWeight] = await Promise.all([
+      getTodayHabitTotals(db, {
+        waterUnit: goals.waterUnit,
+        weightUnit: goals.weightUnit,
+      }),
+      getLatestWeightValue(db, goals.weightUnit),
+    ]);
+    setManualTotals(toActionTotals(day, latestWeight));
   }, [db, goals.waterUnit, goals.weightUnit]);
 
   const afterHabitLog = useCallback(
@@ -168,12 +175,15 @@ export function HabitProgressProvider({ children }: { children: ReactNode }) {
 
     void (async () => {
       try {
-        const day = await getTodayHabitTotals(db, {
-          waterUnit: goals.waterUnit,
-          weightUnit: goals.weightUnit,
-        });
+        const [day, latestWeight] = await Promise.all([
+          getTodayHabitTotals(db, {
+            waterUnit: goals.waterUnit,
+            weightUnit: goals.weightUnit,
+          }),
+          getLatestWeightValue(db, goals.weightUnit),
+        ]);
         if (!cancelled) {
-          setManualTotals(toActionTotals(day));
+          setManualTotals(toActionTotals(day, latestWeight));
         }
       } finally {
         if (!cancelled) {

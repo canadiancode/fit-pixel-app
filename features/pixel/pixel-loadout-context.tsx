@@ -11,6 +11,7 @@ import {
 } from "react";
 
 import { useXpState } from "@/features/xp/xp-state-context";
+import { useAuth } from "@/features/auth/auth-context";
 import { enqueueOp, nowIso, uuid } from "@/lib/db";
 
 import { DEFAULT_PIXEL_LOADOUT } from "./default-loadout";
@@ -57,6 +58,7 @@ const PixelLoadoutContext = createContext<PixelLoadoutContextValue | null>(
 export function PixelLoadoutProvider({ children }: { children: ReactNode }) {
   const db = useSQLiteContext();
   const { xp } = useXpState();
+  const { dataEpoch } = useAuth();
   const [loadout, setLoadout] = useState<PixelLoadout>(DEFAULT_PIXEL_LOADOUT);
   const [inventory, setInventory] = useState<readonly PixelItemId[]>(
     DEFAULT_PIXEL_INVENTORY,
@@ -68,6 +70,8 @@ export function PixelLoadoutProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
+    hasHydratedRef.current = false;
+    setIsHydrated(false);
 
     void (async () => {
       const saved = await loadPixelPersistedState();
@@ -81,7 +85,7 @@ export function PixelLoadoutProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [dataEpoch]);
 
   useEffect(() => {
     if (!hasHydratedRef.current) return;

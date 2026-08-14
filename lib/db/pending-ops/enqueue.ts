@@ -12,6 +12,21 @@ import {
   type PendingServerOpType,
 } from "./types";
 
+const enqueueListeners = new Set<() => void>();
+
+export function subscribePendingOpEnqueue(listener: () => void): () => void {
+  enqueueListeners.add(listener);
+  return () => {
+    enqueueListeners.delete(listener);
+  };
+}
+
+function notifyPendingOpEnqueue(): void {
+  for (const listener of enqueueListeners) {
+    listener();
+  }
+}
+
 type PendingServerOpRow = {
   id: string;
   type: string;
@@ -76,6 +91,8 @@ export async function enqueueOp(
     trust,
   );
 
+  notifyPendingOpEnqueue();
+
   return {
     id: opId,
     type,
@@ -131,6 +148,32 @@ export async function acknowledgeOpSynced(
   if (result.changes === 0) {
     throw new Error(
       `acknowledgeOpSynced: op ${id} missing or already synced (ack=${ackId})`,
+    );
+  }
+}
+
+/**
+ * Terminal validation rejection from the server. Payload is frozen; do not retry.
+ */
+export async function acknowledgeOpRejected(
+  db: SQLiteDatabase,
+  id: string,
+  serverAck: { ackId: string; reason?: string },
+): Promise<void> {
+  const ackId = serverAck.ackId.trim();
+  if (!ackId) {
+    throw new Error("acknowledgeOpRejected: serverAck.ackId is required");
+  }
+
+  const result = await db.runAsync(
+    `UPDATE pending_server_ops
+     SET status = 'rejected'
+     WHERE id = ? AND status IN ('pending', 'failed')`,
+    id,
+  );
+  if (result.changes === 0) {
+    throw new Error(
+      `acknowledgeOpRejected: op ${id} missing or already terminal (ack=${ackId})`,
     );
   }
 }

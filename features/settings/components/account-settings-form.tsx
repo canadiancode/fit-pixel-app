@@ -7,10 +7,103 @@ import {
   APP_SHELL_LABEL_COLOR,
   APP_SHELL_MAIN_TEXT_COLOR,
 } from "@/constants/app-colors";
+import { useAuth } from "@/features/auth/auth-context";
 import { SettingsSingleLineTextField } from "@/features/settings/components/settings-text-field";
 
 export function AccountSettingsForm() {
-  const [email, setEmail] = useState("");
+  const { user, configured, signIn, signUp, resetPassword } = useAuth();
+  const [email, setEmail] = useState(user?.email ?? "");
+  const [password, setPassword] = useState("");
+  const [message, setMessage] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const run = async (action: () => Promise<void>, success: string) => {
+    setBusy(true);
+    setMessage(null);
+    try {
+      await action();
+      setMessage(success);
+      setPassword("");
+    } catch (err) {
+      const text = err instanceof Error ? err.message : "Something went wrong.";
+      setMessage(text);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (!configured) {
+    return (
+      <View style={styles.root}>
+        <ThemedText
+          lightColor={APP_SHELL_MAIN_TEXT_COLOR}
+          darkColor={APP_SHELL_MAIN_TEXT_COLOR}
+          style={styles.hint}
+        >
+          Account sign-in is not configured in this build. Add
+          EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY (never a
+          service-role key).
+        </ThemedText>
+      </View>
+    );
+  }
+
+  if (user) {
+    return (
+      <View style={styles.root}>
+        <View style={styles.field}>
+          <ThemedText
+            lightColor={APP_SHELL_LABEL_COLOR}
+            darkColor={APP_SHELL_LABEL_COLOR}
+            style={styles.fieldLabel}
+          >
+            Signed in
+          </ThemedText>
+          <ThemedText
+            lightColor={APP_SHELL_MAIN_TEXT_COLOR}
+            darkColor={APP_SHELL_MAIN_TEXT_COLOR}
+            style={styles.body}
+          >
+            {user.email ?? user.id}
+          </ThemedText>
+        </View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Send password reset email"
+          disabled={busy || !user.email}
+          onPress={() => {
+            if (!user.email) return;
+            void run(
+              () => resetPassword(user.email ?? ""),
+              "Password reset email sent. Open the HTTPS link on this device.",
+            );
+          }}
+          style={({ pressed }) => [
+            styles.resetButton,
+            pressed && styles.resetButtonPressed,
+            busy && styles.disabled,
+          ]}
+        >
+          <ThemedText
+            lightColor={APP_SHELL_MAIN_TEXT_COLOR}
+            darkColor={APP_SHELL_MAIN_TEXT_COLOR}
+            style={styles.resetButtonLabel}
+          >
+            Reset password
+          </ThemedText>
+        </Pressable>
+        {message ? (
+          <ThemedText
+            lightColor={APP_SHELL_LABEL_COLOR}
+            darkColor={APP_SHELL_LABEL_COLOR}
+            style={styles.hint}
+          >
+            {message}
+          </ThemedText>
+        ) : null}
+      </View>
+    );
+  }
 
   return (
     <View style={styles.root}>
@@ -35,17 +128,89 @@ export function AccountSettingsForm() {
           maxLength={254}
         />
       </View>
-
+      <View style={styles.field}>
+        <ThemedText
+          lightColor={APP_SHELL_LABEL_COLOR}
+          darkColor={APP_SHELL_LABEL_COLOR}
+          style={styles.fieldLabel}
+        >
+          Password
+        </ThemedText>
+        <SettingsSingleLineTextField
+          accessibilityLabel="Password"
+          value={password}
+          onChangeText={setPassword}
+          placeholder="At least 8 characters"
+          autoCapitalize="none"
+          autoCorrect={false}
+          autoComplete="password"
+          textContentType="password"
+          secureTextEntry
+          maxLength={128}
+        />
+      </View>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Reset password"
-        accessibilityHint="Starts password recovery when account sign-in is connected"
+        accessibilityLabel="Sign in"
+        disabled={busy}
         onPress={() => {
-          /* password reset — wire when auth backend exists */
+          void run(
+            () => signIn(email.trim(), password),
+            "Signed in.",
+          );
         }}
         style={({ pressed }) => [
           styles.resetButton,
           pressed && styles.resetButtonPressed,
+          busy && styles.disabled,
+        ]}
+      >
+        <ThemedText
+          lightColor={APP_SHELL_MAIN_TEXT_COLOR}
+          darkColor={APP_SHELL_MAIN_TEXT_COLOR}
+          style={styles.resetButtonLabel}
+        >
+          Sign in
+        </ThemedText>
+      </Pressable>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Create account"
+        disabled={busy}
+        onPress={() => {
+          void run(
+            () => signUp(email.trim(), password),
+            "Account created. You can sign in now.",
+          );
+        }}
+        style={({ pressed }) => [
+          styles.resetButton,
+          pressed && styles.resetButtonPressed,
+          busy && styles.disabled,
+        ]}
+      >
+        <ThemedText
+          lightColor={APP_SHELL_MAIN_TEXT_COLOR}
+          darkColor={APP_SHELL_MAIN_TEXT_COLOR}
+          style={styles.resetButtonLabel}
+        >
+          Create account
+        </ThemedText>
+      </Pressable>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Reset password"
+        disabled={busy}
+        onPress={() => {
+          void run(
+            () => resetPassword(email.trim()),
+            "Password reset email sent. Open the HTTPS link on this device.",
+          );
+        }}
+        style={({ pressed }) => [
+          styles.resetButton,
+          pressed && styles.resetButtonPressed,
+          busy && styles.disabled,
         ]}
       >
         <ThemedText
@@ -56,6 +221,15 @@ export function AccountSettingsForm() {
           Reset password
         </ThemedText>
       </Pressable>
+      {message ? (
+        <ThemedText
+          lightColor={APP_SHELL_LABEL_COLOR}
+          darkColor={APP_SHELL_LABEL_COLOR}
+          style={styles.hint}
+        >
+          {message}
+        </ThemedText>
+      ) : null}
     </View>
   );
 }
@@ -72,6 +246,14 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 16,
   },
+  body: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  hint: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
   resetButton: {
     marginTop: 4,
     alignSelf: "stretch",
@@ -85,6 +267,9 @@ const styles = StyleSheet.create({
   },
   resetButtonPressed: {
     opacity: 0.88,
+  },
+  disabled: {
+    opacity: 0.55,
   },
   resetButtonLabel: {
     fontSize: 14,

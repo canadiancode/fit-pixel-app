@@ -11,6 +11,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.onerepmax.app",
+      "associatedDomains": ["applinks:api.aurashields.com"],
       "entitlements": {
         "com.apple.developer.healthkit": true
       },
@@ -22,6 +23,7 @@
       "config": {}
     },
     "android": {
+      "package": "com.onerepmax.app",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -29,7 +31,21 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "api.aurashields.com",
+              "pathPrefix": "/auth/callback"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -70,7 +86,6 @@
       "reactCompiler": false
     },
     "extra": {
-      "fatSecretClientId": "0b111e3e93644caebe82d6d75127e519",
       "router": {},
       "eas": {
         "projectId": "7f505789-0d91-4bca-bf37-180106e354fb"

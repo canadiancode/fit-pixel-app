@@ -1,4 +1,5 @@
 import { Image } from "expo-image";
+import { router } from "expo-router";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { BarChart } from "@/components/charts/bar-chart";
@@ -10,16 +11,26 @@ import {
 import { FONT_FAMILY } from "@/constants/fonts";
 import { useDailyGoals } from "@/features/actions/daily-goals-context";
 import { useWeeklyHabitHistoryChart } from "@/features/actions/use-habit-history-chart";
+import type { WaterUnit } from "@/lib/db";
 
 import { WATER_RIGHT_ARROW_ICON } from "../constants";
+import { WATER_ACTION_HREFS } from "../water-routes";
 
 const SECTION_TITLE = "History";
 const VIEW_HISTORY_LABEL = "View history";
-/** Y-axis tick step for the weekly water chart (caller-driven, matches `bar-chart.html` default). */
-const WATER_WEEKLY_CHART_INCREMENT = 10;
+/** Y-axis tick step for the weekly water chart in ounces. */
+export const WATER_WEEKLY_CHART_INCREMENT = 10;
+/** Y-axis tick step for water history when the goal unit is milliliters. */
+export const WATER_HISTORY_CHART_INCREMENT_ML = 250;
 
 /** `true` = Y-axis from 0; `false` = Y-axis from data min (snapped to increment). */
-const WATER_WEEKLY_CHART_Y_DOMAIN_FROM_ZERO = false;
+export const WATER_HISTORY_CHART_Y_DOMAIN_FROM_ZERO = false;
+
+export function waterHistoryChartIncrement(unit: WaterUnit): number {
+  return unit === "ml"
+    ? WATER_HISTORY_CHART_INCREMENT_ML
+    : WATER_WEEKLY_CHART_INCREMENT;
+}
 
 export function WaterWeeklyHistorySection() {
   const { goals } = useDailyGoals();
@@ -41,6 +52,7 @@ export function WaterWeeklyHistorySection() {
           accessibilityRole="button"
           accessibilityLabel={VIEW_HISTORY_LABEL}
           hitSlop={8}
+          onPress={() => router.push(WATER_ACTION_HREFS.history)}
           style={({ pressed }) => [
             styles.viewHistoryControl,
             pressed && styles.viewHistoryPressed,
@@ -72,7 +84,7 @@ export function WaterWeeklyHistorySection() {
         targetVal={goals.waterAmount}
         theme="blue"
         userData={userData}
-        yDomainFromZero={WATER_WEEKLY_CHART_Y_DOMAIN_FROM_ZERO}
+        yDomainFromZero={WATER_HISTORY_CHART_Y_DOMAIN_FROM_ZERO}
         accessibilityLabel="Water intake, last seven days"
       />
     </View>

@@ -118,7 +118,7 @@ export async function ensurePrefsProfileSchema(
       bio TEXT NOT NULL DEFAULT '',
       homeGymId TEXT,
       homeGymName TEXT,
-      profileVisible INTEGER NOT NULL DEFAULT 1
+      profileVisible INTEGER NOT NULL DEFAULT 0
         CHECK (profileVisible IN (0, 1)),
       instagram TEXT,
       tiktok TEXT,
@@ -139,7 +139,7 @@ export async function ensurePrefsProfileSchema(
     `INSERT OR IGNORE INTO app_profile (
       id, displayName, bio, homeGymId, homeGymName, profileVisible,
       instagram, tiktok, youtube, updatedAt
-    ) VALUES (1, '', '', NULL, NULL, 1, NULL, NULL, NULL, ?)`,
+    ) VALUES (1, '', '', NULL, NULL, 0, NULL, NULL, NULL, ?)`,
     seededAt,
   );
 }
@@ -277,6 +277,32 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase): Promise<void> {
   if (currentVersion === 8) {
     await ensurePrefsProfileSchema(db);
     currentVersion = 9;
+  }
+
+  if (currentVersion === 9) {
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS pending_server_ops_v10 (
+        id TEXT PRIMARY KEY NOT NULL,
+        type TEXT NOT NULL,
+        payload_json TEXT NOT NULL,
+        createdAt TEXT NOT NULL,
+        status TEXT NOT NULL CHECK (status IN ('pending', 'synced', 'failed', 'rejected')),
+        clientClockAt TEXT,
+        schemaVersion INTEGER,
+        trust TEXT NOT NULL CHECK (trust IN ('fact', 'untrusted_client'))
+      );
+      INSERT INTO pending_server_ops_v10 (
+        id, type, payload_json, createdAt, status, clientClockAt, schemaVersion, trust
+      )
+      SELECT id, type, payload_json, createdAt, status, clientClockAt, schemaVersion, trust
+      FROM pending_server_ops;
+      DROP TABLE pending_server_ops;
+      ALTER TABLE pending_server_ops_v10 RENAME TO pending_server_ops;
+      CREATE INDEX IF NOT EXISTS idx_pending_server_ops_status_created
+        ON pending_server_ops (status, createdAt);
+    `);
+    await db.runAsync(`UPDATE app_profile SET profileVisible = 0 WHERE id = 1`);
+    currentVersion = 10;
   }
 
   // Always repair derived/XP/saved/prefs tables — Fast Refresh can skip onInit while

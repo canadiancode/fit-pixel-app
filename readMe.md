@@ -2,6 +2,22 @@
 
 This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 
+## Auth + sync
+
+The app stays usable offline without an account. **Settings → Account** is email/password via Supabase Auth (anon key only). Food search and outbox drain require a session.
+
+Put only these in `.env` (never a service-role key):
+
+```
+EXPO_PUBLIC_FIT_PIXEL_API_URL=https://api.aurashields.com
+EXPO_PUBLIC_SUPABASE_URL=
+EXPO_PUBLIC_SUPABASE_ANON_KEY=
+```
+
+Session tokens are stored in expo-secure-store, not SQLite. Sign-out revokes the refresh token, wipes SecureStore, and resets local data.
+
+Password reset uses `https://api.aurashields.com/auth/callback` (HTTPS). Do not enable magic-link or OAuth on the custom `onerepmax://` scheme alone.
+
 ## Get started
 
 1. Install dependencies

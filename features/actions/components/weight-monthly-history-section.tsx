@@ -1,78 +1,64 @@
-import { Image } from "expo-image";
-import { Pressable, StyleSheet, View } from "react-native";
+import { useState } from "react";
+import { StyleSheet, View } from "react-native";
 
 import { BarChart } from "@/components/charts/bar-chart";
 import { ThemedText } from "@/components/themed-text";
-import {
-  APP_SHELL_LABEL_COLOR,
-  APP_SHELL_MAIN_TEXT_COLOR,
-} from "@/constants/app-colors";
+import { APP_SHELL_MAIN_TEXT_COLOR } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
+import { HistoryLookbackDropdown } from "@/features/actions/components/history-lookback-dropdown";
 import { useDailyGoals } from "@/features/actions/daily-goals-context";
-import { useMonthlyWeightHistoryChart } from "@/features/actions/use-habit-history-chart";
-
-import { WATER_RIGHT_ARROW_ICON } from "../constants";
+import {
+  DEFAULT_HISTORY_LOOKBACK,
+  historyLookbackLabel,
+  type HistoryLookbackId,
+} from "@/features/actions/history-lookback";
+import { useWeightHistoryChart } from "@/features/actions/use-weight-history-chart";
+import type { WeightUnit } from "@/lib/db";
 
 const SECTION_TITLE = "History";
-const VIEW_HISTORY_LABEL = "View history";
-/** Y-axis tick step for the monthly weight chart. */
-const WEIGHT_MONTHLY_CHART_INCREMENT = 20;
+/** Y-axis tick step for the weight chart in pounds. */
+export const WEIGHT_MONTHLY_CHART_INCREMENT = 20;
+/** Y-axis tick step for weight history when the goal unit is kilograms. */
+export const WEIGHT_HISTORY_CHART_INCREMENT_KG = 10;
 
-const WEIGHT_MONTHLY_CHART_Y_DOMAIN_FROM_ZERO = true;
+export const WEIGHT_MONTHLY_CHART_Y_DOMAIN_FROM_ZERO = true;
+
+export function weightHistoryChartIncrement(unit: WeightUnit): number {
+  return unit === "kg"
+    ? WEIGHT_HISTORY_CHART_INCREMENT_KG
+    : WEIGHT_MONTHLY_CHART_INCREMENT;
+}
 
 export function WeightMonthlyHistorySection() {
+  const [lookback, setLookback] = useState<HistoryLookbackId>(
+    DEFAULT_HISTORY_LOOKBACK,
+  );
   const { goals } = useDailyGoals();
-  const { userData } = useMonthlyWeightHistoryChart();
+  const { userData } = useWeightHistoryChart(lookback, goals.weightUnit);
   const unitLabel = goals.weightUnit === "kg" ? "KG" : "LBS";
+  const rangeLabel = historyLookbackLabel(lookback);
 
   return (
     <View accessible accessibilityLabel={SECTION_TITLE} style={styles.section}>
-      <View style={styles.headerRow}>
-        <ThemedText
-          lightColor={APP_SHELL_MAIN_TEXT_COLOR}
-          darkColor={APP_SHELL_MAIN_TEXT_COLOR}
-          style={styles.title}
-          accessibilityRole="header"
-        >
-          {SECTION_TITLE}
-        </ThemedText>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={VIEW_HISTORY_LABEL}
-          hitSlop={8}
-          style={({ pressed }) => [
-            styles.viewHistoryControl,
-            pressed && styles.viewHistoryPressed,
-          ]}
-        >
-          <View style={styles.viewHistoryRow}>
-            <ThemedText
-              lightColor={APP_SHELL_LABEL_COLOR}
-              darkColor={APP_SHELL_LABEL_COLOR}
-              numberOfLines={1}
-              style={styles.viewHistoryLabel}
-            >
-              {VIEW_HISTORY_LABEL}
-            </ThemedText>
-            <Image
-              accessibilityIgnoresInvertColors
-              accessibilityElementsHidden
-              importantForAccessibility="no-hide-descendants"
-              source={WATER_RIGHT_ARROW_ICON}
-              style={styles.viewHistoryArrow}
-              contentFit="contain"
-            />
-          </View>
-        </Pressable>
+      <ThemedText
+        lightColor={APP_SHELL_MAIN_TEXT_COLOR}
+        darkColor={APP_SHELL_MAIN_TEXT_COLOR}
+        style={styles.title}
+        accessibilityRole="header"
+      >
+        {SECTION_TITLE}
+      </ThemedText>
+      <View style={styles.lookback}>
+        <HistoryLookbackDropdown value={lookback} onChange={setLookback} />
       </View>
       <BarChart
-        increment={WEIGHT_MONTHLY_CHART_INCREMENT}
+        increment={weightHistoryChartIncrement(goals.weightUnit)}
         targetLabel={`${String(goals.weightGoal)} ${unitLabel}`}
         targetVal={goals.weightGoal}
         theme="blue"
         userData={userData}
         yDomainFromZero={WEIGHT_MONTHLY_CHART_Y_DOMAIN_FROM_ZERO}
-        accessibilityLabel="Weight by month"
+        accessibilityLabel={`Weight, ${rangeLabel}`}
       />
     </View>
   );
@@ -84,45 +70,15 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     gap: 14,
   },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    alignSelf: "stretch",
-    gap: 12,
-  },
   title: {
-    flex: 1,
+    alignSelf: "stretch",
+    fontFamily: FONT_FAMILY,
     fontSize: 14,
     lineHeight: 18,
     fontWeight: "600",
   },
-  viewHistoryControl: {
-    flex: 1,
-    minWidth: 0,
+  lookback: {
+    alignSelf: "stretch",
     alignItems: "flex-end",
-    justifyContent: "center",
-  },
-  viewHistoryRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "flex-end",
-    flexWrap: "nowrap",
-    gap: 6,
-    flexShrink: 0,
-  },
-  viewHistoryPressed: {
-    opacity: 0.85,
-  },
-  viewHistoryLabel: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 10,
-    lineHeight: 14,
-    flexShrink: 0,
-  },
-  viewHistoryArrow: {
-    width: 32,
-    height: 32,
-    flexShrink: 0,
   },
 });
