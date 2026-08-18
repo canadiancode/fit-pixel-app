@@ -11,6 +11,7 @@ import {
   TAB_SCREEN_STACK_CHROME_LAYOUT,
 } from "@/constants/app-shell";
 import { ChatHeader } from "@/features/chat/components/chat-header";
+import { ChatSearchProvider } from "@/features/chat/chat-search-context";
 
 export const unstable_settings = {
   initialRouteName: "index",
@@ -18,6 +19,7 @@ export const unstable_settings = {
 
 export default function ChatLayout() {
   return (
+    <ChatSearchProvider>
     <ThemedView
       lightColor={APP_SHELL_PRIMARY_BACKGROUND}
       darkColor={APP_SHELL_PRIMARY_BACKGROUND}
@@ -37,6 +39,7 @@ export default function ChatLayout() {
         />
       </View>
     </ThemedView>
+    </ChatSearchProvider>
   );
 }
 

@@ -1,17 +1,51 @@
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import {
-    APP_SHELL_LABEL_COLOR,
-    APP_SHELL_MAIN_TEXT_COLOR,
+  APP_SHELL_LABEL_COLOR,
+  APP_SHELL_MAIN_TEXT_COLOR,
 } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
+import { useChatSearch } from "@/features/chat/chat-search-context";
 import { ChatSubScreenLayout } from "@/features/chat/components/chat-sub-screen-layout";
 import { GymChatListRow } from "@/features/chat/components/gym-chat-list-row";
-import { FAKE_SAVED_GYM_CHATS } from "@/features/chat/gym-chats-fake-data";
+import { gymHeroSource } from "@/features/map/gym-catalog";
+import { listJoinedGymChats, type GymChatListItem } from "@/lib/api/chat";
+import { FitPixelApiError } from "@/lib/api/client";
 
 export default function GymChatsScreen() {
-  const chats = FAKE_SAVED_GYM_CHATS;
+  const { query } = useChatSearch();
+  const [chats, setChats] = useState<GymChatListItem[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(() => {
+    setLoading(true);
+    void listJoinedGymChats()
+      .then((rows) => {
+        setChats(rows);
+        setError(null);
+      })
+      .catch((err) => {
+        setError(
+          err instanceof FitPixelApiError
+            ? err.message
+            : "Could not load gym chats.",
+        );
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return chats;
+    return chats.filter((item) => item.name.toLowerCase().includes(q));
+  }, [chats, query]);
 
   return (
     <ChatSubScreenLayout>
@@ -31,16 +65,43 @@ export default function GymChatsScreen() {
         >
           Gyms you&apos;ve joined for community chat.
         </ThemedText>
+        {error ? (
+          <ThemedText
+            lightColor={APP_SHELL_LABEL_COLOR}
+            darkColor={APP_SHELL_LABEL_COLOR}
+            style={styles.body}
+          >
+            {error}
+          </ThemedText>
+        ) : null}
+        {loading && chats.length === 0 ? (
+          <ThemedText
+            lightColor={APP_SHELL_LABEL_COLOR}
+            darkColor={APP_SHELL_LABEL_COLOR}
+            style={styles.body}
+          >
+            Loading gym chats...
+          </ThemedText>
+        ) : null}
+        {!loading && filtered.length === 0 && !error ? (
+          <ThemedText
+            lightColor={APP_SHELL_LABEL_COLOR}
+            darkColor={APP_SHELL_LABEL_COLOR}
+            style={styles.body}
+          >
+            Join a gym from the map to see it here.
+          </ThemedText>
+        ) : null}
         <View style={styles.list} accessibilityRole="list">
-          {chats.map((item, index) => (
+          {filtered.map((item, index) => (
             <GymChatListRow
-              key={item.id}
-              gymId={item.id}
+              key={item.gymId}
+              gymId={item.gymId}
               name={item.name}
               memberCount={item.memberCount}
-              liveViewerCount={item.liveViewerCount}
-              background_img={item.background_img}
-              showBottomBorder={index < chats.length - 1}
+              liveViewerCount={0}
+              background_img={gymHeroSource(item.imageKey)}
+              showBottomBorder={index < filtered.length - 1}
             />
           ))}
         </View>

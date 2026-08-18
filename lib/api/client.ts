@@ -27,7 +27,7 @@ async function parseJson(response: Response): Promise<unknown> {
 }
 
 export type ApiFetchOptions = {
-  method?: "GET" | "POST";
+  method?: "GET" | "POST" | "DELETE";
   accessToken?: string | null;
   json?: unknown;
   requireAuth?: boolean;

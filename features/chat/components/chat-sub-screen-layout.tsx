@@ -35,6 +35,8 @@ type Props = {
   gymThreadHeroCollapsed?: boolean;
   /** Gym thread: toggles `gymThreadHeroCollapsed`. */
   onGymThreadHeroCollapseToggle?: () => void;
+  /** Skip ScrollView wrapping so the body can host a FlatList + composer. */
+  fillBody?: boolean;
 };
 
 export function ChatSubScreenLayout({
@@ -43,6 +45,7 @@ export function ChatSubScreenLayout({
   showGymToolbarChevron,
   gymThreadHeroCollapsed = false,
   onGymThreadHeroCollapseToggle,
+  fillBody = false,
 }: Props) {
   const router = useRouter();
   const collapseProgress = useSharedValue(0);
@@ -118,14 +121,20 @@ export function ChatSubScreenLayout({
       {stackLeader != null ? (
         <View style={styles.splitBody}>
           <View style={styles.stackLeaderSlot}>{stackLeader}</View>
-          <ScrollView
-            style={styles.splitScroll}
-            contentContainerStyle={styles.splitScrollContent}
-            showsVerticalScrollIndicator={false}
-          >
-            {children}
-          </ScrollView>
+          {fillBody ? (
+            <View style={styles.splitFill}>{children}</View>
+          ) : (
+            <ScrollView
+              style={styles.splitScroll}
+              contentContainerStyle={styles.splitScrollContent}
+              showsVerticalScrollIndicator={false}
+            >
+              {children}
+            </ScrollView>
+          )}
         </View>
+      ) : fillBody ? (
+        <View style={styles.splitFill}>{children}</View>
       ) : (
         <ScrollView
           style={styles.bodyScroll}
@@ -199,6 +208,10 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   splitScroll: {
+    flex: 1,
+    minHeight: 0,
+  },
+  splitFill: {
     flex: 1,
     minHeight: 0,
   },

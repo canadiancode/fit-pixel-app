@@ -1,5 +1,6 @@
 import { Image } from "expo-image";
 import { router } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
@@ -7,14 +8,40 @@ import {
   APP_SHELL_LABEL_COLOR,
   APP_SHELL_MAIN_TEXT_COLOR,
 } from "@/constants/app-colors";
-import { GYM_CHATS_COUNT_PLACEHOLDER } from "@/features/chat/constants";
 import {
   SETTINGS_ROW_BACKGROUND,
   SETTINGS_ROW_BG_ASPECT_RATIO,
 } from "@/features/settings/constants";
+import { listJoinedGymChats } from "@/lib/api/chat";
+import { FitPixelApiError } from "@/lib/api/client";
+import { useAuth } from "@/features/auth/auth-context";
 
 export function ViewGymChatsCard() {
-  const caption = `# of chats: ${GYM_CHATS_COUNT_PLACEHOLDER}`;
+  const { session } = useAuth();
+  const [count, setCount] = useState<number | null>(null);
+
+  const loadCount = useCallback(() => {
+    if (!session?.access_token) {
+      setCount(0);
+      return;
+    }
+    void listJoinedGymChats()
+      .then((chats) => setCount(chats.length))
+      .catch((err) => {
+        if (err instanceof FitPixelApiError && err.status === 401) {
+          setCount(0);
+          return;
+        }
+        setCount(null);
+      });
+  }, [session?.access_token]);
+
+  useEffect(() => {
+    loadCount();
+  }, [loadCount]);
+
+  const caption =
+    count == null ? "# of chats: —" : `# of chats: ${count}`;
 
   return (
     <Pressable

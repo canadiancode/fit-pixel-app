@@ -1,6 +1,6 @@
 import { Image } from "expo-image";
 import { router, usePathname } from "expo-router";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Platform, Pressable, StyleSheet, TextInput, View } from "react-native";
 
 import {
@@ -13,6 +13,7 @@ import {
   TAB_HEADER_ROW_LAYOUT,
 } from "@/constants/app-shell";
 import { FONT_FAMILY } from "@/constants/fonts";
+import { useChatSearch } from "@/features/chat/chat-search-context";
 
 const SEARCH_INPUT_BACKGROUND = require("@/assets/backgrounds/search-input.png");
 const BELL_ICON = require("@/assets/icons/bell.png");
@@ -43,7 +44,7 @@ function searchFieldCopy(pathname: string): {
 
 /** Primary header band; same dimensions as Settings / Actions / Map. */
 export function ChatHeader() {
-  const [query, setQuery] = useState("");
+  const { query, setQuery } = useChatSearch();
   const pathname = usePathname();
   const { placeholder, a11yLabel } = useMemo(
     () => searchFieldCopy(pathname),

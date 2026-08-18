@@ -8,3 +8,23 @@ export {
   type FoodHabitReadyPayload,
   type FoodSearchItem,
 } from "./food";
+export {
+  createOrGetDm,
+  getGym,
+  getPixel,
+  joinGymChat,
+  leaveGymChat,
+  listDms,
+  listDmMessages,
+  listGymMessages,
+  listGyms,
+  listJoinedGymChats,
+  searchPixels,
+  sendDmMessage,
+  sendGymMessage,
+  type ChatMessage,
+  type DmListItem,
+  type GymChatListItem,
+  type GymListItem,
+  type PixelSearchItem,
+} from "./chat";
