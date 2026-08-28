@@ -20,6 +20,7 @@ import {
 } from "@/features/map/gym-catalog";
 import { joinGymChat, listGyms, type GymListItem } from "@/lib/api/chat";
 import { FitPixelApiError } from "@/lib/api/client";
+import Constants from "expo-constants";
 import { Image } from "expo-image";
 import { router } from "expo-router";
 import * as Location from "expo-location";
@@ -74,6 +75,13 @@ const INITIAL_REGION = {
   latitudeDelta: 0.0922,
   longitudeDelta: 0.0421,
 };
+
+function androidGoogleMapsApiKey(): string {
+  const fromEnv = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
+  const fromConfig =
+    Constants.expoConfig?.android?.config?.googleMaps?.apiKey ?? "";
+  return fromEnv.trim() || fromConfig.trim();
+}
 
 const GYM_MARKER_IMAGE = require("@/assets/icons/marker.png");
 const USER_ICON_MAP_CARD = require("@/assets/icons/user.png");
@@ -381,6 +389,18 @@ export default function MapScreen() {
               />
             ))}
           </MapView>
+          {Platform.OS === "android" && !androidGoogleMapsApiKey() ? (
+            <View style={styles.mapsKeyOverlay} pointerEvents="none">
+              <ThemedText
+                lightColor={APP_SHELL_MAIN_TEXT_COLOR}
+                darkColor={APP_SHELL_MAIN_TEXT_COLOR}
+                style={styles.mapsKeyOverlayText}
+              >
+                Google Maps needs EXPO_PUBLIC_GOOGLE_MAPS_API_KEY in .env,
+                then a native rebuild (`npm run android`).
+              </ThemedText>
+            </View>
+          ) : null}
 
           <View
             collapsable={false}
@@ -548,6 +568,20 @@ const styles = StyleSheet.create({
   },
   map: {
     flex: 1,
+  },
+  mapsKeyOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 5,
+    elevation: 5,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 24,
+    backgroundColor: "rgba(0,0,0,0.45)",
+  },
+  mapsKeyOverlayText: {
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: "center",
   },
   locateFabOverlay: {
     ...StyleSheet.absoluteFillObject,

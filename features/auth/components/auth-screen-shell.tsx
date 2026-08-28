@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Image } from "expo-image";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -15,6 +16,10 @@ import {
   APP_SHELL_MAIN_TEXT_COLOR,
   APP_SHELL_SECONDARY_BACKGROUND,
 } from "@/constants/app-colors";
+import { FONT_FAMILY } from "@/constants/fonts";
+
+/** Same lime asset as food “Search for food” and other primary confirms. */
+const AUTH_PRIMARY_BUTTON_BACKGROUND = require("@/assets/backgrounds/add-action.png");
 
 type ShellProps = {
   title: string;
@@ -57,29 +62,46 @@ type PrimaryProps = {
   label: string;
   onPress: () => void;
   disabled?: boolean;
+  accessibilityLabel?: string;
 };
 
-export function AuthPrimaryButton({ label, onPress, disabled }: PrimaryProps) {
+export function AuthPrimaryButton({
+  label,
+  onPress,
+  disabled,
+  accessibilityLabel,
+}: PrimaryProps) {
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={label}
+      accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ disabled: Boolean(disabled) }}
       disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [
-        styles.primary,
+        styles.primaryOuter,
         pressed && !disabled && styles.pressed,
         disabled && styles.disabled,
       ]}
     >
-      <ThemedText
-        lightColor={APP_SHELL_MAIN_TEXT_COLOR}
-        darkColor={APP_SHELL_MAIN_TEXT_COLOR}
-        style={styles.primaryLabel}
-      >
-        {label}
-      </ThemedText>
+      <View style={styles.primaryShell}>
+        <Image
+          accessibilityIgnoresInvertColors
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+          source={AUTH_PRIMARY_BUTTON_BACKGROUND}
+          style={StyleSheet.absoluteFillObject}
+          contentFit="fill"
+        />
+        <ThemedText
+          lightColor={APP_SHELL_MAIN_TEXT_COLOR}
+          darkColor={APP_SHELL_MAIN_TEXT_COLOR}
+          style={styles.primaryLabel}
+          numberOfLines={2}
+        >
+          {label}
+        </ThemedText>
+      </View>
     </Pressable>
   );
 }
@@ -90,20 +112,48 @@ type LinkProps = {
   disabled?: boolean;
 };
 
-export function AuthTextLink({ label, onPress, disabled }: LinkProps) {
+export function AuthSecondaryButton({ label, onPress, disabled }: PrimaryProps) {
   return (
     <Pressable
-      accessibilityRole="link"
+      accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ disabled: Boolean(disabled) }}
       disabled={disabled}
       onPress={onPress}
-      hitSlop={8}
-      style={({ pressed }) => [pressed && !disabled && styles.pressed]}
+      style={({ pressed }) => [
+        styles.secondary,
+        pressed && !disabled && styles.pressed,
+        disabled && styles.disabled,
+      ]}
     >
       <ThemedText
-        lightColor={APP_SHELL_LABEL_COLOR}
-        darkColor={APP_SHELL_LABEL_COLOR}
+        lightColor={APP_SHELL_MAIN_TEXT_COLOR}
+        darkColor={APP_SHELL_MAIN_TEXT_COLOR}
+        style={styles.secondaryLabel}
+      >
+        {label}
+      </ThemedText>
+    </Pressable>
+  );
+}
+
+export function AuthTextLink({ label, onPress, disabled }: LinkProps) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled: Boolean(disabled) }}
+      disabled={disabled}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.linkButton,
+        pressed && !disabled && styles.pressed,
+        disabled && styles.disabled,
+      ]}
+    >
+      <ThemedText
+        lightColor={APP_SHELL_MAIN_TEXT_COLOR}
+        darkColor={APP_SHELL_MAIN_TEXT_COLOR}
         style={styles.linkLabel}
       >
         {label}
@@ -173,25 +223,60 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 16,
   },
-  primary: {
-    marginTop: 8,
+  primaryOuter: {
     alignSelf: "stretch",
-    borderRadius: 10,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(120,200,255,0.55)",
-    backgroundColor: "rgba(120,200,255,0.12)",
+  },
+  primaryShell: {
+    width: "100%",
+    minHeight: 48,
+    borderRadius: 8,
+    overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  primaryLabel: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 12,
+    lineHeight: 16,
+    textAlign: "center",
+    fontWeight: "600",
+  },
+  secondary: {
+    alignSelf: "stretch",
+    minHeight: 52,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: "rgba(255,255,255,0.55)",
+    backgroundColor: "rgba(255,255,255,0.12)",
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  secondaryLabel: {
+    fontSize: 14,
+    lineHeight: 22,
+    fontWeight: "700",
+    textAlign: "center",
+  },
+  linkButton: {
+    alignSelf: "stretch",
+    minHeight: 48,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: "rgba(255,255,255,0.35)",
+    backgroundColor: "rgba(255,255,255,0.06)",
     paddingVertical: 14,
     paddingHorizontal: 16,
     alignItems: "center",
-  },
-  primaryLabel: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: "600",
+    justifyContent: "center",
   },
   linkLabel: {
     fontSize: 13,
-    lineHeight: 18,
+    lineHeight: 20,
+    fontWeight: "600",
     textAlign: "center",
   },
   message: {

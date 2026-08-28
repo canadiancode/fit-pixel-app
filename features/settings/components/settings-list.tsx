@@ -16,6 +16,7 @@ import {
   SETTINGS_SIGN_OUT_BG_ASPECT_RATIO,
 } from "../constants";
 import { SETTINGS_ROWS } from "../data";
+import { SyncStatusBanner } from "./sync-status-banner";
 
 export function SettingsList() {
   return (
@@ -25,6 +26,7 @@ export function SettingsList() {
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
       >
+        <SyncStatusBanner />
         {SETTINGS_ROWS.map((row) => {
           const isSignOut = row.id === "sign-out";
           const rowAspectRatio = isSignOut

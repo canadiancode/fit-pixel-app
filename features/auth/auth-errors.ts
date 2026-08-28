@@ -10,7 +10,7 @@ export const AUTH_COPY = {
   signUpFailed:
     "Could not create an account. Try signing in, or reset your password.",
   resetSent:
-    "If an account exists for that email, we sent a reset link. Open it in the browser, then return to Fit Pixel.",
+    "If an account exists for that email, we sent a reset link. Open it, set a new password in the browser, then sign in to Fit Pixel.",
   network: "Could not reach the server. Check your connection.",
   rateLimit: "Too many attempts. Try again in a few minutes.",
   notConfigured: "Account sign-in is not configured in this build.",

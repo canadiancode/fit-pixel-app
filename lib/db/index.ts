@@ -165,6 +165,7 @@ export { newLocalRecord, nowIso, uuid } from "./ids";
 export {
   acknowledgeOpRejected,
   acknowledgeOpSynced,
+  countDrainableOps,
   enqueueOp,
   FACT_PENDING_OP_TYPES,
   getPendingOp,
@@ -176,6 +177,7 @@ export {
   sanitizePendingOpPayload,
   subscribePendingOpEnqueue,
   trustForOpType,
+  type DrainableOpCounts,
   type EnqueueOpOptions,
   type PendingServerOp,
   type PendingServerOpStatus,

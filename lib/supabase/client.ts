@@ -25,6 +25,8 @@ export function getSupabaseClient(): SupabaseClient | null {
       autoRefreshToken: true,
       persistSession: true,
       detectSessionInUrl: false,
+      /** Implicit so recovery emails redirect with hash tokens the HTTPS callback can use. */
+      flowType: "implicit",
       storage: supabaseSecureStore,
     },
   });

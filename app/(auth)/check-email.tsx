@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 
 import { AUTH_COPY } from "@/features/auth/auth-errors";
 import {
@@ -9,7 +9,6 @@ import {
 
 export default function CheckEmailScreen() {
   const router = useRouter();
-  useLocalSearchParams<{ email?: string }>();
 
   return (
     <AuthScreenShell title="Check your email">

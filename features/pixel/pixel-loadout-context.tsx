@@ -1,4 +1,4 @@
-import { useSQLiteContext } from "expo-sqlite";
+import { useSQLiteContext, type SQLiteDatabase } from "expo-sqlite";
 import {
   createContext,
   useCallback,
@@ -25,7 +25,7 @@ import {
   savePixelPersistedState,
 } from "./pixel-persistence";
 import { getShopOffer } from "./shop-catalog";
-import type { PixelItemId, PixelLayerId, PixelLoadout } from "./types";
+import { PIXEL_LAYER_Z_INDEX, type PixelItemId, type PixelLayerId, type PixelLoadout } from "./types";
 
 export type UnlockItemResult =
   | { ok: true }
@@ -54,6 +54,31 @@ type PixelLoadoutContextValue = {
 const PixelLoadoutContext = createContext<PixelLoadoutContextValue | null>(
   null,
 );
+
+function loadoutToEquipped(
+  loadout: PixelLoadout,
+): Record<string, string> {
+  const equipped: Record<string, string> = {};
+  for (const layerId of Object.keys(PIXEL_LAYER_Z_INDEX) as PixelLayerId[]) {
+    const itemId = loadout[layerId];
+    if (typeof itemId === "string" && itemId.length > 0) {
+      equipped[layerId] = itemId;
+    }
+  }
+  return equipped;
+}
+
+async function enqueueLoadoutSnapshot(
+  db: SQLiteDatabase,
+  loadout: PixelLoadout,
+): Promise<void> {
+  await enqueueOp(
+    db,
+    "loadout",
+    { equipped: loadoutToEquipped(loadout) },
+    { clientClockAt: nowIso() },
+  );
+}
 
 export function PixelLoadoutProvider({ children }: { children: ReactNode }) {
   const db = useSQLiteContext();
@@ -106,9 +131,13 @@ export function PixelLoadoutProvider({ children }: { children: ReactNode }) {
       const item = getPixelItem(itemId);
       if (item == null || item.layer !== layerId) return;
       if (!inventory.includes(itemId)) return;
-      setLoadout((current) => ({ ...current, [layerId]: itemId }));
+      setLoadout((current) => {
+        const next = { ...current, [layerId]: itemId };
+        void enqueueLoadoutSnapshot(db, next);
+        return next;
+      });
     },
-    [inventory],
+    [db, inventory],
   );
 
   const unlockItem = useCallback(

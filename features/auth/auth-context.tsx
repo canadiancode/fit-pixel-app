@@ -56,10 +56,6 @@ function storageKeyFromUrl(url: string): string | undefined {
   return undefined;
 }
 
-function assertConfigured(): never {
-  throw new Error(AUTH_COPY.notConfigured);
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const db = useSQLiteContext();
   const client = getSupabaseClient();
@@ -90,6 +86,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     let cancelled = false;
+
+    void client.auth.getSession().then(async ({ data }) => {
+      if (cancelled) return;
+      const next = data.session ?? null;
+      if (next?.user.id) {
+        const switched = await adoptSessionUser(next.user.id);
+        if (cancelled) return;
+        if (switched) {
+          setDataEpoch((value) => value + 1);
+        }
+      }
+      if (cancelled) return;
+      setSession(next);
+      setIsReady(true);
+    });
+
     const { data } = client.auth.onAuthStateChange((_event, next) => {
       void (async () => {
         if (next?.user.id) {
@@ -114,7 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signIn = useCallback(
     async (email: string, password: string) => {
       if (!client) {
-        assertConfigured();
+        throw new Error(AUTH_COPY.notConfigured);
       }
       const { error } = await client.auth.signInWithPassword({
         email,
@@ -130,7 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signUp = useCallback(
     async (email: string, password: string) => {
       if (!client) {
-        assertConfigured();
+        throw new Error(AUTH_COPY.notConfigured);
       }
       if (password.length < AUTH_PASSWORD_MIN_LENGTH) {
         throw new Error(AUTH_COPY.weakPassword);
@@ -147,7 +159,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const resetPassword = useCallback(
     async (email: string) => {
       if (!client) {
-        assertConfigured();
+        throw new Error(AUTH_COPY.notConfigured);
       }
       const { error } = await client.auth.resetPasswordForEmail(email, {
         redirectTo: AUTH_CALLBACK_URL,

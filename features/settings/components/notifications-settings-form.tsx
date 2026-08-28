@@ -44,7 +44,7 @@ export function NotificationsSettingsForm() {
           darkColor={APP_SHELL_LABEL_COLOR}
           style={styles.cardBody}
         >
-          Get light banner notifications on your iPhone during the day—quick
+          Get light banner notifications on your phone during the day—quick
           nudges tied to the goals you set here so you remember to log work,
           check in, and keep momentum before the day slips by. Turn this off
           anytime.

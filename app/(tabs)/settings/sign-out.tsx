@@ -1,14 +1,17 @@
+import { Image } from "expo-image";
 import { Pressable, StyleSheet, View } from "react-native";
-import { useRouter } from "expo-router";
 
 import { ThemedText } from "@/components/themed-text";
 import { APP_SHELL_MAIN_TEXT_COLOR } from "@/constants/app-colors";
 import { useAuth } from "@/features/auth/auth-context";
 import { SettingsSubScreenLayout } from "@/features/settings/components/settings-sub-screen-layout";
+import {
+  SETTINGS_SIGN_OUT_BACKGROUND,
+  SETTINGS_SIGN_OUT_BG_ASPECT_RATIO,
+} from "@/features/settings/constants";
 
 export default function SignOutSettingsScreen() {
-  const { user, signOut } = useAuth();
-  const router = useRouter();
+  const { signOut } = useAuth();
 
   return (
     <SettingsSubScreenLayout>
@@ -18,31 +21,44 @@ export default function SignOutSettingsScreen() {
           darkColor={APP_SHELL_MAIN_TEXT_COLOR}
           style={styles.body}
         >
-          {user
-            ? "Sign out revokes this session, clears saved login, and resets local Fit Pixel data on this device."
-            : "You are not signed in. You can still reset local data on this device."}
+          Sign out revokes this session, clears saved login, and resets local
+          Fit Pixel data on this device.
         </ThemedText>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Sign out"
+          android_ripple={{ color: "rgba(255,255,255,0.12)" }}
           onPress={() => {
-            void (async () => {
-              await signOut();
-              router.back();
-            })();
+            void signOut();
           }}
           style={({ pressed }) => [
             styles.button,
             pressed && styles.buttonPressed,
           ]}
         >
-          <ThemedText
-            lightColor={APP_SHELL_MAIN_TEXT_COLOR}
-            darkColor={APP_SHELL_MAIN_TEXT_COLOR}
-            style={styles.buttonLabel}
+          <View
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+            style={styles.buttonShell}
           >
-            {user ? "Sign out" : "Reset local data"}
-          </ThemedText>
+            <Image
+              accessibilityIgnoresInvertColors
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
+              source={SETTINGS_SIGN_OUT_BACKGROUND}
+              style={StyleSheet.absoluteFillObject}
+              contentFit="fill"
+            />
+            <View style={styles.buttonInner}>
+              <ThemedText
+                lightColor="#ff8a8a"
+                darkColor="#ff8a8a"
+                style={styles.buttonLabel}
+              >
+                Sign out
+              </ThemedText>
+            </View>
+          </View>
         </Pressable>
       </View>
     </SettingsSubScreenLayout>
@@ -51,7 +67,7 @@ export default function SignOutSettingsScreen() {
 
 const styles = StyleSheet.create({
   block: {
-    gap: 16,
+    gap: 20,
   },
   body: {
     fontSize: 14,
@@ -59,20 +75,28 @@ const styles = StyleSheet.create({
   },
   button: {
     alignSelf: "stretch",
-    borderRadius: 10,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(255,120,120,0.55)",
-    backgroundColor: "rgba(255,120,120,0.12)",
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    alignItems: "center",
+    borderRadius: 12,
+    overflow: "hidden",
   },
   buttonPressed: {
-    opacity: 0.88,
+    opacity: 0.85,
+  },
+  buttonShell: {
+    width: "100%",
+    aspectRatio: SETTINGS_SIGN_OUT_BG_ASPECT_RATIO,
+    borderRadius: 12,
+    overflow: "hidden",
+  },
+  buttonInner: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "center",
+    paddingVertical: 12,
+    paddingLeft: 72,
+    paddingRight: 20,
   },
   buttonLabel: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: "600",
+    fontSize: 16,
+    lineHeight: 22,
+    color: "#ff8a8a",
   },
 });

@@ -1,5 +1,6 @@
 import type { SQLiteDatabase } from "expo-sqlite";
 
+import { FitPixelApiError } from "@/lib/api/client";
 import { postSyncOps, type SyncOpWire } from "@/lib/api/sync";
 import {
   acknowledgeOpRejected,
@@ -9,6 +10,7 @@ import {
   PENDING_OP_SCHEMA_VERSION,
   type PendingServerOp,
 } from "@/lib/db";
+import { setLastDrainError } from "@/lib/sync/drain-status";
 
 function parsePayload(json: string): Record<string, unknown> | null {
   try {
@@ -33,6 +35,16 @@ function toWire(op: PendingServerOp): SyncOpWire | null {
     schemaVersion: op.schemaVersion ?? PENDING_OP_SCHEMA_VERSION,
     trust: op.trust,
   };
+}
+
+function drainErrorMessage(err: unknown): string {
+  if (err instanceof FitPixelApiError) {
+    return err.message;
+  }
+  if (err instanceof Error && err.message.trim()) {
+    return err.message;
+  }
+  return "Could not reach Fit Pixel API.";
 }
 
 /**
@@ -93,7 +105,9 @@ export async function drainPendingServerOps(
         reason: ack.reason,
       });
     }
-  } catch {
+    setLastDrainError(null);
+  } catch (err) {
+    setLastDrainError(drainErrorMessage(err));
     for (const op of ops) {
       try {
         await markOpFailed(db, op.id);

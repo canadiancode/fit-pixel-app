@@ -6,16 +6,36 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "environment": "development",
+      "env": {
+        "EXPO_PUBLIC_FIT_PIXEL_API_URL": "https://api.aurashields.com"
+      }
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "environment": "preview",
+      "env": {
+        "EXPO_PUBLIC_FIT_PIXEL_API_URL": "https://api.aurashields.com"
+      }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "environment": "production",
+      "android": {
+        "credentialsSource": "remote"
+      },
+      "env": {
+        "EXPO_PUBLIC_FIT_PIXEL_API_URL": "https://api.aurashields.com"
+      }
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "android": {
+        "track": "internal",
+        "releaseStatus": "draft"
+      }
+    }
   }
 }

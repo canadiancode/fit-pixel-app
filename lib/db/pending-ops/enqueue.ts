@@ -27,6 +27,30 @@ function notifyPendingOpEnqueue(): void {
   }
 }
 
+export type DrainableOpCounts = {
+  pending: number;
+  failed: number;
+};
+
+/** Rows still waiting to drain (pending + failed retries). */
+export async function countDrainableOps(
+  db: SQLiteDatabase,
+): Promise<DrainableOpCounts> {
+  const rows = await db.getAllAsync<{ status: string; n: number }>(
+    `SELECT status, COUNT(*) AS n
+     FROM pending_server_ops
+     WHERE status IN ('pending', 'failed')
+     GROUP BY status`,
+  );
+  const counts: DrainableOpCounts = { pending: 0, failed: 0 };
+  for (const row of rows) {
+    const n = Number(row.n) || 0;
+    if (row.status === "pending") counts.pending = n;
+    if (row.status === "failed") counts.failed = n;
+  }
+  return counts;
+}
+
 type PendingServerOpRow = {
   id: string;
   type: string;
@@ -121,6 +145,7 @@ export async function markOpFailed(
       `markOpFailed: op ${id} missing or already synced (refusing overwrite)`,
     );
   }
+  notifyPendingOpEnqueue();
 }
 
 /**
@@ -150,6 +175,7 @@ export async function acknowledgeOpSynced(
       `acknowledgeOpSynced: op ${id} missing or already synced (ack=${ackId})`,
     );
   }
+  notifyPendingOpEnqueue();
 }
 
 /**
@@ -176,6 +202,7 @@ export async function acknowledgeOpRejected(
       `acknowledgeOpRejected: op ${id} missing or already terminal (ack=${ackId})`,
     );
   }
+  notifyPendingOpEnqueue();
 }
 
 /** Ops still waiting to drain (pending first, then failed for retry). */

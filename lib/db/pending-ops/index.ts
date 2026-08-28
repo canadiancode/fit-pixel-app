@@ -1,11 +1,13 @@
 export {
   acknowledgeOpRejected,
   acknowledgeOpSynced,
+  countDrainableOps,
   enqueueOp,
   getPendingOp,
   listDrainableOps,
   markOpFailed,
   subscribePendingOpEnqueue,
+  type DrainableOpCounts,
 } from "./enqueue";
 export { sanitizePendingOpPayload } from "./sanitize";
 export { FACT_PENDING_OP_TYPES, trustForOpType } from "./trust";

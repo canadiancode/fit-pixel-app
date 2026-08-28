@@ -40,10 +40,7 @@ export default function SignUpScreen() {
       try {
         const result = await signUp(trimmedEmail, password);
         if (result.needsEmailConfirm) {
-          router.replace({
-            pathname: "/(auth)/check-email",
-            params: { email: trimmedEmail },
-          });
+          router.replace("/(auth)/check-email");
         }
       } catch (err) {
         setMessage(

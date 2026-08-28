@@ -86,8 +86,8 @@ export default function TabLayout() {
     <XpStateProvider key={dataEpoch}>
       <PrefsProfileProvider key={dataEpoch}>
         <SyncDrainProvider>
-    <DailyGoalsProvider>
-      <HabitProgressProvider>
+          <DailyGoalsProvider>
+            <HabitProgressProvider>
         <Tabs
           layout={({ children }) => (
             <View
@@ -175,7 +175,10 @@ export default function TabLayout() {
             }}
           />
         </Tabs>
-      </HabitProgressProvider>
-    </DailyGoalsProvider>
+            </HabitProgressProvider>
+          </DailyGoalsProvider>
+        </SyncDrainProvider>
+      </PrefsProfileProvider>
+    </XpStateProvider>
   );
 }

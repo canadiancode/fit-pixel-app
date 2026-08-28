@@ -1,0 +1,33 @@
+Fit Pixel — Google Play listing checklist
+Package: com.fitpixel.app
+
+Required in Play Console (not stored in this repo):
+- Short description (80 characters)
+- Full description
+- App icon 512×512 PNG (export from assets/images/icon.png)
+- Feature graphic 1024×500 PNG
+- Phone screenshots (at least 2; 16:9 or 9:16)
+- Tablet screenshots if you claim tablet support
+- Privacy policy URL (required for Health Connect / health data)
+- Content rating questionnaire
+
+Already in the Expo app:
+- Adaptive icon foreground / background / monochrome:
+  assets/images/android-icon-foreground.png
+  assets/images/android-icon-background.png
+  assets/images/android-icon-monochrome.png
+- Splash via expo-splash-screen plugin
+
+Health Connect:
+- Complete the Play Console Health apps declaration before production
+  https://support.google.com/googleplay/android-developer/answer/14738291
+
+App Links:
+- Host store/android/assetlinks.json.example at
+  https://api.aurashields.com/.well-known/assetlinks.json
+- Use the Play / EAS upload certificate SHA-256 (eas credentials -p android)
+
+EAS:
+- First production Android build creates the remote upload keystore
+- eas.json submit.production.android → internal track, draft status
+- Link a Play Console service account in the Expo dashboard (do not commit the JSON key)

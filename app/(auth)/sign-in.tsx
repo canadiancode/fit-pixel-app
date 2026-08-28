@@ -2,6 +2,7 @@ import { useState } from "react";
 import { View, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 
+import { AUTH_COPY } from "@/features/auth/auth-errors";
 import {
   AUTH_EMAIL_MAX_LENGTH,
   AUTH_PASSWORD_MAX_LENGTH,
@@ -12,6 +13,7 @@ import {
   AuthMessage,
   AuthPrimaryButton,
   AuthScreenShell,
+  AuthSecondaryButton,
   AuthTextLink,
 } from "@/features/auth/components/auth-screen-shell";
 import { SettingsSingleLineTextField } from "@/features/settings/components/settings-text-field";
@@ -36,7 +38,7 @@ export default function SignInScreen() {
         await signIn(trimmedEmail, password);
       } catch (err) {
         setMessage(
-          err instanceof Error ? err.message : "Email or password is incorrect.",
+          err instanceof Error ? err.message : AUTH_COPY.invalidCredentials,
         );
       } finally {
         setBusy(false);
@@ -79,21 +81,23 @@ export default function SignInScreen() {
           onSubmitEditing={onSubmit}
         />
       </View>
-      <AuthPrimaryButton
-        label="Sign in"
-        onPress={onSubmit}
-        disabled={!canSubmit}
-      />
-      <AuthTextLink
-        label="Create account"
-        disabled={busy}
-        onPress={() => router.push("/(auth)/sign-up")}
-      />
-      <AuthTextLink
-        label="Forgot password?"
-        disabled={busy}
-        onPress={() => router.push("/(auth)/forgot-password")}
-      />
+      <View style={styles.actions}>
+        <AuthPrimaryButton
+          label="Sign in"
+          onPress={onSubmit}
+          disabled={!canSubmit}
+        />
+        <AuthSecondaryButton
+          label="Create account"
+          disabled={busy}
+          onPress={() => router.push("/(auth)/sign-up")}
+        />
+        <AuthTextLink
+          label="Forgot password?"
+          disabled={busy}
+          onPress={() => router.push("/(auth)/forgot-password")}
+        />
+      </View>
       {message ? <AuthMessage>{message}</AuthMessage> : null}
     </AuthScreenShell>
   );
@@ -102,5 +106,8 @@ export default function SignInScreen() {
 const styles = StyleSheet.create({
   field: {
     gap: 6,
+  },
+  actions: {
+    gap: 12,
   },
 });

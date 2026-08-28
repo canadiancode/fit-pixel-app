@@ -53,7 +53,17 @@ function SessionGate() {
   }
 
   if (!configured) {
-    return <AuthMisconfiguredScreen />;
+    return (
+      <View
+        style={{
+          flex: 1,
+          paddingHorizontal: APP_SHELL_PADDING,
+          backgroundColor: APP_SHELL_PRIMARY_BACKGROUND,
+        }}
+      >
+        <AuthMisconfiguredScreen />
+      </View>
+    );
   }
 
   return (

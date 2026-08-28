@@ -1,8 +1,5 @@
-import { AuthorizationRequestStatus } from "@kingstinct/react-native-healthkit";
 import {
   ActivityIndicator,
-  Linking,
-  Platform,
   Pressable,
   StyleSheet,
   View,
@@ -16,6 +13,8 @@ import {
 } from "@/constants/app-colors";
 import {
   type DashboardHealthConnectivity,
+  type HealthAuthorizationStatus,
+  type HealthPlatform,
   useDashboardHealthMetrics,
 } from "@/hooks/use-dashboard-health-metrics";
 
@@ -30,18 +29,48 @@ const METRIC_ROWS: {
   { key: "sleep", label: "Sleep analysis" },
 ];
 
+function platformTitle(platform: HealthPlatform): string {
+  if (platform === "health-connect") return "Health Connect";
+  if (platform === "apple-health") return "Apple Health";
+  return "Health";
+}
+
 function authorizationSummary(
-  status: AuthorizationRequestStatus | null,
+  platform: HealthPlatform,
+  status: HealthAuthorizationStatus | null,
 ): string {
   if (status == null) return "Checking Health access…";
+  const store =
+    platform === "health-connect"
+      ? "Health Connect"
+      : platform === "apple-health"
+        ? "Apple Health"
+        : "Health";
   switch (status) {
-    case AuthorizationRequestStatus.shouldRequest:
-      return "Apple has not received a permission decision yet for this app.";
-    case AuthorizationRequestStatus.unnecessary:
-      return "Access has been presented to Apple Health. You can refine which categories are shared in the Health app.";
+    case "shouldRequest":
+      return `${store} has not received a permission decision yet for this app.`;
+    case "unnecessary":
+      return `Access has been presented to ${store}. You can refine which categories are shared in ${store}.`;
     default:
       return "Health permission status is unknown.";
   }
+}
+
+function availabilityCopy(
+  platform: HealthPlatform,
+  available: boolean | null,
+): string {
+  const store = platformTitle(platform);
+  if (available === null) {
+    return `Checking whether ${store} is available…`;
+  }
+  if (available) {
+    return `Health data is available on this device.`;
+  }
+  if (platform === "health-connect") {
+    return "Health Connect is not available on this device. Install or update Health Connect, then return here.";
+  }
+  return "Health data is not available on this device (e.g. restricted or unsupported).";
 }
 
 function formatFriendlyLastUpdated(d: Date): string {
@@ -80,9 +109,11 @@ export function HealthWearablesSettings() {
     healthDataAvailable,
     authorizationRequestStatus,
     healthContributors,
+    healthPlatform,
+    openHealthSettings,
   } = useDashboardHealthMetrics();
 
-  if (Platform.OS !== "ios") {
+  if (healthPlatform === "none") {
     return (
       <View style={styles.block}>
         <ThemedText
@@ -90,11 +121,16 @@ export function HealthWearablesSettings() {
           darkColor={APP_SHELL_LABEL_COLOR}
           style={styles.body}
         >
-          Apple Health and HealthKit are only available on iPhone.
+          Wearable health data is available on iPhone (Apple Health) and Android
+          (Health Connect).
         </ThemedText>
       </View>
     );
   }
+
+  const title = platformTitle(healthPlatform);
+  const liveSource =
+    healthPlatform === "health-connect" ? "Health Connect" : "HealthKit";
 
   return (
     <View style={styles.block}>
@@ -104,7 +140,7 @@ export function HealthWearablesSettings() {
           darkColor={APP_SHELL_MAIN_TEXT_COLOR}
           style={styles.sectionTitle}
         >
-          Apple Health
+          {title}
         </ThemedText>
         <View style={styles.availabilityRow}>
           {isLoading && healthDataAvailable === null ? (
@@ -118,11 +154,7 @@ export function HealthWearablesSettings() {
             darkColor={APP_SHELL_LABEL_COLOR}
             style={[styles.body, styles.availabilityText]}
           >
-            {healthDataAvailable === null
-              ? "Checking whether Apple Health is available…"
-              : healthDataAvailable
-                ? "Health data is available on this device."
-                : "Health data is not available on this device (e.g. restricted or unsupported)."}
+            {availabilityCopy(healthPlatform, healthDataAvailable)}
           </ThemedText>
         </View>
         <ThemedText
@@ -130,14 +162,16 @@ export function HealthWearablesSettings() {
           darkColor={APP_SHELL_LABEL_COLOR}
           style={[styles.body, styles.sectionGap]}
         >
-          {authorizationSummary(authorizationRequestStatus)}
+          {authorizationSummary(healthPlatform, authorizationRequestStatus)}
         </ThemedText>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Open system settings for this app"
-          onPress={() => {
-            void Linking.openSettings();
-          }}
+          accessibilityLabel={
+            healthPlatform === "health-connect"
+              ? "Open Health Connect settings"
+              : "Open system settings for this app"
+          }
+          onPress={openHealthSettings}
           style={({ pressed }) => [
             styles.settingsLink,
             pressed && styles.settingsLinkPressed,
@@ -148,7 +182,9 @@ export function HealthWearablesSettings() {
             darkColor={APP_SHELL_MAIN_TEXT_COLOR}
             style={styles.settingsLinkLabel}
           >
-            Open app settings
+            {healthPlatform === "health-connect"
+              ? "Open Health Connect"
+              : "Open app settings"}
           </ThemedText>
         </Pressable>
       </View>
@@ -166,7 +202,7 @@ export function HealthWearablesSettings() {
           darkColor={APP_SHELL_LABEL_COLOR}
           style={styles.body}
         >
-          Categories this app reads. “Live” means we received HealthKit data
+          Categories this app reads. “Live” means we received {liveSource} data
         </ThemedText>
         <View style={[styles.metricList, styles.sectionGap]}>
           {isLoading ? (
