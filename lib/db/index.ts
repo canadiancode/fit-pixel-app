@@ -1,11 +1,16 @@
 export { wipeLocalUserData } from "./wipe-local";
 export { DATABASE_NAME, DATABASE_VERSION } from "./constants";
 export {
+  getLastAuthUserId,
+  setLastAuthUserId,
+} from "./auth-local";
+export {
   migrateDbIfNeeded,
   ensureDailySummarySchema,
   ensureXpSchema,
   ensureSavedMealsSchema,
   ensurePrefsProfileSchema,
+  ensureAuthLocalSchema,
 } from "./migrations";
 export {
   DAILY_GOAL_LIMITS,

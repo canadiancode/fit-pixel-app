@@ -541,11 +541,21 @@ function pickRandom<T>(items: T[]): T {
   return items[Math.floor(Math.random() * items.length)]!;
 }
 
-/** Random owned/catalog id from every layer (for visual testing). */
-export function createRandomPixelLoadout(): PixelLoadout {
+/**
+ * Random item id per layer. Pass inventory to sample owned items only
+ * (day-1 starter loadout); omit it to sample the full catalog (visual tests).
+ */
+export function createRandomPixelLoadout(
+  inventory?: readonly PixelItemId[],
+): PixelLoadout {
   const loadout: PixelLoadout = {};
   for (const layerId of Object.keys(PIXEL_LAYER_ASSETS) as PixelLayerId[]) {
-    loadout[layerId] = pickRandom(PIXEL_LAYER_ASSETS[layerId]).id;
+    const pool =
+      inventory != null
+        ? getOwnedItemsForLayer(layerId, inventory)
+        : PIXEL_LAYER_ASSETS[layerId];
+    if (pool.length === 0) continue;
+    loadout[layerId] = pickRandom(pool).id;
   }
   return loadout;
 }

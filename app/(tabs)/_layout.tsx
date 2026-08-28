@@ -13,6 +13,10 @@ import {
 } from "@/constants/app-colors";
 import { DailyGoalsProvider } from "@/features/actions/daily-goals-context";
 import { HabitProgressProvider } from "@/features/actions/habit-progress-context";
+import { useAuth } from "@/features/auth/auth-context";
+import { PrefsProfileProvider } from "@/features/settings/prefs-profile-context";
+import { XpStateProvider } from "@/features/xp/xp-state-context";
+import { SyncDrainProvider } from "@/lib/sync/sync-drain-provider";
 
 const TAB_ICON_SIZE = 28;
 
@@ -70,6 +74,7 @@ export const unstable_settings = {
 };
 
 export default function TabLayout() {
+  const { dataEpoch } = useAuth();
   const insets = useSafeAreaInsets();
   const horizontalInset = Math.max(insets.left, insets.right);
   const tabBarBottomInset =
@@ -78,6 +83,9 @@ export default function TabLayout() {
       : Math.max(0, insets.bottom - TAB_BAR_BOTTOM_INSET_REDUCTION_NATIVE);
 
   return (
+    <XpStateProvider key={dataEpoch}>
+      <PrefsProfileProvider key={dataEpoch}>
+        <SyncDrainProvider>
     <DailyGoalsProvider>
       <HabitProgressProvider>
         <Tabs

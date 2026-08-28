@@ -10,8 +10,18 @@ import {
   type ReactNode,
 } from "react";
 
+import { AUTH_PASSWORD_MIN_LENGTH } from "@/features/auth/auth-constants";
+import {
+  AUTH_COPY,
+  isSurfacedResetError,
+  mapAuthError,
+} from "@/features/auth/auth-errors";
 import { deletePixelPersistedState } from "@/features/pixel/pixel-persistence";
-import { wipeLocalUserData } from "@/lib/db";
+import {
+  getLastAuthUserId,
+  setLastAuthUserId,
+  wipeLocalUserData,
+} from "@/lib/db";
 import {
   AUTH_CALLBACK_URL,
   getSupabaseClient,
@@ -25,7 +35,10 @@ type AuthContextValue = {
   dataEpoch: number;
   configured: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string) => Promise<void>;
+  signUp: (
+    email: string,
+    password: string,
+  ) => Promise<{ needsEmailConfirm: boolean }>;
   resetPassword: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
 };
@@ -43,12 +56,32 @@ function storageKeyFromUrl(url: string): string | undefined {
   return undefined;
 }
 
+function assertConfigured(): never {
+  throw new Error(AUTH_COPY.notConfigured);
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const db = useSQLiteContext();
   const client = getSupabaseClient();
   const [session, setSession] = useState<Session | null>(null);
   const [isReady, setIsReady] = useState(!client);
   const [dataEpoch, setDataEpoch] = useState(0);
+
+  const adoptSessionUser = useCallback(
+    async (userId: string): Promise<boolean> => {
+      const last = await getLastAuthUserId(db);
+      if (last === userId) {
+        return false;
+      }
+      if (last != null) {
+        await wipeLocalUserData(db);
+        await deletePixelPersistedState();
+      }
+      await setLastAuthUserId(db, userId);
+      return last != null;
+    },
+    [db],
+  );
 
   useEffect(() => {
     if (!client) {
@@ -57,30 +90,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     let cancelled = false;
-    void client.auth.getSession().then(({ data }) => {
-      if (!cancelled) {
-        setSession(data.session ?? null);
-        setIsReady(true);
-      }
-    });
-
     const { data } = client.auth.onAuthStateChange((_event, next) => {
-      setSession(next);
+      void (async () => {
+        if (next?.user.id) {
+          const switched = await adoptSessionUser(next.user.id);
+          if (cancelled) return;
+          if (switched) {
+            setDataEpoch((value) => value + 1);
+          }
+        }
+        if (cancelled) return;
+        setSession(next);
+        setIsReady(true);
+      })();
     });
 
     return () => {
       cancelled = true;
       data.subscription.unsubscribe();
     };
-  }, [client]);
+  }, [adoptSessionUser, client]);
 
   const signIn = useCallback(
     async (email: string, password: string) => {
       if (!client) {
-        throw new Error("Supabase is not configured on this build.");
+        assertConfigured();
       }
-      const { error } = await client.auth.signInWithPassword({ email, password });
-      if (error) throw error;
+      const { error } = await client.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (error) {
+        throw new Error(mapAuthError(error, "signIn"));
+      }
     },
     [client],
   );
@@ -88,10 +130,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signUp = useCallback(
     async (email: string, password: string) => {
       if (!client) {
-        throw new Error("Supabase is not configured on this build.");
+        assertConfigured();
       }
-      const { error } = await client.auth.signUp({ email, password });
-      if (error) throw error;
+      if (password.length < AUTH_PASSWORD_MIN_LENGTH) {
+        throw new Error(AUTH_COPY.weakPassword);
+      }
+      const { data, error } = await client.auth.signUp({ email, password });
+      if (error) {
+        throw new Error(mapAuthError(error, "signUp"));
+      }
+      return { needsEmailConfirm: data.session == null };
     },
     [client],
   );
@@ -99,12 +147,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const resetPassword = useCallback(
     async (email: string) => {
       if (!client) {
-        throw new Error("Supabase is not configured on this build.");
+        assertConfigured();
       }
       const { error } = await client.auth.resetPasswordForEmail(email, {
         redirectTo: AUTH_CALLBACK_URL,
       });
-      if (error) throw error;
+      if (error && isSurfacedResetError(error)) {
+        throw new Error(mapAuthError(error, "reset"));
+      }
     },
     [client],
   );
@@ -117,6 +167,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     await wipeLocalUserData(db);
     await deletePixelPersistedState();
+    await setLastAuthUserId(db, null);
     setSession(null);
     setDataEpoch((value) => value + 1);
   }, [client, db]);
@@ -133,7 +184,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       resetPassword,
       signOut,
     }),
-    [session, isReady, dataEpoch, client, signIn, signUp, resetPassword, signOut],
+    [
+      session,
+      isReady,
+      dataEpoch,
+      client,
+      signIn,
+      signUp,
+      resetPassword,
+      signOut,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

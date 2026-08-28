@@ -145,6 +145,26 @@ export async function ensurePrefsProfileSchema(
 }
 
 /**
+ * Idempotent last-account binding (v11). Stores user id only — never JWTs.
+ */
+export async function ensureAuthLocalSchema(
+  db: SQLiteDatabase,
+): Promise<void> {
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS auth_local (
+      id INTEGER PRIMARY KEY NOT NULL CHECK (id = 1),
+      lastUserId TEXT,
+      updatedAt TEXT NOT NULL
+    );
+  `);
+  await db.runAsync(
+    `INSERT OR IGNORE INTO auth_local (id, lastUserId, updatedAt)
+     VALUES (1, NULL, ?)`,
+    nowIso(),
+  );
+}
+
+/**
  * Versioned schema upgrades via `PRAGMA user_version`.
  * daily_summary is a derived cache only. XP is local UX until server authority.
  */
@@ -305,12 +325,18 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase): Promise<void> {
     currentVersion = 10;
   }
 
+  if (currentVersion === 10) {
+    await ensureAuthLocalSchema(db);
+    currentVersion = 11;
+  }
+
   // Always repair derived/XP/saved/prefs tables — Fast Refresh can skip onInit while
   // stamping user_version ahead of CREATE TABLE.
   await ensureDailySummarySchema(db);
   await ensureXpSchema(db);
   await ensureSavedMealsSchema(db);
   await ensurePrefsProfileSchema(db);
+  await ensureAuthLocalSchema(db);
 
   await db.execAsync(`PRAGMA user_version = ${DATABASE_VERSION}`);
 }

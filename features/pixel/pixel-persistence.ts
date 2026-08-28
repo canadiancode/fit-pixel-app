@@ -9,6 +9,7 @@ import {
 import { DEFAULT_PIXEL_LOADOUT } from "./default-loadout";
 import {
   DEFAULT_PIXEL_INVENTORY,
+  createRandomPixelLoadout,
   getPixelItem,
 } from "./layer-assets";
 import { PIXEL_LAYER_Z_INDEX, type PixelItemId, type PixelLoadout } from "./types";
@@ -94,7 +95,7 @@ function normalizeLoadout(
 
 export function createDefaultPixelPersistedState(): PixelPersistedState {
   return {
-    loadout: { ...DEFAULT_PIXEL_LOADOUT },
+    loadout: createRandomPixelLoadout(DEFAULT_PIXEL_INVENTORY),
     inventory: [...DEFAULT_PIXEL_INVENTORY],
     inventoryGrantVersion: PIXEL_INVENTORY_GRANT_VERSION,
   };

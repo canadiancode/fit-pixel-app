@@ -21,11 +21,9 @@ import {
 import { APP_SHELL_PADDING } from "@/constants/app-shell";
 import { FONT_FAMILY } from "@/constants/fonts";
 import { AuthProvider, useAuth } from "@/features/auth/auth-context";
-import { PrefsProfileProvider } from "@/features/settings/prefs-profile-context";
-import { XpStateProvider } from "@/features/xp/xp-state-context";
+import { AuthMisconfiguredScreen } from "@/features/auth/components/auth-screen-shell";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { DATABASE_NAME, migrateDbIfNeeded } from "@/lib/db";
-import { SyncDrainProvider } from "@/lib/sync/sync-drain-provider";
 
 SplashScreen.preventAutoHideAsync();
 const CELL_HEADING_FONT_FAMILY = "PixeloidSans";
@@ -41,42 +39,55 @@ export const unstable_settings = {
   anchor: "(tabs)",
 };
 
-function AuthedAppShell() {
-  const { dataEpoch } = useAuth();
+function SessionGate() {
+  const { isReady, configured, session } = useAuth();
+
+  useEffect(() => {
+    if (isReady) {
+      void SplashScreen.hideAsync();
+    }
+  }, [isReady]);
+
+  if (!isReady) {
+    return null;
+  }
+
+  if (!configured) {
+    return <AuthMisconfiguredScreen />;
+  }
 
   return (
-    <XpStateProvider key={dataEpoch}>
-      <PrefsProfileProvider key={dataEpoch}>
-        <SyncDrainProvider>
-          <View
-            style={{
-              flex: 1,
-              flexDirection: "column",
-              paddingTop: 0,
-              paddingHorizontal: APP_SHELL_PADDING,
-              paddingBottom: 0,
-              backgroundColor: APP_SHELL_PRIMARY_BACKGROUND,
-            }}
-          >
-            <View
-              style={{
-                flex: 1,
-                backgroundColor: APP_SHELL_SECONDARY_BACKGROUND,
-              }}
-            >
-              <Stack>
-                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                <Stack.Screen
-                  name="modal"
-                  options={{ presentation: "modal", title: "Modal" }}
-                />
-              </Stack>
-            </View>
-            <StatusBar style="auto" />
-          </View>
-        </SyncDrainProvider>
-      </PrefsProfileProvider>
-    </XpStateProvider>
+    <View
+      style={{
+        flex: 1,
+        flexDirection: "column",
+        paddingTop: 0,
+        paddingHorizontal: APP_SHELL_PADDING,
+        paddingBottom: 0,
+        backgroundColor: APP_SHELL_PRIMARY_BACKGROUND,
+      }}
+    >
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: APP_SHELL_SECONDARY_BACKGROUND,
+        }}
+      >
+        <Stack>
+          <Stack.Protected guard={session != null}>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen
+              name="modal"
+              options={{ presentation: "modal", title: "Modal" }}
+            />
+          </Stack.Protected>
+          <Stack.Protected guard={session == null}>
+            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+          </Stack.Protected>
+        </Stack>
+      </View>
+      <StatusBar style="auto" />
+    </View>
   );
 }
 
@@ -86,12 +97,6 @@ export default function RootLayout() {
     [FONT_FAMILY]: require("@/assets/fonts/PressStart2P-Regular.ttf"),
     [CELL_HEADING_FONT_FAMILY]: require("@/assets/fonts/PixeloidSans-lxa3y.ttf"),
   });
-
-  useEffect(() => {
-    if (fontsLoaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [fontsLoaded]);
 
   if (!fontsLoaded) {
     return null;
@@ -113,7 +118,7 @@ export default function RootLayout() {
     <ThemeProvider value={navigationTheme}>
       <SQLiteProvider databaseName={DATABASE_NAME} onInit={migrateDbIfNeeded}>
         <AuthProvider>
-          <AuthedAppShell />
+          <SessionGate />
         </AuthProvider>
       </SQLiteProvider>
     </ThemeProvider>

@@ -1,17 +1,19 @@
 {
   "expo": {
     "name": "Fit Pixel",
-    "slug": "one-rep-max",
+    "slug": "fit-pixel-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "onerepmax",
+    "scheme": "fitpixel",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.onerepmax.app",
-      "associatedDomains": ["applinks:api.aurashields.com"],
+      "bundleIdentifier": "com.fitpixel.app",
+      "associatedDomains": [
+        "applinks:api.aurashields.com"
+      ],
       "entitlements": {
         "com.apple.developer.healthkit": true
       },
@@ -23,7 +25,7 @@
       "config": {}
     },
     "android": {
-      "package": "com.onerepmax.app",
+      "package": "com.fitpixel.app",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -43,7 +45,10 @@
               "pathPrefix": "/auth/callback"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ]
     },
@@ -87,9 +92,11 @@
     },
     "extra": {
       "router": {},
+      "fitPixelApiUrl": "https://api.aurashields.com",
       "eas": {
-        "projectId": "7f505789-0d91-4bca-bf37-180106e354fb"
+        "projectId": "9e6ef890-8751-4a1b-ba96-3cecae61cd37"
       }
-    }
+    },
+    "owner": "heidemakevin"
   }
 }
