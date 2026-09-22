@@ -51,6 +51,9 @@ function sleepPartsFromHours(hours: number): { h: number; m: number } {
 type ActionMetricRoute = "weight" | "steps" | "calories" | "sleep" | "water";
 
 function pushActionRoute(id: ActionMetricRoute) {
+  // Clear any prior action screens so Pixel → weight → Pixel → sleep
+  // does not leave weight under sleep on the Actions stack.
+  router.dismissTo("/(tabs)/actions");
   router.push(`/(tabs)/actions/${id}`);
 }
 

@@ -81,7 +81,15 @@ export function ChatSubScreenLayout({
           accessibilityRole="button"
           accessibilityLabel="Back"
           hitSlop={12}
-          onPress={() => router.back()}
+          onPress={() => {
+            // Prefer stack dismiss so Map → gym-chat Back stays on Chat
+            // (router.back() can jump to the tabs initial route / Pixel).
+            if (router.canDismiss()) {
+              router.dismiss();
+            } else {
+              router.replace("/(tabs)/chat");
+            }
+          }}
           style={({ pressed }) => [
             styles.backHit,
             pressed && styles.backPressed,

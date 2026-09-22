@@ -10,7 +10,6 @@ import {
   TAB_SCREEN_STACK_CHROME_LAYOUT,
 } from "@/constants/app-shell";
 import { FIT_PIXEL_GOOGLE_MAP_STYLE } from "@/constants/google-map-style";
-import { FONT_FAMILY } from "@/constants/fonts";
 import { useAuth } from "@/features/auth/auth-context";
 import { MapHeader } from "@/features/map/components/map-header";
 import {
@@ -90,6 +89,14 @@ const LOCATE_ME_ICON = require("@/assets/icons/locate-me.png");
 /** Popup card behind gym name, hero image, distance, etc. */
 const MAP_GYM_SHEET_CARD_BACKGROUND = require("@/assets/backgrounds/blue-square-card.png");
 
+/**
+ * Point size for gym pins. Matches Metro/dev-client sizing of the 93×105
+ * marker.png on a 3x device (pixels ÷ screen scale). Using a child `Image`
+ * instead of Marker `image` so release/TestFlight does not treat the PNG as 1x.
+ */
+const GYM_MARKER_WIDTH = 31;
+const GYM_MARKER_HEIGHT = 35;
+
 const LOCATE_FAB_SIZE = 48;
 const LOCATE_ICON_SIZE = 24;
 /** Extra space below the status bar / notch; increase to move the locate FAB down. */
@@ -146,6 +153,40 @@ function formatDriveDurationMinutes(totalMinutes: number): string {
 const FOCUSED_LATITUDE_DELTA = 0.004;
 const FOCUSED_LONGITUDE_DELTA = 0.006;
 const FOCUS_ANIMATION_MS = 650;
+
+type GymMapMarkerProps = {
+  gym: MapGym;
+  onPress: (gym: MapGym) => void;
+};
+
+/**
+ * Custom marker via styled child Image (not Marker `image`) so pin size is
+ * consistent between Metro/dev-client and release/TestFlight builds.
+ */
+function GymMapMarker({ gym, onPress }: GymMapMarkerProps) {
+  const [tracksViewChanges, setTracksViewChanges] = useState(true);
+
+  return (
+    <Marker
+      coordinate={{
+        latitude: gym.latitude,
+        longitude: gym.longitude,
+      }}
+      anchor={{ x: 0.5, y: 1 }}
+      tracksViewChanges={tracksViewChanges}
+      accessibilityLabel={gym.name}
+      onPress={() => onPress(gym)}
+    >
+      <Image
+        source={GYM_MARKER_IMAGE}
+        style={styles.gymMarkerImage}
+        contentFit="contain"
+        accessibilityIgnoresInvertColors
+        onLoad={() => setTracksViewChanges(false)}
+      />
+    </Marker>
+  );
+}
 
 export default function MapScreen() {
   const mapRef = useRef<InstanceType<typeof MapView>>(null);
@@ -274,10 +315,13 @@ export default function MapScreen() {
   const handleOpenGymChat = useCallback(async () => {
     if (!selectedGym || joining) return;
     const open = (gymId: string) => {
-      router.push({
-        pathname: "/(tabs)/chat/gym-chat/[gymId]",
-        params: { gymId },
-      });
+      router.push(
+        {
+          pathname: "/(tabs)/chat/gym-chat/[gymId]",
+          params: { gymId },
+        },
+        { withAnchor: true },
+      );
     };
     if (selectedGym.joined) {
       open(selectedGym.id);
@@ -375,17 +419,10 @@ export default function MapScreen() {
             onPanDrag={handleMapPanDrag}
           >
             {gyms.map((gym) => (
-              <Marker
+              <GymMapMarker
                 key={gym.id}
-                coordinate={{
-                  latitude: gym.latitude,
-                  longitude: gym.longitude,
-                }}
-                image={GYM_MARKER_IMAGE}
-                anchor={{ x: 0.5, y: 1 }}
-                tracksViewChanges={false}
-                accessibilityLabel={gym.name}
-                onPress={() => handleSelectGym(gym)}
+                gym={gym}
+                onPress={handleSelectGym}
               />
             ))}
           </MapView>
@@ -434,9 +471,25 @@ export default function MapScreen() {
 
           {selectedGym ? (
             <View style={styles.sheetOverlay} pointerEvents="box-none">
-              <View
-                accessibilityLabel={`${selectedGym.name} details`}
-                style={[styles.sheetCard, { height: sheetHeight }]}
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={
+                  joining
+                    ? `Joining ${selectedGym.name} chat`
+                    : selectedGym.joined
+                      ? `Open ${selectedGym.name} chat`
+                      : `Join ${selectedGym.name} chat`
+                }
+                accessibilityState={{ busy: joining, disabled: joining }}
+                disabled={joining}
+                onPress={() => {
+                  void handleOpenGymChat();
+                }}
+                style={({ pressed }) => [
+                  styles.sheetCard,
+                  { height: sheetHeight },
+                  pressed && styles.sheetCardPressed,
+                ]}
               >
                 <Image
                   accessibilityElementsHidden
@@ -455,7 +508,6 @@ export default function MapScreen() {
                     />
                     <View style={styles.sheetBottomBlock}>
                       <ThemedText
-                        type="title"
                         lightColor={APP_SHELL_MAIN_TEXT_COLOR}
                         darkColor={APP_SHELL_MAIN_TEXT_COLOR}
                         style={styles.sheetGymName}
@@ -515,37 +567,10 @@ export default function MapScreen() {
                           </View>
                         ) : null}
                       </View>
-                      <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel={
-                          selectedGym.joined
-                            ? `Open ${selectedGym.name} chat`
-                            : `Join ${selectedGym.name} chat`
-                        }
-                        onPress={() => {
-                          void handleOpenGymChat();
-                        }}
-                        style={({ pressed }) => [
-                          styles.sheetChatButton,
-                          pressed && styles.sheetChatButtonPressed,
-                        ]}
-                      >
-                        <ThemedText
-                          lightColor={APP_SHELL_MAIN_TEXT_COLOR}
-                          darkColor={APP_SHELL_MAIN_TEXT_COLOR}
-                          style={styles.sheetChatButtonLabel}
-                        >
-                          {joining
-                            ? "Joining..."
-                            : selectedGym.joined
-                              ? "Open chat"
-                              : "Join chat"}
-                        </ThemedText>
-                      </Pressable>
                     </View>
                   </View>
                 </View>
-              </View>
+              </Pressable>
             </View>
           ) : null}
         </View>
@@ -568,6 +593,10 @@ const styles = StyleSheet.create({
   },
   map: {
     flex: 1,
+  },
+  gymMarkerImage: {
+    width: GYM_MARKER_WIDTH,
+    height: GYM_MARKER_HEIGHT,
   },
   mapsKeyOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -629,6 +658,9 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     overflow: "hidden",
   },
+  sheetCardPressed: {
+    opacity: 0.9,
+  },
   sheetCardBackground: {
     ...StyleSheet.absoluteFillObject,
   },
@@ -645,22 +677,25 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "column",
     minHeight: 0,
+    overflow: "hidden",
   },
-  /** ~2/3 of card inner height (flex 2 vs bottom block flex 1), minus card padding. */
+  /** Fills leftover space after title / meta / CTA size themselves. */
   sheetHeroImage: {
-    flex: 2,
+    flex: 1,
     minHeight: 0,
     width: "100%",
     alignSelf: "stretch",
     borderRadius: 10,
   },
-  /** ~1/3 for title + actions; content pinned toward bottom of this band. */
+  /**
+   * Intrinsic height for name + footer + button so a 2-line title cannot
+   * overflow upward onto the hero (previous flex:1 + flex-end did that).
+   */
   sheetBottomBlock: {
-    flex: 1,
-    minHeight: 0,
-    justifyContent: "flex-end",
+    flexGrow: 0,
+    flexShrink: 0,
     gap: 10,
-    paddingTop: 0,
+    paddingTop: 10,
     paddingBottom: 0,
     paddingLeft: 8,
     paddingRight: 8,
@@ -669,6 +704,7 @@ const styles = StyleSheet.create({
     textAlign: "left",
     fontSize: 14,
     lineHeight: 20,
+    flexShrink: 0,
   },
   sheetFooterMeta: {
     flexDirection: "row",
@@ -717,21 +753,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 16,
     flexShrink: 1,
-  },
-  sheetChatButton: {
-    alignSelf: "stretch",
-    backgroundColor: APP_SHELL_PRIMARY_BACKGROUND,
-    borderRadius: 10,
-    paddingVertical: 8,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  sheetChatButtonPressed: {
-    opacity: 0.85,
-  },
-  sheetChatButtonLabel: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 11,
-    lineHeight: 16,
   },
 });

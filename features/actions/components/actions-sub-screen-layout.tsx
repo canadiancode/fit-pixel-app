@@ -1,4 +1,4 @@
-import { useRouter } from "expo-router";
+import { usePathname, useRouter } from "expo-router";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
@@ -12,8 +12,13 @@ type Props = {
   children: React.ReactNode;
 };
 
+/** Habit roots under Actions — Back should clear sibling stacks (e.g. weight then sleep). */
+const TOP_LEVEL_ACTION_PATH =
+  /^\/actions\/(weight|sleep|water|steps|calories|train|food)\/?$/;
+
 export function ActionsSubScreenLayout({ children }: Props) {
   const router = useRouter();
+  const pathname = usePathname();
 
   return (
     <View style={styles.root}>
@@ -22,7 +27,18 @@ export function ActionsSubScreenLayout({ children }: Props) {
           accessibilityRole="button"
           accessibilityLabel="Back to actions"
           hitSlop={12}
-          onPress={() => router.back()}
+          onPress={() => {
+            if (TOP_LEVEL_ACTION_PATH.test(pathname)) {
+              // Skip any prior sibling actions left on the stack from Pixel.
+              router.dismissTo("/(tabs)/actions");
+              return;
+            }
+            if (router.canDismiss()) {
+              router.dismiss();
+            } else {
+              router.replace("/(tabs)/actions");
+            }
+          }}
           style={({ pressed }) => [styles.backHit, pressed && styles.backPressed]}
         >
           <ThemedText
