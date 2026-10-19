@@ -1,8 +1,9 @@
 const path = require('path');
-const { getDefaultConfig } = require('expo/metro-config');
+const { getSentryExpoConfig } = require('@sentry/react-native/metro');
 const { withNativeWind } = require('nativewind/metro');
 
-let config = getDefaultConfig(__dirname);
+// Expo's default config plus Sentry debug IDs, so crash stack traces map back to source.
+let config = getSentryExpoConfig(__dirname);
 config = withNativeWind(config, { input: './tailwind.css' });
 
 const reactNativeMapsWebStub = path.resolve(

@@ -17,6 +17,7 @@ import {
   APP_SHELL_SECONDARY_BACKGROUND,
 } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
+import { openLegalPage } from "@/lib/legal";
 
 /** Same lime asset as food “Search for food” and other primary confirms. */
 const AUTH_PRIMARY_BUTTON_BACKGROUND = require("@/assets/backgrounds/add-action.png");
@@ -187,6 +188,46 @@ export function AuthMessage({ children }: { children: string }) {
   );
 }
 
+/**
+ * Sign-up consent line. App Store Guideline 1.2: users agree to terms with a
+ * zero-tolerance policy for objectionable content before they can chat.
+ */
+export function AuthLegalConsent() {
+  return (
+    <ThemedText
+      lightColor={APP_SHELL_LABEL_COLOR}
+      darkColor={APP_SHELL_LABEL_COLOR}
+      style={styles.message}
+    >
+      {"By creating an account, you agree to the "}
+      <ThemedText
+        lightColor={APP_SHELL_MAIN_TEXT_COLOR}
+        darkColor={APP_SHELL_MAIN_TEXT_COLOR}
+        style={styles.inlineLink}
+        accessibilityRole="link"
+        onPress={() => {
+          void openLegalPage("terms");
+        }}
+      >
+        Terms of Use
+      </ThemedText>
+      {", including zero tolerance for objectionable content, and the "}
+      <ThemedText
+        lightColor={APP_SHELL_MAIN_TEXT_COLOR}
+        darkColor={APP_SHELL_MAIN_TEXT_COLOR}
+        style={styles.inlineLink}
+        accessibilityRole="link"
+        onPress={() => {
+          void openLegalPage("privacy");
+        }}
+      >
+        Privacy Policy
+      </ThemedText>
+      .
+    </ThemedText>
+  );
+}
+
 export function AuthMisconfiguredScreen() {
   return (
     <View style={styles.misconfiguredRoot}>
@@ -282,6 +323,12 @@ const styles = StyleSheet.create({
   message: {
     fontSize: 13,
     lineHeight: 18,
+  },
+  inlineLink: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: "600",
+    textDecorationLine: "underline",
   },
   pressed: {
     opacity: 0.88,

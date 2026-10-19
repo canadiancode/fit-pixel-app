@@ -13,6 +13,7 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { View } from "react-native";
 import "react-native-reanimated";
+import * as Sentry from "@sentry/react-native";
 
 import {
   APP_SHELL_PRIMARY_BACKGROUND,
@@ -23,8 +24,10 @@ import { FONT_FAMILY } from "@/constants/fonts";
 import { AuthProvider, useAuth } from "@/features/auth/auth-context";
 import { AuthMisconfiguredScreen } from "@/features/auth/components/auth-screen-shell";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import { initCrashReporting } from "@/lib/crash-reporting";
 import { DATABASE_NAME, migrateDbIfNeeded } from "@/lib/db";
 
+initCrashReporting();
 SplashScreen.preventAutoHideAsync();
 const CELL_HEADING_FONT_FAMILY = "PixeloidSans";
 
@@ -101,7 +104,7 @@ function SessionGate() {
   );
 }
 
-export default function RootLayout() {
+function RootLayout() {
   const colorScheme = useColorScheme();
   const [fontsLoaded] = useFonts({
     [FONT_FAMILY]: require("@/assets/fonts/PressStart2P-Regular.ttf"),
@@ -134,3 +137,6 @@ export default function RootLayout() {
     </ThemeProvider>
   );
 }
+
+/** Sentry.wrap adds an error boundary; a no-op until Sentry is initialized. */
+export default Sentry.wrap(RootLayout);

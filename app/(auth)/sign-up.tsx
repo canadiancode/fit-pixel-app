@@ -11,6 +11,7 @@ import { useAuth } from "@/features/auth/auth-context";
 import { AUTH_COPY } from "@/features/auth/auth-errors";
 import {
   AuthFieldLabel,
+  AuthLegalConsent,
   AuthMessage,
   AuthPrimaryButton,
   AuthScreenShell,
@@ -87,6 +88,7 @@ export default function SignUpScreen() {
           onSubmitEditing={onSubmit}
         />
       </View>
+      <AuthLegalConsent />
       <AuthPrimaryButton
         label="Create account"
         onPress={onSubmit}

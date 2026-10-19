@@ -9,15 +9,19 @@
       "distribution": "internal",
       "environment": "development",
       "env": {
-        "EXPO_PUBLIC_FIT_PIXEL_API_URL": "https://api.aurashields.com"
-      }
+        "EXPO_PUBLIC_FIT_PIXEL_API_URL": "https://api.aurashields.com",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
+      },
+      "channel": "development"
     },
     "preview": {
       "distribution": "internal",
       "environment": "preview",
       "env": {
-        "EXPO_PUBLIC_FIT_PIXEL_API_URL": "https://api.aurashields.com"
-      }
+        "EXPO_PUBLIC_FIT_PIXEL_API_URL": "https://api.aurashields.com",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
+      },
+      "channel": "preview"
     },
     "production": {
       "autoIncrement": true,
@@ -26,8 +30,10 @@
         "credentialsSource": "remote"
       },
       "env": {
-        "EXPO_PUBLIC_FIT_PIXEL_API_URL": "https://api.aurashields.com"
-      }
+        "EXPO_PUBLIC_FIT_PIXEL_API_URL": "https://api.aurashields.com",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
+      },
+      "channel": "production"
     }
   },
   "submit": {

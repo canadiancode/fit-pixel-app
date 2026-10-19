@@ -35,6 +35,11 @@ export const SETTINGS_ROWS = [
     caption: "Email, password, delete account",
   },
   {
+    id: "legal",
+    label: "Privacy & terms",
+    caption: "Privacy Policy, Terms of Use",
+  },
+  {
     id: "sign-out",
     label: "Sign out",
     caption: "End session on device",
