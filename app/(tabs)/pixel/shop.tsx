@@ -88,8 +88,7 @@ export default function PixelShopScreen() {
           darkColor={APP_SHELL_LABEL_COLOR}
           style={styles.hint}
         >
-          Unlock cosmetics with your level. Local unlocks are honor-system until
-          the server is authoritative.
+          Level up to unlock new cosmetics for your Pixel.
         </ThemedText>
 
         <View style={styles.list}>

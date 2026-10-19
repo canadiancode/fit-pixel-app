@@ -14,6 +14,8 @@ type State = {
   blocked: readonly BlockedUserItem[];
   blockedIds: ReadonlySet<string>;
   loaded: boolean;
+  /** Last fetch failed before any list arrived (e.g. API unreachable). */
+  loadFailed: boolean;
 };
 
 const EMPTY: State = {
@@ -21,6 +23,7 @@ const EMPTY: State = {
   blocked: [],
   blockedIds: new Set(),
   loaded: false,
+  loadFailed: false,
 };
 
 let state: State = EMPTY;
@@ -38,6 +41,7 @@ function withBlocked(ownerId: string, blocked: readonly BlockedUserItem[]) {
     blocked,
     blockedIds: new Set(blocked.map((item) => item.userId)),
     loaded: true,
+    loadFailed: false,
   };
 }
 
@@ -54,12 +58,19 @@ function getSnapshot() {
 
 async function load(ownerId: string): Promise<void> {
   if (inflight?.ownerId === ownerId) return inflight.promise;
+  if (state.ownerId === ownerId && state.loadFailed) {
+    setState({ ...state, loadFailed: false });
+  }
   const promise = listBlockedUsers()
     .then((blocked) => {
       if (state.ownerId === ownerId) setState(withBlocked(ownerId, blocked));
     })
     .catch(() => {
       // Keep the last known list; the server still filters blocked content.
+      // With no list yet, flag it so the UI can offer a retry, not spin.
+      if (state.ownerId === ownerId && !state.loaded) {
+        setState({ ...state, loadFailed: true });
+      }
     })
     .finally(() => {
       if (inflight?.promise === promise) inflight = null;
@@ -130,6 +141,7 @@ export function useBlockedUsers() {
     blocked: isCurrent ? snapshot.blocked : EMPTY.blocked,
     blockedIds: isCurrent ? snapshot.blockedIds : EMPTY.blockedIds,
     loaded: isCurrent && snapshot.loaded,
+    loadFailed: isCurrent && snapshot.loadFailed,
     block,
     unblock,
     refresh,

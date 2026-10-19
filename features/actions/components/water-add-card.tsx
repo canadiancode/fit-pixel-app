@@ -20,7 +20,7 @@ import {
 } from "../constants";
 
 const WATER_ADD_CARD_TITLE = "Add water";
-const WATER_ADD_WATER_BUTTON_LABEL = "ADD WATER";
+const WATER_ADD_WATER_BUTTON_LABEL = "Add water";
 const SERVING_STEP_OZ = 1;
 
 export function WaterAddCard() {

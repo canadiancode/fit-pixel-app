@@ -298,8 +298,8 @@ export function PreferencesSettingsForm() {
           darkColor={APP_SHELL_LABEL_COLOR}
           style={styles.sectionHint}
         >
-          Habit logs and daily goals use this boundary for “today.” Changing it
-          can re-open local day bonuses until a server is authoritative.
+          When your day resets for habits and daily goals. Pick a later time if
+          you often train after midnight.
         </ThemedText>
         <View style={styles.dayStartChips}>
           {DAY_START_PRESETS.map((preset) => {

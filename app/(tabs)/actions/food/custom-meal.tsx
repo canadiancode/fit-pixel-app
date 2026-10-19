@@ -279,7 +279,7 @@ export default function FoodCustomMealScreen() {
         ))}
 
         <FoodLimePillButton
-          title={isSubmitting ? "Adding…" : "+ add meal"}
+          title={isSubmitting ? "Adding…" : "+ Add meal"}
           accessibilityLabel="Add custom meal"
           onPress={() => {
             void onAddMeal();
@@ -317,7 +317,7 @@ const styles = StyleSheet.create({
   inputWithSuffix: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 1,
+    gap: 8,
     alignSelf: "flex-start",
   },
   input: {

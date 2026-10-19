@@ -38,7 +38,8 @@ export function SleepDurationParts({
       <>
         {sign != null ? <Text style={numberStyle}>{sign}</Text> : null}
         <Text style={numberStyle}>0</Text>
-        <Text style={unitStyle}>M</Text>
+        {/* "0H" like formatSleepDurationLabel (dashboard, Actions list). */}
+        <Text style={unitStyle}>H</Text>
       </>
     );
   }

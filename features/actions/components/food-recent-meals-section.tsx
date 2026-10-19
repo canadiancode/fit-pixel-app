@@ -18,7 +18,7 @@ import { useHabitProgress } from "../habit-progress-context";
 import { FoodMealListRow } from "./food-meal-list-row";
 
 const SECTION_TITLE = "Recent meals";
-const EMPTY_LIST_MESSAGE = "no recent meals";
+const EMPTY_LIST_MESSAGE = "No recent meals";
 const HUB_PREVIEW_LIMIT = 3;
 
 /** Recent meals from food habit_logs; quick-add logs again; heart saves favorite. */

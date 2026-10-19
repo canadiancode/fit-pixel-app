@@ -6,6 +6,8 @@ import {
   APP_SHELL_MAIN_TEXT_COLOR,
 } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
+import { useDailyGoals } from "@/features/actions/daily-goals-context";
+import { formatSleepDurationLabel } from "@/features/actions/data";
 import { useHabitProgress } from "@/features/actions/habit-progress-context";
 
 const EM_DASH = "\u2014";
@@ -79,17 +81,29 @@ export function CaloriesManualConnectedSection() {
   );
 }
 
-/** Placeholder until manual vs HealthKit (or similar) totals are wired. */
+/** Latest logged weight; no connected (HealthKit) weight source yet. */
 export function WeightManualConnectedSection() {
-  return <ActionManualConnectedSection manualValueLabel="123 LBS" />;
-}
+  const { manualTotals } = useHabitProgress();
+  const { goals } = useDailyGoals();
+  const unit = goals.weightUnit === "kg" ? "KG" : "LBS";
+  const weight = manualTotals.weight;
 
-/** Placeholder until manual vs HealthKit (or similar) totals are wired. */
-export function SleepManualConnectedSection() {
   return (
     <ActionManualConnectedSection
-      manualValueLabel="8H"
-      connectedValueLabel="0M"
+      manualValueLabel={weight == null ? EM_DASH : `${formatInt(weight)} ${unit}`}
+      connectedValueLabel={EM_DASH}
+    />
+  );
+}
+
+/** Today's logged sleep; no connected (HealthKit) sleep source yet. */
+export function SleepManualConnectedSection() {
+  const { manualTotals } = useHabitProgress();
+
+  return (
+    <ActionManualConnectedSection
+      manualValueLabel={formatSleepDurationLabel(manualTotals.sleepHours ?? 0)}
+      connectedValueLabel={EM_DASH}
     />
   );
 }

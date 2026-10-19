@@ -242,7 +242,9 @@ const styles = StyleSheet.create({
   input: {
     width: "100%",
     height: "100%",
-    paddingHorizontal: 16,
+    /** Clear the search icon baked into the background (same as MapHeader). */
+    paddingLeft: 55,
+    paddingRight: 16,
     fontFamily: FONT_FAMILY,
     fontSize: 16,
     color: APP_SHELL_MAIN_TEXT_COLOR,

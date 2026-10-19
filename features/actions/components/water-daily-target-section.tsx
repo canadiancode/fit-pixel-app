@@ -89,7 +89,7 @@ export function WaterDailyTargetSection() {
               onPressIn={decreaseHold.onPressIn}
               onPressOut={decreaseHold.onPressOut}
               style={({ pressed }) => [
-                styles.stepperColumn,
+                styles.stepperButton,
                 pressed && styles.stepperPressed,
                 targetAmount <= targetMin && styles.stepperDisabled,
               ]}
@@ -102,7 +102,7 @@ export function WaterDailyTargetSection() {
               />
             </Pressable>
             <View
-              style={styles.stepperColumn}
+              style={styles.stepperValue}
               accessible
               accessibilityLabel={valueA11y}
             >
@@ -115,7 +115,7 @@ export function WaterDailyTargetSection() {
                 <Text style={[styles.valueNumber, { color: accentColor }]}>
                   {targetAmount}
                 </Text>
-                <Text style={styles.valueSuffix}>{suffix}</Text>
+                <Text style={styles.valueSuffix}>{" "}{suffix}</Text>
               </Text>
             </View>
             <Pressable
@@ -127,7 +127,7 @@ export function WaterDailyTargetSection() {
               onPressIn={increaseHold.onPressIn}
               onPressOut={increaseHold.onPressOut}
               style={({ pressed }) => [
-                styles.stepperColumn,
+                styles.stepperButton,
                 pressed && styles.stepperPressed,
                 targetAmount >= targetMax && styles.stepperDisabled,
               ]}
@@ -174,11 +174,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     alignSelf: "stretch",
   },
-  stepperColumn: {
-    flex: 1,
+  /** Fixed width so the value column gets the rest of the row. */
+  stepperButton: {
+    width: 48,
     alignItems: "center",
     justifyContent: "center",
     minHeight: 48,
+  },
+  stepperValue: {
+    flex: 1,
+    minWidth: 0,
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 48,
+    paddingHorizontal: 8,
   },
   stepperIcon: {
     width: 40,
@@ -203,7 +212,6 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILY,
     fontSize: 20,
     lineHeight: 25,
-    marginLeft: 6,
     color: APP_SHELL_MAIN_TEXT_COLOR,
   },
 });

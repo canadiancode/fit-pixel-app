@@ -205,7 +205,8 @@ export function getActionRowProgressDisplay(
       const goal = goals.weightGoal;
       const unit = goals.weightUnit === "kg" ? "KG" : "LBS";
       return {
-        current: formatInt(current),
+        // No weight logged yet: an em dash, like the dashboard, not "0".
+        current: totals.weight == null ? "—" : formatInt(current),
         rest: ` / ${formatInt(goal)} ${unit}`,
         accentColor,
         percent: percentToward(current, goal),

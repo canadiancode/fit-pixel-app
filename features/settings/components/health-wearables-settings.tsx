@@ -134,7 +134,7 @@ export function HealthWearablesSettings() {
 
   return (
     <View style={styles.block}>
-      <View>
+      <View style={styles.titleGroup}>
         <ThemedText
           lightColor={APP_SHELL_MAIN_TEXT_COLOR}
           darkColor={APP_SHELL_MAIN_TEXT_COLOR}
@@ -202,7 +202,7 @@ export function HealthWearablesSettings() {
           darkColor={APP_SHELL_LABEL_COLOR}
           style={styles.body}
         >
-          Categories this app reads. “Live” means we received {liveSource} data
+          Categories this app reads. “Live” means we received {liveSource} data.
         </ThemedText>
         <View style={[styles.metricList, styles.sectionGap]}>
           {isLoading ? (
@@ -299,6 +299,10 @@ const styles = StyleSheet.create({
   block: {
     gap: 10,
     paddingBottom: 28,
+  },
+  /** Same title → body spacing as `section`. */
+  titleGroup: {
+    gap: 8,
   },
   section: {
     marginTop: 8,

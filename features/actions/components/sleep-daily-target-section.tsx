@@ -105,7 +105,7 @@ export function SleepDailyTargetSection() {
               onPressIn={decreaseHold.onPressIn}
               onPressOut={decreaseHold.onPressOut}
               style={({ pressed }) => [
-                styles.stepperColumn,
+                styles.stepperButton,
                 pressed && styles.stepperPressed,
                 targetMinutes <= TARGET_MIN_MINUTES && styles.stepperDisabled,
               ]}
@@ -118,7 +118,7 @@ export function SleepDailyTargetSection() {
               />
             </Pressable>
             <View
-              style={styles.stepperColumn}
+              style={styles.stepperValue}
               accessible
               accessibilityLabel={valueA11y}
             >
@@ -153,7 +153,7 @@ export function SleepDailyTargetSection() {
               onPressIn={increaseHold.onPressIn}
               onPressOut={increaseHold.onPressOut}
               style={({ pressed }) => [
-                styles.stepperColumn,
+                styles.stepperButton,
                 pressed && styles.stepperPressed,
                 targetMinutes >= TARGET_MAX_MINUTES && styles.stepperDisabled,
               ]}
@@ -200,11 +200,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     alignSelf: "stretch",
   },
-  stepperColumn: {
-    flex: 1,
+  /** Fixed width so the value column gets the rest of the row. */
+  stepperButton: {
+    width: 48,
     alignItems: "center",
     justifyContent: "center",
     minHeight: 48,
+  },
+  stepperValue: {
+    flex: 1,
+    minWidth: 0,
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 48,
+    paddingHorizontal: 8,
   },
   stepperIcon: {
     width: 40,

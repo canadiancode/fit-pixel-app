@@ -98,8 +98,12 @@ const MAP_GYM_SHEET_CARD_BACKGROUND = require("@/assets/backgrounds/blue-square-
  * `Image` instead of Marker `image` so release/TestFlight does not treat the
  * PNG as 1x.
  */
-const GYM_MARKER_WIDTH = 18;
-const GYM_MARKER_HEIGHT = 20;
+const GYM_MARKER_WIDTH = 31;
+const GYM_MARKER_HEIGHT = 35;
+
+/** Smaller pin beside each gym search result row. */
+const SEARCH_RESULT_PIN_WIDTH = 18;
+const SEARCH_RESULT_PIN_HEIGHT = 20;
 
 /** Max rows in the gym search dropdown. */
 const GYM_SEARCH_RESULT_LIMIT = 8;
@@ -161,6 +165,9 @@ const FOCUSED_LATITUDE_DELTA = 0.004;
 const FOCUSED_LONGITUDE_DELTA = 0.006;
 const FOCUS_ANIMATION_MS = 650;
 
+/** Gap under the gym sheet; keep in step with `sheetOverlay.paddingBottom`. */
+const SHEET_BOTTOM_GAP = 10;
+
 type GymMapMarkerProps = {
   gym: MapGym;
   onPress: (gym: MapGym) => void;
@@ -207,6 +214,7 @@ export default function MapScreen() {
   const [userLocationVisible, setUserLocationVisible] = useState(false);
   const [userCoords, setUserCoords] = useState<LatLng | null>(null);
   const [gymQuery, setGymQuery] = useState("");
+  const [mapSize, setMapSize] = useState({ width: 0, height: 0 });
   /** Map `onPress` often fires after a marker tap (esp. Android); skip one clear. */
   const skipNextMapDismiss = useRef(false);
   const { height: windowHeight } = useWindowDimensions();
@@ -297,17 +305,38 @@ export default function MapScreen() {
     return { minutes, km };
   }, [selectedGym, userCoords]);
 
-  const focusGym = useCallback((gym: MapGym) => {
-    mapRef.current?.animateToRegion(
-      {
-        latitude: gym.latitude,
-        longitude: gym.longitude,
-        latitudeDelta: FOCUSED_LATITUDE_DELTA,
-        longitudeDelta: FOCUSED_LONGITUDE_DELTA,
-      },
-      FOCUS_ANIMATION_MS,
-    );
-  }, []);
+  /**
+   * Centre the pin in the strip of map above the gym sheet, not behind it.
+   * The map widens whichever span is short for its aspect ratio, so the
+   * shift uses the latitude span it will really show.
+   */
+  const focusGym = useCallback(
+    (gym: MapGym) => {
+      const { width, height } = mapSize;
+      let latitude = gym.latitude;
+      if (width > 0 && height > 0) {
+        const shownLatitudeDelta = Math.max(
+          FOCUSED_LATITUDE_DELTA,
+          FOCUSED_LONGITUDE_DELTA *
+            Math.cos((gym.latitude * Math.PI) / 180) *
+            (height / width),
+        );
+        const visibleHeight = height - sheetHeight - SHEET_BOTTOM_GAP;
+        const pinBottomY = visibleHeight / 2 + GYM_MARKER_HEIGHT / 2;
+        latitude -= ((height / 2 - pinBottomY) / height) * shownLatitudeDelta;
+      }
+      mapRef.current?.animateToRegion(
+        {
+          latitude,
+          longitude: gym.longitude,
+          latitudeDelta: FOCUSED_LATITUDE_DELTA,
+          longitudeDelta: FOCUSED_LONGITUDE_DELTA,
+        },
+        FOCUS_ANIMATION_MS,
+      );
+    },
+    [mapSize, sheetHeight],
+  );
 
   const dismissGymFilterKeyboard = useCallback(() => {
     gymFilterInputRef.current?.blur();
@@ -426,7 +455,13 @@ export default function MapScreen() {
         onSubmitQuery={handleSubmitGymQuery}
       />
       <View style={styles.mapChrome}>
-        <View style={styles.mapStack}>
+        <View
+          style={styles.mapStack}
+          onLayout={(e) => {
+            const { width, height } = e.nativeEvent.layout;
+            setMapSize({ width, height });
+          }}
+        >
           <MapView
             ref={mapRef}
             provider={
@@ -773,8 +808,8 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.08)",
   },
   searchResultPin: {
-    width: GYM_MARKER_WIDTH,
-    height: GYM_MARKER_HEIGHT,
+    width: SEARCH_RESULT_PIN_WIDTH,
+    height: SEARCH_RESULT_PIN_HEIGHT,
   },
   searchResultText: {
     flex: 1,
@@ -793,7 +828,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     justifyContent: "flex-end",
     paddingHorizontal: 12,
-    paddingBottom: 10,
+    paddingBottom: SHEET_BOTTOM_GAP,
   },
   sheetCard: {
     flexDirection: "column",

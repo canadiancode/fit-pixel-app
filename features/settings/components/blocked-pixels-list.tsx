@@ -10,12 +10,46 @@ import { FONT_FAMILY } from "@/constants/fonts";
 import { useBlockedUsers } from "@/features/chat/blocked-users-store";
 
 export function BlockedPixelsList() {
-  const { blocked, loaded, unblock, refresh } = useBlockedUsers();
+  const { blocked, loaded, loadFailed, unblock, refresh } = useBlockedUsers();
   const [pendingId, setPendingId] = useState<string | null>(null);
 
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  if (!loaded && loadFailed) {
+    return (
+      <View style={styles.root}>
+        <ThemedText
+          lightColor={APP_SHELL_LABEL_COLOR}
+          darkColor={APP_SHELL_LABEL_COLOR}
+          style={styles.hint}
+        >
+          {"Couldn't load your blocked Pixels. Check your connection."}
+        </ThemedText>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Try loading blocked Pixels again"
+          onPress={() => {
+            void refresh();
+          }}
+          style={({ pressed }) => [
+            styles.unblock,
+            styles.retry,
+            pressed && styles.unblockPressed,
+          ]}
+        >
+          <ThemedText
+            lightColor={APP_SHELL_MAIN_TEXT_COLOR}
+            darkColor={APP_SHELL_MAIN_TEXT_COLOR}
+            style={styles.unblockLabel}
+          >
+            Try again
+          </ThemedText>
+        </Pressable>
+      </View>
+    );
+  }
 
   if (!loaded) {
     return (
@@ -127,6 +161,9 @@ const styles = StyleSheet.create({
   },
   unblockPressed: {
     opacity: 0.6,
+  },
+  retry: {
+    alignSelf: "flex-start",
   },
   unblockLabel: {
     fontFamily: FONT_FAMILY,
