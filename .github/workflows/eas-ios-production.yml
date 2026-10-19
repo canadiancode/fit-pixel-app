@@ -18,7 +18,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - uses: expo/expo-github-action@v9
@@ -29,4 +29,4 @@ jobs:
 
       - run: npm ci
 
-      - run: eas build -p ios --profile production --non-interactive --wait --freeze-credentials
+      - run: eas build -p ios --profile production --non-interactive --wait --freeze-credentials --auto-submit
