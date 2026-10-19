@@ -1,4 +1,3 @@
-import { Image } from "expo-image";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
@@ -9,6 +8,7 @@ import {
 import { FONT_FAMILY } from "@/constants/fonts";
 
 import { getOwnedItemsForLayer } from "../layer-assets";
+import { PixelItemThumb } from "./pixel-item-thumb";
 import type { PixelItemId, PixelLayerId } from "../types";
 
 const THUMB_SIZE = 72;
@@ -67,25 +67,7 @@ export function PixelLayerAssetPicker({
                       isSelected && styles.thumbSelected,
                     ]}
                   >
-                    <Image
-                      accessibilityIgnoresInvertColors
-                      source={option.source}
-                      style={[
-                        styles.thumbImage,
-                        layerId === "skin" && styles.thumbImageSkinZoom,
-                        layerId === "eyes" && styles.thumbImageEyesZoom,
-                        layerId === "mouth" && styles.thumbImageMouthZoom,
-                        layerId === "top" && styles.thumbImageTopZoom,
-                        layerId === "bottom" && styles.thumbImageBottomZoom,
-                        layerId === "shoes" && styles.thumbImageShoesZoom,
-                        layerId === "hair" && styles.thumbImageHairZoom,
-                        layerId === "item_left" &&
-                          styles.thumbImageItemLeftZoom,
-                        layerId === "item_right" &&
-                          styles.thumbImageItemRightZoom,
-                      ]}
-                      contentFit="cover"
-                    />
+                    <PixelItemThumb item={option} size={THUMB_SIZE - 4} />
                   </View>
                   <View style={styles.textColumn}>
                     <ThemedText
@@ -152,46 +134,6 @@ const styles = StyleSheet.create({
   },
   thumbSelected: {
     borderColor: APP_SHELL_MAIN_TEXT_COLOR,
-  },
-  thumbImage: {
-    width: "100%",
-    height: "100%",
-  },
-  /** Skin only: zoom and nudge for framing inside the clipped shell. */
-  thumbImageSkinZoom: {
-    transform: [{ translateX: 0 }, { translateY: -8 }, { scale: 1.5 }],
-  },
-  /** Eyes only: zoom and nudge for framing inside the clipped shell. */
-  thumbImageEyesZoom: {
-    transform: [{ translateX: -7 }, { translateY: 35 }, { scale: 6 }],
-  },
-  /** Mouth only: zoom and nudge for framing inside the clipped shell. */
-  thumbImageMouthZoom: {
-    transform: [{ translateX: -12 }, { translateY: 38 }, { scale: 12 }],
-  },
-  /** Top only: zoom and nudge for framing inside the clipped shell. */
-  thumbImageTopZoom: {
-    transform: [{ translateX: 0 }, { translateY: -10 }, { scale: 3 }],
-  },
-  /** Bottom only: zoom and nudge for framing inside the clipped shell. */
-  thumbImageBottomZoom: {
-    transform: [{ translateX: 0 }, { translateY: -38 }, { scale: 2.6 }],
-  },
-  /** Shoes only: zoom and nudge for framing inside the clipped shell. */
-  thumbImageShoesZoom: {
-    transform: [{ translateX: 0 }, { translateY: -60 }, { scale: 3 }],
-  },
-  /** Hair only: zoom and nudge for framing inside the clipped shell. */
-  thumbImageHairZoom: {
-    transform: [{ translateX: 4 }, { translateY: 20 }, { scale: 2.3 }],
-  },
-  /** Left item only: zoom and nudge for framing inside the clipped shell. */
-  thumbImageItemLeftZoom: {
-    transform: [{ translateX: 55 }, { translateY: -55 }, { scale: 3 }],
-  },
-  /** Right item only: zoom and nudge for framing inside the clipped shell. */
-  thumbImageItemRightZoom: {
-    transform: [{ translateX: -46 }, { translateY: -40 }, { scale: 2.2 }],
   },
   textColumn: {
     flex: 1,

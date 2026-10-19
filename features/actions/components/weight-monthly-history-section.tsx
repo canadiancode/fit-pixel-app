@@ -12,7 +12,8 @@ import {
 import { useWeightHistoryChart } from "@/features/actions/use-weight-history-chart";
 import type { WeightUnit } from "@/lib/db";
 
-const SECTION_TITLE = "History";
+/** Charts only go back a week; there is no longer-range history screen. */
+const SECTION_TITLE = "Last 7 days";
 /** Y-axis tick step for the weight chart in pounds. */
 export const WEIGHT_MONTHLY_CHART_INCREMENT = 20;
 /** Y-axis tick step for weight history when the goal unit is kilograms. */

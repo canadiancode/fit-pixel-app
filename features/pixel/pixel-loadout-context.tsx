@@ -24,7 +24,7 @@ import {
   loadPixelPersistedState,
   savePixelPersistedState,
 } from "./pixel-persistence";
-import { getShopOffer } from "./shop-catalog";
+import { getShopOffer, PIXEL_SHOP_OFFERS } from "./shop-catalog";
 import { PIXEL_LAYER_Z_INDEX, type PixelItemId, type PixelLayerId, type PixelLoadout } from "./types";
 
 export type UnlockItemResult =
@@ -179,6 +179,44 @@ export function PixelLoadoutProvider({ children }: { children: ReactNode }) {
     },
     [db, xp.level, xp.lifetimeXp],
   );
+
+  // Shop offers are free: reaching an offer's level puts it straight into the
+  // inventory, no "Unlock" tap. Runs after hydration and on every level change.
+  // SECURITY: still honor-system until the server re-validates entitlement.
+  useEffect(() => {
+    if (!isHydrated) return;
+    const earned = PIXEL_SHOP_OFFERS.filter(
+      (offer) =>
+        offer.requiredLevel <= xp.level &&
+        !inventoryRef.current.includes(offer.itemId),
+    );
+    if (earned.length === 0) return;
+
+    setInventory((current) => [
+      ...current,
+      ...earned
+        .map((offer) => offer.itemId)
+        .filter((itemId) => !current.includes(itemId)),
+    ]);
+    const unlockedAt = nowIso();
+    void (async () => {
+      for (const offer of earned) {
+        await enqueueOp(
+          db,
+          "inventory_unlock",
+          {
+            itemId: offer.itemId,
+            reason: "level_gate",
+            requiredLevel: offer.requiredLevel,
+            clientLevel: xp.level,
+            clientLifetimeXp: xp.lifetimeXp,
+            unlockedAt,
+          },
+          { id: uuid(), clientClockAt: unlockedAt },
+        );
+      }
+    })();
+  }, [db, isHydrated, xp.level, xp.lifetimeXp]);
 
   const value = useMemo(
     () => ({

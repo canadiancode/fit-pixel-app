@@ -1,16 +1,15 @@
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  View,
-} from "react-native";
+import { Fragment } from "react";
+import { ActivityIndicator, StyleSheet, View } from "react-native";
 
-import { ThemedText } from "@/components/themed-text";
+import { APP_SHELL_MAIN_TEXT_COLOR } from "@/constants/app-colors";
 import {
-  APP_SHELL_INPUT_BOARDER_COLOR,
-  APP_SHELL_LABEL_COLOR,
-  APP_SHELL_MAIN_TEXT_COLOR,
-} from "@/constants/app-colors";
+  SETTINGS_SUCCESS_COLOR,
+  SettingsDivider,
+  SettingsIntro,
+  SettingsLinkRow,
+  SettingsSection,
+  SettingsValueRow,
+} from "@/features/settings/components/settings-ui";
 import {
   type DashboardHealthConnectivity,
   type HealthAuthorizationStatus,
@@ -115,278 +114,122 @@ export function HealthWearablesSettings() {
 
   if (healthPlatform === "none") {
     return (
-      <View style={styles.block}>
-        <ThemedText
-          lightColor={APP_SHELL_LABEL_COLOR}
-          darkColor={APP_SHELL_LABEL_COLOR}
-          style={styles.body}
-        >
-          Wearable health data is available on iPhone (Apple Health) and Android
-          (Health Connect).
-        </ThemedText>
-      </View>
+      <SettingsIntro>
+        Wearable health data is available on iPhone (Apple Health) and Android
+        (Health Connect).
+      </SettingsIntro>
     );
   }
 
   const title = platformTitle(healthPlatform);
-  const liveSource =
-    healthPlatform === "health-connect" ? "Health Connect" : "HealthKit";
+  const liveCount = METRIC_ROWS.filter((m) => connectivity[m.key]).length;
 
   return (
-    <View style={styles.block}>
-      <View style={styles.titleGroup}>
-        <ThemedText
-          lightColor={APP_SHELL_MAIN_TEXT_COLOR}
-          darkColor={APP_SHELL_MAIN_TEXT_COLOR}
-          style={styles.sectionTitle}
-        >
-          {title}
-        </ThemedText>
-        <View style={styles.availabilityRow}>
-          {isLoading && healthDataAvailable === null ? (
-            <ActivityIndicator
-              color={APP_SHELL_MAIN_TEXT_COLOR}
-              style={styles.inlineSpinner}
-            />
-          ) : null}
-          <ThemedText
-            lightColor={APP_SHELL_LABEL_COLOR}
-            darkColor={APP_SHELL_LABEL_COLOR}
-            style={[styles.body, styles.availabilityText]}
-          >
-            {availabilityCopy(healthPlatform, healthDataAvailable)}
-          </ThemedText>
-        </View>
-        <ThemedText
-          lightColor={APP_SHELL_LABEL_COLOR}
-          darkColor={APP_SHELL_LABEL_COLOR}
-          style={[styles.body, styles.sectionGap]}
-        >
-          {authorizationSummary(healthPlatform, authorizationRequestStatus)}
-        </ThemedText>
-        <Pressable
-          accessibilityRole="button"
+    <View style={styles.root}>
+      <SettingsIntro>
+        {`Fit Pixel reads your health data to fill in your dashboard and goals. It never writes to ${title}.`}
+      </SettingsIntro>
+
+      <SettingsSection
+        title="connection"
+        footer={authorizationSummary(healthPlatform, authorizationRequestStatus)}
+      >
+        <SettingsValueRow
+          title={title}
+          description={availabilityCopy(healthPlatform, healthDataAvailable)}
+          value={
+            healthDataAvailable == null
+              ? "..."
+              : healthDataAvailable
+                ? `${liveCount}/${METRIC_ROWS.length} live`
+                : "Off"
+          }
+          valueColor={liveCount > 0 ? SETTINGS_SUCCESS_COLOR : undefined}
+        />
+        <SettingsDivider />
+        <SettingsLinkRow
+          title={
+            healthPlatform === "health-connect"
+              ? "Open Health Connect"
+              : "Manage access"
+          }
+          description={
+            healthPlatform === "health-connect"
+              ? "Choose which data Fit Pixel can read."
+              : "Choose which data Fit Pixel can read in Settings → Health."
+          }
+          onPress={openHealthSettings}
           accessibilityLabel={
             healthPlatform === "health-connect"
               ? "Open Health Connect settings"
               : "Open system settings for this app"
           }
-          onPress={openHealthSettings}
-          style={({ pressed }) => [
-            styles.settingsLink,
-            pressed && styles.settingsLinkPressed,
-          ]}
-        >
-          <ThemedText
-            lightColor={APP_SHELL_MAIN_TEXT_COLOR}
-            darkColor={APP_SHELL_MAIN_TEXT_COLOR}
-            style={styles.settingsLinkLabel}
-          >
-            {healthPlatform === "health-connect"
-              ? "Open Health Connect"
-              : "Open app settings"}
-          </ThemedText>
-        </Pressable>
-      </View>
+        />
+      </SettingsSection>
 
-      <View style={styles.section}>
-        <ThemedText
-          lightColor={APP_SHELL_MAIN_TEXT_COLOR}
-          darkColor={APP_SHELL_MAIN_TEXT_COLOR}
-          style={styles.sectionTitle}
-        >
-          Dashboard metrics
-        </ThemedText>
-        <ThemedText
-          lightColor={APP_SHELL_LABEL_COLOR}
-          darkColor={APP_SHELL_LABEL_COLOR}
-          style={styles.body}
-        >
-          Categories this app reads. “Live” means we received {liveSource} data.
-        </ThemedText>
-        <View style={[styles.metricList, styles.sectionGap]}>
-          {isLoading ? (
+      <SettingsSection
+        title="dashboard metrics"
+        footer={`"Live" means we received ${healthPlatform === "health-connect" ? "Health Connect" : "Apple Health"} data for it.`}
+      >
+        {isLoading ? (
+          <View style={styles.loading}>
             <ActivityIndicator color={APP_SHELL_MAIN_TEXT_COLOR} />
-          ) : (
-            METRIC_ROWS.map((m) => {
-              const ok = connectivity[m.key];
-              return (
-                <View key={m.key} style={styles.metricRow}>
-                  <ThemedText
-                    lightColor={APP_SHELL_MAIN_TEXT_COLOR}
-                    darkColor={APP_SHELL_MAIN_TEXT_COLOR}
-                    style={styles.metricLabel}
-                  >
-                    {m.label}
-                  </ThemedText>
-                  <ThemedText
-                    lightColor={ok ? "#7dffb3" : APP_SHELL_LABEL_COLOR}
-                    darkColor={ok ? "#7dffb3" : APP_SHELL_LABEL_COLOR}
-                    style={styles.metricState}
-                  >
-                    {ok ? "Live" : "No data"}
-                  </ThemedText>
-                </View>
-              );
-            })
-          )}
-        </View>
-      </View>
-
-      <View style={styles.section}>
-        <ThemedText
-          lightColor={APP_SHELL_MAIN_TEXT_COLOR}
-          darkColor={APP_SHELL_MAIN_TEXT_COLOR}
-          style={styles.sectionTitle}
-        >
-          Recent data sources
-        </ThemedText>
-        <ThemedText
-          lightColor={APP_SHELL_LABEL_COLOR}
-          darkColor={APP_SHELL_LABEL_COLOR}
-          style={styles.body}
-        >
-          Devices and apps seen in the last 14 days from your steps, resting
-          heart rate, weight, and sleep data.
-        </ThemedText>
-        {healthContributors.length === 0 ? (
-          <ThemedText
-            lightColor={APP_SHELL_LABEL_COLOR}
-            darkColor={APP_SHELL_LABEL_COLOR}
-            style={[styles.body, styles.sectionGap]}
-          >
-            {isLoading
-              ? "Loading…"
-              : "No contributing sources found yet, or access is limited for the categories above."}
-          </ThemedText>
-        ) : (
-          <View style={[styles.sourceList, styles.sectionGap]}>
-            {healthContributors.map((c) => (
-              <View key={c.id} style={styles.sourceCard}>
-                <ThemedText
-                  lightColor={APP_SHELL_MAIN_TEXT_COLOR}
-                  darkColor={APP_SHELL_MAIN_TEXT_COLOR}
-                  style={styles.sourceTitle}
-                >
-                  {c.displayTitle}
-                </ThemedText>
-                {c.subtitle ? (
-                  <ThemedText
-                    lightColor={APP_SHELL_LABEL_COLOR}
-                    darkColor={APP_SHELL_LABEL_COLOR}
-                    style={styles.sourceMeta}
-                  >
-                    {c.subtitle}
-                  </ThemedText>
-                ) : null}
-                <ThemedText
-                  lightColor={APP_SHELL_LABEL_COLOR}
-                  darkColor={APP_SHELL_LABEL_COLOR}
-                  style={styles.sourceMeta}
-                >
-                  Last updated {formatFriendlyLastUpdated(c.lastSeenAt)}
-                </ThemedText>
-              </View>
-            ))}
           </View>
+        ) : (
+          METRIC_ROWS.map((m, index) => {
+            const ok = connectivity[m.key];
+            return (
+              <Fragment key={m.key}>
+                {index > 0 ? <SettingsDivider /> : null}
+                <SettingsValueRow
+                  title={m.label}
+                  value={ok ? "Live" : "No data"}
+                  valueColor={ok ? SETTINGS_SUCCESS_COLOR : undefined}
+                />
+              </Fragment>
+            );
+          })
         )}
-      </View>
+      </SettingsSection>
+
+      <SettingsSection
+        title="recent sources"
+        footer="Devices and apps that sent steps, resting heart rate, weight or sleep in the last 14 days."
+      >
+        {healthContributors.length === 0 ? (
+          <SettingsValueRow
+            title={isLoading ? "Loading..." : "No sources yet"}
+            description={
+              isLoading
+                ? null
+                : "Nothing found, or access is limited for the categories above."
+            }
+            value=""
+          />
+        ) : (
+          healthContributors.map((c, index) => (
+            <Fragment key={c.id}>
+              {index > 0 ? <SettingsDivider /> : null}
+              <SettingsValueRow
+                title={c.displayTitle}
+                description={[c.subtitle, `Updated ${formatFriendlyLastUpdated(c.lastSeenAt)}`]
+                  .filter(Boolean)
+                  .join(" · ")}
+                value=""
+              />
+            </Fragment>
+          ))
+        )}
+      </SettingsSection>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  block: {
-    gap: 10,
-    paddingBottom: 28,
+  root: {
+    gap: 28,
   },
-  /** Same title → body spacing as `section`. */
-  titleGroup: {
-    gap: 8,
-  },
-  section: {
-    marginTop: 8,
-    paddingTop: 14,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: APP_SHELL_INPUT_BOARDER_COLOR,
-    gap: 8,
-  },
-  sectionTitle: {
-    fontSize: 15,
-    lineHeight: 21,
-    fontWeight: "600",
-  },
-  sectionGap: {
-    marginTop: 4,
-  },
-  body: {
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  availabilityRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  inlineSpinner: {
-    marginVertical: 2,
-  },
-  availabilityText: {
-    flex: 1,
-  },
-  settingsLink: {
-    alignSelf: "flex-start",
-    marginTop: 6,
-    paddingVertical: 6,
-    paddingHorizontal: 2,
-  },
-  settingsLinkPressed: {
-    opacity: 0.85,
-  },
-  settingsLinkLabel: {
-    fontSize: 14,
-    lineHeight: 20,
-    textDecorationLine: "underline",
-  },
-  metricList: {
-    gap: 0,
-  },
-  metricRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 8,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: APP_SHELL_INPUT_BOARDER_COLOR,
-  },
-  metricLabel: {
-    flex: 1,
-    fontSize: 14,
-    lineHeight: 20,
-    paddingRight: 12,
-  },
-  metricState: {
-    fontSize: 13,
-    lineHeight: 18,
-    fontWeight: "600",
-  },
-  sourceList: {
-    gap: 10,
-  },
-  sourceCard: {
-    borderRadius: 10,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: APP_SHELL_INPUT_BOARDER_COLOR,
-    padding: 12,
-    gap: 4,
-  },
-  sourceTitle: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: "600",
-  },
-  sourceMeta: {
-    fontSize: 12,
-    lineHeight: 17,
+  loading: {
+    paddingVertical: 20,
   },
 });

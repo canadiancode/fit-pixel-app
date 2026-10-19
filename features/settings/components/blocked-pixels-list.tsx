@@ -1,5 +1,12 @@
-import { useEffect, useState } from "react";
-import { Alert, Pressable, StyleSheet, View } from "react-native";
+import { Fragment, useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import {
@@ -8,6 +15,21 @@ import {
 } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
 import { useBlockedUsers } from "@/features/chat/blocked-users-store";
+import {
+  SETTINGS_CARD_RIM_ACTIVE,
+  SETTINGS_TRACK_FILL,
+  SettingsButton,
+  SettingsDivider,
+  SettingsIntro,
+  SettingsSection,
+} from "@/features/settings/components/settings-ui";
+import { timeAgo } from "@/features/chat/time-ago";
+
+function blockedLabel(iso: string): string {
+  const ago = timeAgo(iso);
+  if (ago === "now") return "Blocked just now";
+  return /^\d+[mhd]$/.test(ago) ? `Blocked ${ago} ago` : `Blocked on ${ago}`;
+}
 
 export function BlockedPixelsList() {
   const { blocked, loaded, loadFailed, unblock, refresh } = useBlockedUsers();
@@ -17,157 +39,158 @@ export function BlockedPixelsList() {
     void refresh();
   }, [refresh]);
 
+  const intro = (
+    <SettingsIntro>
+      {"Blocked Pixels can't message you or send friend requests, and their chat messages are hidden from you."}
+    </SettingsIntro>
+  );
+
   if (!loaded && loadFailed) {
     return (
       <View style={styles.root}>
-        <ThemedText
-          lightColor={APP_SHELL_LABEL_COLOR}
-          darkColor={APP_SHELL_LABEL_COLOR}
-          style={styles.hint}
+        {intro}
+        <SettingsSection
+          title="blocked"
+          footer="Couldn't load your blocked Pixels. Check your connection."
+          bare
         >
-          {"Couldn't load your blocked Pixels. Check your connection."}
-        </ThemedText>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Try loading blocked Pixels again"
-          onPress={() => {
-            void refresh();
-          }}
-          style={({ pressed }) => [
-            styles.unblock,
-            styles.retry,
-            pressed && styles.unblockPressed,
-          ]}
-        >
-          <ThemedText
-            lightColor={APP_SHELL_MAIN_TEXT_COLOR}
-            darkColor={APP_SHELL_MAIN_TEXT_COLOR}
-            style={styles.unblockLabel}
-          >
-            Try again
-          </ThemedText>
-        </Pressable>
+          <SettingsButton label="Try again" onPress={() => void refresh()} />
+        </SettingsSection>
       </View>
     );
   }
 
   if (!loaded) {
     return (
-      <ThemedText
-        lightColor={APP_SHELL_LABEL_COLOR}
-        darkColor={APP_SHELL_LABEL_COLOR}
-        style={styles.hint}
-      >
-        Loading...
-      </ThemedText>
-    );
-  }
-
-  if (blocked.length === 0) {
-    return (
-      <ThemedText
-        lightColor={APP_SHELL_LABEL_COLOR}
-        darkColor={APP_SHELL_LABEL_COLOR}
-        style={styles.hint}
-      >
-        {"You haven't blocked anyone. To block a Pixel, long-press one of " +
-          "their chat messages or open their profile."}
-      </ThemedText>
+      <View style={styles.root}>
+        {intro}
+        <ActivityIndicator color={APP_SHELL_MAIN_TEXT_COLOR} />
+      </View>
     );
   }
 
   return (
     <View style={styles.root}>
-      <ThemedText
-        lightColor={APP_SHELL_LABEL_COLOR}
-        darkColor={APP_SHELL_LABEL_COLOR}
-        style={styles.hint}
+      {intro}
+      <SettingsSection
+        title={`blocked · ${blocked.length}`}
+        footer={
+          blocked.length === 0
+            ? "You haven't blocked anyone. To block a Pixel, long-press one of their chat messages or open their profile."
+            : "Unblocking lets them message you again. They aren't told either way."
+        }
+        bare={blocked.length === 0}
       >
-        {"Blocked Pixels can't message you, and their chat messages are hidden."}
-      </ThemedText>
-      {blocked.map((item) => (
-        <View key={item.userId} style={styles.row}>
-          <ThemedText
-            lightColor={APP_SHELL_MAIN_TEXT_COLOR}
-            darkColor={APP_SHELL_MAIN_TEXT_COLOR}
-            style={styles.name}
-            numberOfLines={1}
-          >
-            {item.displayName}
-          </ThemedText>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`Unblock ${item.displayName}`}
-            disabled={pendingId === item.userId}
-            onPress={() => {
-              setPendingId(item.userId);
-              void unblock(item.userId)
-                .catch((err) => {
-                  Alert.alert(
-                    "Could not unblock",
-                    err instanceof Error ? err.message : "Please try again.",
-                  );
-                })
-                .finally(() => setPendingId(null));
-            }}
-            style={({ pressed }) => [
-              styles.unblock,
-              (pressed || pendingId === item.userId) && styles.unblockPressed,
-            ]}
-          >
-            <ThemedText
-              lightColor={APP_SHELL_MAIN_TEXT_COLOR}
-              darkColor={APP_SHELL_MAIN_TEXT_COLOR}
-              style={styles.unblockLabel}
-            >
-              Unblock
-            </ThemedText>
-          </Pressable>
-        </View>
-      ))}
+        {blocked.length === 0
+          ? null
+          : blocked.map((item, index) => {
+              const busy = pendingId === item.userId;
+              return (
+                <Fragment key={item.userId}>
+                  {index > 0 ? <SettingsDivider /> : null}
+                  <View style={styles.row}>
+                    <View style={styles.rowText}>
+                      <ThemedText
+                        lightColor={APP_SHELL_MAIN_TEXT_COLOR}
+                        darkColor={APP_SHELL_MAIN_TEXT_COLOR}
+                        style={styles.name}
+                        numberOfLines={1}
+                      >
+                        {item.displayName}
+                      </ThemedText>
+                      <ThemedText
+                        lightColor={APP_SHELL_LABEL_COLOR}
+                        darkColor={APP_SHELL_LABEL_COLOR}
+                        style={styles.meta}
+                      >
+                        {blockedLabel(item.blockedAt)}
+                      </ThemedText>
+                    </View>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`Unblock ${item.displayName}`}
+                      accessibilityState={{ busy, disabled: busy }}
+                      disabled={busy}
+                      onPress={() => {
+                        setPendingId(item.userId);
+                        void unblock(item.userId)
+                          .catch((err) => {
+                            Alert.alert(
+                              "Could not unblock",
+                              err instanceof Error
+                                ? err.message
+                                : "Please try again.",
+                            );
+                          })
+                          .finally(() => setPendingId(null));
+                      }}
+                      style={({ pressed }) => [
+                        styles.unblock,
+                        (pressed || busy) && styles.pressed,
+                      ]}
+                    >
+                      {busy ? (
+                        <ActivityIndicator
+                          size="small"
+                          color={APP_SHELL_MAIN_TEXT_COLOR}
+                        />
+                      ) : (
+                        <Text style={styles.unblockLabel}>Unblock</Text>
+                      )}
+                    </Pressable>
+                  </View>
+                </Fragment>
+              );
+            })}
+      </SettingsSection>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: {
-    gap: 12,
-    paddingBottom: 28,
-  },
-  hint: {
-    fontSize: 13,
-    lineHeight: 18,
+    gap: 20,
   },
   row: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
     gap: 12,
-    paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "rgba(255,255,255,0.16)",
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+  },
+  rowText: {
+    flex: 1,
+    minWidth: 0,
+    gap: 8,
   },
   name: {
-    flex: 1,
-    fontSize: 14,
-    lineHeight: 20,
+    fontFamily: FONT_FAMILY,
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  meta: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 8,
+    lineHeight: 12,
   },
   unblock: {
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.16)",
+    minWidth: 88,
+    height: 36,
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: SETTINGS_CARD_RIM_ACTIVE,
+    backgroundColor: SETTINGS_TRACK_FILL,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  unblockPressed: {
-    opacity: 0.6,
-  },
-  retry: {
-    alignSelf: "flex-start",
+  pressed: {
+    opacity: 0.7,
   },
   unblockLabel: {
+    color: APP_SHELL_MAIN_TEXT_COLOR,
     fontFamily: FONT_FAMILY,
-    fontSize: 10,
-    lineHeight: 14,
+    fontSize: 9,
+    lineHeight: 13,
   },
 });

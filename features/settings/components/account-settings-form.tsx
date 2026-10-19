@@ -1,18 +1,23 @@
 import { useSQLiteContext } from "expo-sqlite";
 import { useState } from "react";
-import { Alert, Pressable, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Alert, StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
-import {
-  APP_SHELL_LABEL_COLOR,
-  APP_SHELL_MAIN_TEXT_COLOR,
-} from "@/constants/app-colors";
+import { APP_SHELL_MAIN_TEXT_COLOR } from "@/constants/app-colors";
 import { useAuth } from "@/features/auth/auth-context";
 import { AUTH_COPY } from "@/features/auth/auth-errors";
-import { AuthPrimaryButton } from "@/features/auth/components/auth-screen-shell";
+import {
+  SETTINGS_DANGER_COLOR,
+  SETTINGS_SUCCESS_COLOR,
+  SettingsButton,
+  SettingsDivider,
+  SettingsIntro,
+  SettingsLinkRow,
+  SettingsSection,
+  SettingsValueRow,
+} from "@/features/settings/components/settings-ui";
+import { SyncStatusBanner } from "@/features/settings/components/sync-status-banner";
 import { restoreFromServer } from "@/features/restore/restore-from-server";
-
-const DELETE_COLOR = "#ff8a8a";
 
 export function AccountSettingsForm() {
   const db = useSQLiteContext();
@@ -24,12 +29,27 @@ export function AccountSettingsForm() {
     deleteAccount,
     refreshLocalData,
   } = useAuth();
-  const [message, setMessage] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [resetState, setResetState] = useState<
+    { kind: "idle" } | { kind: "sending" } | { kind: "sent" } | { kind: "error"; message: string }
+  >({ kind: "idle" });
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [restoring, setRestoring] = useState(false);
   const [restoreMessage, setRestoreMessage] = useState<string | null>(null);
+
+  const sendReset = () => {
+    const email = user?.email;
+    if (!email || resetState.kind === "sending") return;
+    setResetState({ kind: "sending" });
+    void resetPassword(email)
+      .then(() => setResetState({ kind: "sent" }))
+      .catch((err) =>
+        setResetState({
+          kind: "error",
+          message: err instanceof Error ? err.message : AUTH_COPY.network,
+        }),
+      );
+  };
 
   const runRestore = () => {
     const accessToken = session?.access_token;
@@ -100,188 +120,105 @@ export function AccountSettingsForm() {
   };
 
   if (!configured) {
-    return (
-      <View style={styles.root}>
-        <ThemedText
-          lightColor={APP_SHELL_MAIN_TEXT_COLOR}
-          darkColor={APP_SHELL_MAIN_TEXT_COLOR}
-          style={styles.hint}
-        >
-          {AUTH_COPY.misconfigured}
-        </ThemedText>
-      </View>
-    );
+    return <SettingsIntro>{AUTH_COPY.misconfigured}</SettingsIntro>;
   }
+
+  const resetDescription =
+    resetState.kind === "sent"
+      ? `Check ${user?.email ?? "your inbox"} for a reset link.`
+      : resetState.kind === "error"
+        ? resetState.message
+        : "We'll email you a link to choose a new password.";
 
   return (
     <View style={styles.root}>
-      <View style={styles.field}>
-        <ThemedText
-          lightColor={APP_SHELL_LABEL_COLOR}
-          darkColor={APP_SHELL_LABEL_COLOR}
-          style={styles.fieldLabel}
-        >
-          Signed in
-        </ThemedText>
-        <ThemedText
-          lightColor={APP_SHELL_MAIN_TEXT_COLOR}
-          darkColor={APP_SHELL_MAIN_TEXT_COLOR}
-          style={styles.body}
-        >
-          {user?.email ?? user?.id ?? ""}
-        </ThemedText>
-      </View>
-      <AuthPrimaryButton
-        label="Reset password"
-        accessibilityLabel="Send password reset email"
-        disabled={busy || !user?.email}
-        onPress={() => {
-          if (!user?.email) return;
-          setBusy(true);
-          setMessage(null);
-          void (async () => {
-            try {
-              await resetPassword(user.email ?? "");
-              setMessage(AUTH_COPY.resetSent);
-            } catch (err) {
-              setMessage(
-                err instanceof Error ? err.message : AUTH_COPY.network,
-              );
-            } finally {
-              setBusy(false);
-            }
-          })();
-        }}
-      />
-      {message ? (
-        <ThemedText
-          lightColor={APP_SHELL_LABEL_COLOR}
-          darkColor={APP_SHELL_LABEL_COLOR}
-          style={styles.hint}
-          accessibilityLiveRegion="polite"
-        >
-          {message}
-        </ThemedText>
-      ) : null}
-      <View style={styles.field}>
-        <ThemedText
-          lightColor={APP_SHELL_LABEL_COLOR}
-          darkColor={APP_SHELL_LABEL_COLOR}
-          style={styles.fieldLabel}
-        >
-          Cloud backup
-        </ThemedText>
-        <AuthPrimaryButton
-          label={restoring ? "Restoring..." : "Restore from cloud"}
-          accessibilityLabel="Restore data from the cloud"
-          disabled={restoring || !session}
-          onPress={confirmRestore}
+      <SettingsSection title="sign-in">
+        <SettingsValueRow
+          title="Email"
+          value=""
+          description={user?.email ?? user?.id ?? ""}
         />
-        {restoreMessage ? (
-          <ThemedText
-            lightColor={APP_SHELL_LABEL_COLOR}
-            darkColor={APP_SHELL_LABEL_COLOR}
-            style={styles.hint}
-            accessibilityLiveRegion="polite"
-          >
-            {restoreMessage}
-          </ThemedText>
-        ) : null}
-      </View>
-      <View style={styles.dangerZone}>
-        <ThemedText
-          lightColor={APP_SHELL_LABEL_COLOR}
-          darkColor={APP_SHELL_LABEL_COLOR}
-          style={styles.fieldLabel}
-        >
-          Delete account
-        </ThemedText>
-        <ThemedText
-          lightColor={APP_SHELL_MAIN_TEXT_COLOR}
-          darkColor={APP_SHELL_MAIN_TEXT_COLOR}
-          style={styles.hint}
-        >
-          Permanently removes your account and all Fit Pixel data from our
-          servers and this device.
-        </ThemedText>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Delete account"
-          accessibilityState={{ disabled: deleting }}
-          disabled={deleting}
-          onPress={confirmDelete}
-          style={({ pressed }) => [
-            styles.deleteButton,
-            pressed && styles.deleteButtonPressed,
-            deleting && styles.deleteButtonDisabled,
-          ]}
-        >
-          <ThemedText
-            lightColor={DELETE_COLOR}
-            darkColor={DELETE_COLOR}
-            style={styles.deleteLabel}
-          >
-            {deleting ? "Deleting..." : "Delete account"}
-          </ThemedText>
-        </Pressable>
-        {deleteError ? (
-          <ThemedText
-            lightColor={DELETE_COLOR}
-            darkColor={DELETE_COLOR}
-            style={styles.hint}
-            accessibilityLiveRegion="polite"
-          >
-            {deleteError}
-          </ThemedText>
-        ) : null}
-      </View>
+        <SettingsDivider />
+        <SettingsLinkRow
+          title="Reset password"
+          description={resetDescription}
+          onPress={sendReset}
+          disabled={!user?.email || resetState.kind === "sending"}
+          accessibilityLabel="Send password reset email"
+          trailing={
+            resetState.kind === "sending" ? (
+              <ActivityIndicator color={APP_SHELL_MAIN_TEXT_COLOR} />
+            ) : resetState.kind === "sent" ? (
+              <ThemedText
+                lightColor={SETTINGS_SUCCESS_COLOR}
+                darkColor={SETTINGS_SUCCESS_COLOR}
+                style={styles.sent}
+              >
+                Sent
+              </ThemedText>
+            ) : undefined
+          }
+        />
+      </SettingsSection>
+
+      <SettingsSection
+        title="cloud backup"
+        footer={restoreMessage}
+        bare
+      >
+        <View style={styles.stack}>
+          <SyncStatusBanner />
+          <SettingsButton
+            label={restoring ? "Restoring..." : "Restore from cloud"}
+            accessibilityLabel="Restore data from the cloud"
+            disabled={restoring || !session}
+            onPress={confirmRestore}
+          />
+        </View>
+      </SettingsSection>
+
+      <SettingsSection
+        title="danger zone"
+        footer="Permanently removes your account and all Fit Pixel data from our servers and this phone."
+        bare
+      >
+        <View style={styles.stack}>
+          <SettingsButton
+            label={deleting ? "Deleting..." : "Delete account"}
+            tone="danger"
+            disabled={deleting}
+            onPress={confirmDelete}
+          />
+          {deleteError ? (
+            <ThemedText
+              lightColor={SETTINGS_DANGER_COLOR}
+              darkColor={SETTINGS_DANGER_COLOR}
+              style={styles.error}
+              accessibilityLiveRegion="polite"
+            >
+              {deleteError}
+            </ThemedText>
+          ) : null}
+        </View>
+      </SettingsSection>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: {
-    gap: 22,
-    paddingBottom: 28,
+    gap: 28,
   },
-  field: {
-    gap: 6,
+  stack: {
+    gap: 12,
   },
-  fieldLabel: {
-    fontSize: 12,
-    lineHeight: 16,
+  sent: {
+    fontSize: 9,
+    lineHeight: 13,
   },
-  body: {
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  hint: {
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  dangerZone: {
-    gap: 10,
-    marginTop: 12,
-    paddingTop: 20,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "rgba(255,255,255,0.16)",
-  },
-  deleteButton: {
-    alignSelf: "flex-start",
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: DELETE_COLOR,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  deleteButtonPressed: {
-    opacity: 0.85,
-  },
-  deleteButtonDisabled: {
-    opacity: 0.5,
-  },
-  deleteLabel: {
-    fontSize: 14,
-    lineHeight: 20,
+  error: {
+    fontSize: 9,
+    lineHeight: 15,
+    paddingHorizontal: 4,
   },
 });

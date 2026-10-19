@@ -1,6 +1,6 @@
 import { Image } from "expo-image";
 import { forwardRef, useState } from "react";
-import { Platform, Pressable, StyleSheet, TextInput, View } from "react-native";
+import { Platform, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
 import {
   APP_SHELL_INPUT_PLACEHOLDER_COLOR,
@@ -33,10 +33,20 @@ type MapHeaderProps = {
   onChangeQuery?: (next: string) => void;
   onSubmitQuery?: () => void;
   onFocus?: () => void;
+  onPressFilter?: () => void;
+  /** Filters that differ from the defaults; shown as a badge. */
+  activeFilterCount?: number;
 };
 
 export const MapHeader = forwardRef<TextInput, MapHeaderProps>(function MapHeader(
-  { query: controlledQuery, onChangeQuery, onSubmitQuery, onFocus },
+  {
+    query: controlledQuery,
+    onChangeQuery,
+    onSubmitQuery,
+    onFocus,
+    onPressFilter,
+    activeFilterCount = 0,
+  },
   ref,
 ) {
   const [localQuery, setLocalQuery] = useState("");
@@ -76,7 +86,12 @@ export const MapHeader = forwardRef<TextInput, MapHeaderProps>(function MapHeade
           </View>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Filter gyms"
+            accessibilityLabel={
+              activeFilterCount > 0
+                ? `Filter gyms, ${activeFilterCount} on`
+                : "Filter gyms"
+            }
+            onPress={onPressFilter}
             style={({ pressed }) => [
               styles.filterButton,
               pressed && styles.filterButtonPressed,
@@ -88,6 +103,11 @@ export const MapHeader = forwardRef<TextInput, MapHeaderProps>(function MapHeade
               contentFit="contain"
               accessibilityIgnoresInvertColors
             />
+            {activeFilterCount > 0 ? (
+              <View style={styles.badge} pointerEvents="none">
+                <Text style={styles.badgeText}>{activeFilterCount}</Text>
+              </View>
+            ) : null}
           </Pressable>
         </View>
       </View>
@@ -139,6 +159,23 @@ const styles = StyleSheet.create({
   },
   filterButtonPressed: {
     opacity: 0.85,
+  },
+  badge: {
+    position: "absolute",
+    top: 4,
+    right: 2,
+    minWidth: 18,
+    height: 18,
+    paddingHorizontal: 4,
+    borderRadius: 9,
+    backgroundColor: "#5fd35f",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  badgeText: {
+    color: "#011a3a",
+    fontSize: 10,
+    fontWeight: "800",
   },
   filterIcon: {
     width: FILTER_ICON_SIZE,

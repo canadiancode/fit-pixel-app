@@ -3,9 +3,10 @@ import { useState } from "react";
 import { Alert, Pressable, StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
-import { APP_SHELL_MAIN_TEXT_COLOR } from "@/constants/app-colors";
 import { useAuth } from "@/features/auth/auth-context";
 import { SettingsSubScreenLayout } from "@/features/settings/components/settings-sub-screen-layout";
+import { SettingsIntro } from "@/features/settings/components/settings-ui";
+import { SyncStatusBanner } from "@/features/settings/components/sync-status-banner";
 import {
   SETTINGS_SIGN_OUT_BACKGROUND,
   SETTINGS_SIGN_OUT_BG_ASPECT_RATIO,
@@ -37,14 +38,11 @@ export default function SignOutSettingsScreen() {
   return (
     <SettingsSubScreenLayout>
       <View style={styles.block}>
-        <ThemedText
-          lightColor={APP_SHELL_MAIN_TEXT_COLOR}
-          darkColor={APP_SHELL_MAIN_TEXT_COLOR}
-          style={styles.body}
-        >
-          Sign out revokes this session, clears saved login, and resets local
-          Fit Pixel data on this device.
-        </ThemedText>
+        <SettingsIntro>
+          Signing out ends this session and clears Fit Pixel data from this
+          phone. Everything that has synced comes back when you sign in again.
+        </SettingsIntro>
+        <SyncStatusBanner />
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Sign out"
@@ -89,10 +87,6 @@ export default function SignOutSettingsScreen() {
 const styles = StyleSheet.create({
   block: {
     gap: 20,
-  },
-  body: {
-    fontSize: 14,
-    lineHeight: 20,
   },
   button: {
     alignSelf: "stretch",

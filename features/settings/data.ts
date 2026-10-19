@@ -1,46 +1,65 @@
+/** Groups on the Settings list, in display order. */
+export const SETTINGS_GROUPS = [
+  { id: "you", label: "you" },
+  { id: "app", label: "app" },
+  { id: "safety", label: "privacy & safety" },
+  { id: "account", label: "account" },
+] as const;
+
+export type SettingsGroupId = (typeof SETTINGS_GROUPS)[number]["id"];
+
 export const SETTINGS_ROWS = [
   {
     id: "profile",
+    group: "you",
     label: "Profile",
-    caption: "Display name, bio, home gym, visibility",
-  },
-  {
-    id: "health",
-    label: "Health & wearables",
-    caption: "Apple Health",
-  },
-  {
-    id: "notifications",
-    label: "Notifications",
-    caption: "Accountability reminders, news & updates, etc",
+    caption: "Name, bio, home gym and who can see them",
   },
   {
     id: "social",
+    group: "you",
     label: "Social medias",
-    caption: "Instagram, TikTok, YouTube links",
+    caption: "Instagram, TikTok and YouTube",
+  },
+  {
+    id: "health",
+    group: "app",
+    label: "Health & wearables",
+    caption: "Apple Health access and data sources",
+  },
+  {
+    id: "notifications",
+    group: "app",
+    label: "Notifications",
+    caption: "Messages, friends and reminders",
   },
   {
     id: "preferences",
+    group: "app",
     label: "Preferences",
-    caption: "Unit, theme, etc",
+    caption: "Theme, units and when your day starts",
   },
   {
     id: "blocked",
+    group: "safety",
     label: "Blocked Pixels",
     caption: "People you've blocked in chat",
   },
   {
-    id: "account",
-    label: "Account info",
-    caption: "Email, password, delete account",
+    id: "legal",
+    group: "safety",
+    label: "Privacy & terms",
+    caption: "Privacy Policy and Terms of Use",
   },
   {
-    id: "legal",
-    label: "Privacy & terms",
-    caption: "Privacy Policy, Terms of Use",
+    id: "account",
+    group: "account",
+    label: "Account info",
+    caption: "Email, password, backup, delete account",
   },
   {
     id: "sign-out",
+    group: "account",
     label: "Sign out",
     caption: "End session on device",
   },

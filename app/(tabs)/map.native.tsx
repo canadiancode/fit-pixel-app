@@ -11,8 +11,10 @@ import {
   TAB_SCREEN_ROOT_ABOVE_TAB_BAR,
   TAB_SCREEN_STACK_CHROME_LAYOUT,
 } from "@/constants/app-shell";
+import { FONT_FAMILY } from "@/constants/fonts";
 import { FIT_PIXEL_GOOGLE_MAP_STYLE } from "@/constants/google-map-style";
 import { useAuth } from "@/features/auth/auth-context";
+import { MapFilterSheet } from "@/features/map/components/map-filter-sheet";
 import { MapHeader } from "@/features/map/components/map-header";
 import {
   FALLBACK_GYMS,
@@ -20,6 +22,13 @@ import {
   searchGyms,
   type GymCatalogItem,
 } from "@/features/map/gym-catalog";
+import {
+  DEFAULT_GYM_FILTERS,
+  activeFilterCount,
+  applyGymFilters,
+  availableGymKinds,
+  type GymFilters,
+} from "@/features/map/gym-filters";
 import { joinGymChat, listGyms, type GymListItem } from "@/lib/api/chat";
 import { FitPixelApiError } from "@/lib/api/client";
 import Constants from "expo-constants";
@@ -46,6 +55,7 @@ import MapView, {
 type MapGym = GymCatalogItem & {
   memberCount: number;
   joined: boolean;
+  favorite: boolean;
 };
 
 function toMapGym(item: GymCatalogItem | GymListItem): MapGym {
@@ -58,6 +68,7 @@ function toMapGym(item: GymCatalogItem | GymListItem): MapGym {
       imageKey: item.imageKey ?? undefined,
       memberCount: item.memberCount,
       joined: item.joined,
+      favorite: item.favorite ?? false,
     };
   }
   return {
@@ -68,6 +79,7 @@ function toMapGym(item: GymCatalogItem | GymListItem): MapGym {
     imageKey: item.imageKey,
     memberCount: 0,
     joined: false,
+    favorite: false,
   };
 }
 
@@ -214,6 +226,8 @@ export default function MapScreen() {
   const [userLocationVisible, setUserLocationVisible] = useState(false);
   const [userCoords, setUserCoords] = useState<LatLng | null>(null);
   const [gymQuery, setGymQuery] = useState("");
+  const [filters, setFilters] = useState<GymFilters>(DEFAULT_GYM_FILTERS);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [mapSize, setMapSize] = useState({ width: 0, height: 0 });
   /** Map `onPress` often fires after a marker tap (esp. Android); skip one clear. */
   const skipNextMapDismiss = useRef(false);
@@ -291,10 +305,46 @@ export default function MapScreen() {
     };
   }, [selectedGym, userLocationVisible]);
 
+  /**
+   * Where distance is measured from, rounded to ~1 km so small location
+   * updates don't change the pin set (each change remounts the map, below).
+   */
+  const filterLat = userCoords ? Math.round(userCoords.latitude * 100) / 100 : null;
+  const filterLon = userCoords ? Math.round(userCoords.longitude * 100) / 100 : null;
+  const filterOrigin = useMemo(
+    () =>
+      filters.maxKm != null && filterLat != null && filterLon != null
+        ? { latitude: filterLat, longitude: filterLon }
+        : null,
+    [filters.maxKm, filterLat, filterLon],
+  );
+
+  /** Pins and search both use the filtered set. */
+  const visibleGyms = useMemo(
+    () => applyGymFilters(gyms, filters, filterOrigin),
+    [filters, gyms, filterOrigin],
+  );
+  /**
+   * react-native-maps (iOS, new architecture interop) crashes in
+   * AIRMap insertReactSubview when many markers are added, removed or
+   * re-propped at once. Filtering therefore remounts the map with the new pin
+   * set, starting from the camera the user was looking at.
+   */
+  const mapKey = useMemo(
+    () => JSON.stringify([filters, filterOrigin]),
+    [filters, filterOrigin],
+  );
+  const lastRegionRef = useRef(INITIAL_REGION);
+  const gymKinds = useMemo(() => availableGymKinds(gyms), [gyms]);
+  const filterCount = activeFilterCount(filters);
+
   const gymSearchResults = useMemo(
     () =>
-      searchGyms(gyms, gymQuery, userCoords).slice(0, GYM_SEARCH_RESULT_LIMIT),
-    [gyms, gymQuery, userCoords],
+      searchGyms(visibleGyms, gymQuery, userCoords).slice(
+        0,
+        GYM_SEARCH_RESULT_LIMIT,
+      ),
+    [visibleGyms, gymQuery, userCoords],
   );
   const showGymSearchResults = gymQuery.trim().length > 0;
 
@@ -398,6 +448,24 @@ export default function MapScreen() {
     }
   }, [joining, selectedGym, session?.access_token]);
 
+  // Picking a distance frames that radius around you.
+  const maxKm = filters.maxKm;
+  useEffect(() => {
+    if (maxKm == null || userCoords == null) return;
+    const latitudeDelta = ((maxKm * 2) / 111) * 1.15;
+    mapRef.current?.animateToRegion(
+      {
+        ...userCoords,
+        latitudeDelta,
+        longitudeDelta:
+          latitudeDelta / Math.cos((userCoords.latitude * Math.PI) / 180),
+      },
+      FOCUS_ANIMATION_MS,
+    );
+    // Only when the radius changes, not on every location update.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [maxKm]);
+
   const handleMapPress = useCallback(() => {
     dismissGymFilterKeyboard();
     if (skipNextMapDismiss.current) {
@@ -453,6 +521,21 @@ export default function MapScreen() {
         query={gymQuery}
         onChangeQuery={setGymQuery}
         onSubmitQuery={handleSubmitGymQuery}
+        onPressFilter={() => {
+          dismissGymFilterKeyboard();
+          setFiltersOpen(true);
+        }}
+        activeFilterCount={filterCount}
+      />
+      <MapFilterSheet
+        visible={filtersOpen}
+        filters={filters}
+        onChange={setFilters}
+        onClose={() => setFiltersOpen(false)}
+        matchCount={visibleGyms.length}
+        kinds={gymKinds}
+        hasLocation={userCoords != null}
+        onEnableLocation={() => void handleLocateMePress()}
       />
       <View style={styles.mapChrome}>
         <View
@@ -463,6 +546,7 @@ export default function MapScreen() {
           }}
         >
           <MapView
+            key={mapKey}
             ref={mapRef}
             provider={
               Platform.OS === "android" ? PROVIDER_GOOGLE : PROVIDER_DEFAULT
@@ -473,13 +557,16 @@ export default function MapScreen() {
                 : undefined
             }
             style={styles.map}
-            initialRegion={INITIAL_REGION}
+            initialRegion={lastRegionRef.current}
+            onRegionChangeComplete={(region) => {
+              lastRegionRef.current = region;
+            }}
             showsUserLocation={userLocationVisible}
             showsMyLocationButton={false}
             onPress={handleMapPress}
             onPanDrag={handleMapPanDrag}
           >
-            {gyms.map((gym) => (
+            {visibleGyms.map((gym) => (
               <GymMapMarker
                 key={gym.id}
                 gym={gym}
@@ -500,6 +587,31 @@ export default function MapScreen() {
             </View>
           ) : null}
 
+          {filterCount > 0 && visibleGyms.length === 0 ? (
+            <View
+              collapsable={false}
+              style={styles.noMatchOverlay}
+              pointerEvents="box-none"
+            >
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="No gyms match your filters. Reset filters"
+                onPress={() => setFilters(DEFAULT_GYM_FILTERS)}
+                style={({ pressed }) => [
+                  styles.noMatchPill,
+                  pressed && styles.noMatchPillPressed,
+                ]}
+              >
+                <ThemedText
+                  lightColor={APP_SHELL_MAIN_TEXT_COLOR}
+                  darkColor={APP_SHELL_MAIN_TEXT_COLOR}
+                  style={styles.noMatchText}
+                >
+                  No gyms match · Reset filters
+                </ThemedText>
+              </Pressable>
+            </View>
+          ) : null}
           <View
             collapsable={false}
             style={[
@@ -738,6 +850,31 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     textAlign: "center",
+  },
+  noMatchOverlay: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 24,
+    alignItems: "center",
+    zIndex: 21,
+    elevation: 21,
+  },
+  noMatchPill: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: "#2f86e8",
+    backgroundColor: "#01224e",
+  },
+  noMatchPillPressed: {
+    opacity: 0.85,
+  },
+  noMatchText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 10,
+    lineHeight: 14,
   },
   locateFabOverlay: {
     ...StyleSheet.absoluteFillObject,

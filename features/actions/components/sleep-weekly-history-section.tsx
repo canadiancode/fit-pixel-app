@@ -1,23 +1,14 @@
-import { Image } from "expo-image";
-import { router } from "expo-router";
-import { Pressable, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
 import { BarChart } from "@/components/charts/bar-chart";
 import { ThemedText } from "@/components/themed-text";
-import {
-  APP_SHELL_LABEL_COLOR,
-  APP_SHELL_MAIN_TEXT_COLOR,
-} from "@/constants/app-colors";
-import { FONT_FAMILY } from "@/constants/fonts";
+import { APP_SHELL_MAIN_TEXT_COLOR } from "@/constants/app-colors";
 import { useDailyGoals } from "@/features/actions/daily-goals-context";
 import { useWeeklyHabitHistoryChart } from "@/features/actions/use-habit-history-chart";
 import { formatSleepDurationLabel } from "@/features/actions/data";
 
-import { WATER_RIGHT_ARROW_ICON } from "../constants";
-import { SLEEP_ACTION_HREFS } from "../sleep-routes";
-
-const SECTION_TITLE = "History";
-const VIEW_HISTORY_LABEL = "View history";
+/** Charts only go back a week; there is no longer-range history screen. */
+const SECTION_TITLE = "Last 7 days";
 /** Y-axis tick step for the weekly sleep chart (hours). */
 export const SLEEP_WEEKLY_CHART_INCREMENT = 1;
 
@@ -38,35 +29,6 @@ export function SleepWeeklyHistorySection() {
         >
           {SECTION_TITLE}
         </ThemedText>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={VIEW_HISTORY_LABEL}
-          hitSlop={8}
-          onPress={() => router.push(SLEEP_ACTION_HREFS.history)}
-          style={({ pressed }) => [
-            styles.viewHistoryControl,
-            pressed && styles.viewHistoryPressed,
-          ]}
-        >
-          <View style={styles.viewHistoryRow}>
-            <ThemedText
-              lightColor={APP_SHELL_LABEL_COLOR}
-              darkColor={APP_SHELL_LABEL_COLOR}
-              numberOfLines={1}
-              style={styles.viewHistoryLabel}
-            >
-              {VIEW_HISTORY_LABEL}
-            </ThemedText>
-            <Image
-              accessibilityIgnoresInvertColors
-              accessibilityElementsHidden
-              importantForAccessibility="no-hide-descendants"
-              source={WATER_RIGHT_ARROW_ICON}
-              style={styles.viewHistoryArrow}
-              contentFit="contain"
-            />
-          </View>
-        </Pressable>
       </View>
       <BarChart
         increment={SLEEP_WEEKLY_CHART_INCREMENT}
@@ -99,33 +61,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 18,
     fontWeight: "600",
-  },
-  viewHistoryControl: {
-    flex: 1,
-    minWidth: 0,
-    alignItems: "flex-end",
-    justifyContent: "center",
-  },
-  viewHistoryRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "flex-end",
-    flexWrap: "nowrap",
-    gap: 6,
-    flexShrink: 0,
-  },
-  viewHistoryPressed: {
-    opacity: 0.85,
-  },
-  viewHistoryLabel: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 10,
-    lineHeight: 14,
-    flexShrink: 0,
-  },
-  viewHistoryArrow: {
-    width: 32,
-    height: 32,
-    flexShrink: 0,
   },
 });

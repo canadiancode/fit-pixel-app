@@ -30,7 +30,7 @@ function statusCopy(status: ReturnType<typeof useSyncOutboxStatus>): {
   }
   return {
     title: "Cloud backup: up to date",
-    caption: "Habits and settings on this phone are queued to the server.",
+    caption: "Your habits and settings are saved to your account.",
     failed: false,
   };
 }
@@ -68,24 +68,23 @@ export function SyncStatusBanner() {
 const styles = StyleSheet.create({
   banner: {
     borderRadius: 12,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(120,200,255,0.45)",
-    backgroundColor: "rgba(120,200,255,0.10)",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    gap: 4,
+    borderWidth: 2,
+    borderColor: "rgba(95,211,95,0.55)",
+    backgroundColor: "rgba(95,211,95,0.08)",
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    gap: 8,
   },
   bannerFailed: {
-    borderColor: "rgba(255,138,138,0.55)",
-    backgroundColor: "rgba(255,138,138,0.10)",
+    borderColor: "rgba(255,138,138,0.6)",
+    backgroundColor: "rgba(255,138,138,0.08)",
   },
   title: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: "600",
+    fontSize: 12,
+    lineHeight: 16,
   },
   caption: {
-    fontSize: 11,
+    fontSize: 9,
     lineHeight: 15,
   },
 });
