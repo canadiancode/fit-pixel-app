@@ -20,7 +20,10 @@ import {
   TAB_HEADER_ROW_LAYOUT,
 } from "@/constants/app-shell";
 import { FONT_FAMILY } from "@/constants/fonts";
-import { useChatSearch } from "@/features/chat/chat-search-context";
+import {
+  useChatSearch,
+  type ChatSection,
+} from "@/features/chat/chat-search-context";
 import { useNotifications } from "@/features/social/notifications-context";
 
 const SEARCH_INPUT_BACKGROUND = require("@/assets/backgrounds/search-input.png");
@@ -37,27 +40,36 @@ const SINGLE_LINE_ANDROID = Platform.select({
   default: {},
 });
 
-function searchFieldCopy(pathname: string): {
+const SECTION_SEARCH_COPY: Record<
+  ChatSection,
+  { placeholder: string; a11yLabel: string }
+> = {
+  gyms: { placeholder: "Search gyms", a11yLabel: "Search gym chats" },
+  messages: { placeholder: "Search DMs", a11yLabel: "Search messages" },
+  friends: { placeholder: "Find Pixels", a11yLabel: "Find Pixels by name" },
+};
+
+function searchFieldCopy(
+  pathname: string,
+  section: ChatSection,
+): {
   placeholder: string;
   a11yLabel: string;
 } {
   if (pathname.includes("/gym-chat/")) {
     return { placeholder: "Search chat...", a11yLabel: "Search chat" };
   }
-  if (pathname.includes("/gym-chats")) {
-    return { placeholder: "Search chats", a11yLabel: "Search chats" };
-  }
-  return { placeholder: "Search Pixels", a11yLabel: "Search Pixels" };
+  return SECTION_SEARCH_COPY[section];
 }
 
 /** Primary header band; same dimensions as Settings / Actions / Map. */
 export function ChatHeader() {
-  const { query, setQuery } = useChatSearch();
+  const { query, setQuery, section, searchInputRef } = useChatSearch();
   const { unreadCount } = useNotifications();
   const pathname = usePathname();
   const { placeholder, a11yLabel } = useMemo(
-    () => searchFieldCopy(pathname),
-    [pathname],
+    () => searchFieldCopy(pathname, section),
+    [pathname, section],
   );
 
   return (
@@ -73,6 +85,7 @@ export function ChatHeader() {
               contentFit="fill"
             />
             <TextInput
+              ref={searchInputRef}
               accessibilityLabel={a11yLabel}
               value={query}
               onChangeText={setQuery}
@@ -81,7 +94,8 @@ export function ChatHeader() {
               style={styles.input}
               autoCapitalize="none"
               autoCorrect={false}
-              clearButtonMode="while-editing"
+              clearButtonMode="always"
+              returnKeyType="search"
               blurOnSubmit
               underlineColorAndroid="transparent"
               {...SINGLE_LINE_ANDROID}

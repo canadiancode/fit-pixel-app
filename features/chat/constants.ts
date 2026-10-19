@@ -6,3 +6,15 @@ export const GYM_CHAT_USER_ICON = require("@/assets/icons/users.png");
 
 /** Live viewers indicator beside member count on gym chat rows. */
 export const GYM_CHAT_LIVE_ICON = require("@/assets/icons/live.png");
+
+/** Chat index chrome: pixel-card fill + bright rim (matches the row background assets). */
+export const CHAT_CARD_FILL = "#01224e";
+export const CHAT_CARD_RIM = "#0b4f96";
+export const CHAT_CARD_RIM_ACTIVE = "#2f86e8";
+/** Recessed track behind the section tabs. */
+export const CHAT_TRACK_FILL = "#011a3a";
+
+/** Count badges (tab bar, bell, section tabs). */
+export const CHAT_BADGE_COLOR = "#ff5a5a";
+/** Unread DM / notification marker. */
+export const CHAT_UNREAD_DOT_COLOR = "#7CFFB2";

@@ -11,6 +11,7 @@ import {
 import { FONT_FAMILY } from "@/constants/fonts";
 import { ChatSubScreenLayout } from "@/features/chat/components/chat-sub-screen-layout";
 import { FriendshipButton } from "@/features/social/components/friendship-button";
+import { timeAgo } from "@/features/chat/time-ago";
 import { useNotifications } from "@/features/social/notifications-context";
 import { useFriendshipActions } from "@/features/social/use-friendship-actions";
 import {
@@ -20,18 +21,6 @@ import {
 } from "@/lib/api/chat";
 
 const UNREAD_DOT_COLOR = "#7CFFB2";
-
-function timeAgo(iso: string): string {
-  const seconds = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
-  if (seconds < 60) return "now";
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d`;
-  return new Date(iso).toLocaleDateString();
-}
 
 function describe(item: NotificationItem): string {
   switch (item.kind) {
