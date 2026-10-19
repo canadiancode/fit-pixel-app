@@ -12,7 +12,7 @@ import {
   SETTINGS_ROW_BACKGROUND,
   SETTINGS_ROW_BG_ASPECT_RATIO,
 } from "@/features/settings/constants";
-import { listJoinedGymChats } from "@/lib/api/chat";
+import { listGyms } from "@/lib/api/chat";
 import { FitPixelApiError } from "@/lib/api/client";
 import { useAuth } from "@/features/auth/auth-context";
 
@@ -25,8 +25,8 @@ export function ViewGymChatsCard() {
       setCount(0);
       return;
     }
-    void listJoinedGymChats()
-      .then((chats) => setCount(chats.length))
+    void listGyms()
+      .then((gyms) => setCount(gyms.length))
       .catch((err) => {
         if (err instanceof FitPixelApiError && err.status === 401) {
           setCount(0);

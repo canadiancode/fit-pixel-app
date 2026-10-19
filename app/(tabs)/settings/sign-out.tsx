@@ -1,5 +1,6 @@
 import { Image } from "expo-image";
-import { Pressable, StyleSheet, View } from "react-native";
+import { useState } from "react";
+import { Alert, Pressable, StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import { APP_SHELL_MAIN_TEXT_COLOR } from "@/constants/app-colors";
@@ -12,6 +13,26 @@ import {
 
 export default function SignOutSettingsScreen() {
   const { signOut } = useAuth();
+  const [signingOut, setSigningOut] = useState(false);
+
+  const confirmSignOut = () => {
+    if (signingOut) return;
+    Alert.alert(
+      "Sign out?",
+      "Your synced data comes back when you sign in again. Anything not synced yet on this device will be lost.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Sign out",
+          style: "destructive",
+          onPress: () => {
+            setSigningOut(true);
+            void signOut().catch(() => setSigningOut(false));
+          },
+        },
+      ],
+    );
+  };
 
   return (
     <SettingsSubScreenLayout>
@@ -27,13 +48,13 @@ export default function SignOutSettingsScreen() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Sign out"
+          accessibilityState={{ busy: signingOut, disabled: signingOut }}
           android_ripple={{ color: "rgba(255,255,255,0.12)" }}
-          onPress={() => {
-            void signOut();
-          }}
+          disabled={signingOut}
+          onPress={confirmSignOut}
           style={({ pressed }) => [
             styles.button,
-            pressed && styles.buttonPressed,
+            (pressed || signingOut) && styles.buttonPressed,
           ]}
         >
           <View
@@ -55,7 +76,7 @@ export default function SignOutSettingsScreen() {
                 darkColor="#ff8a8a"
                 style={styles.buttonLabel}
               >
-                Sign out
+                {signingOut ? "Signing out..." : "Sign out"}
               </ThemedText>
             </View>
           </View>

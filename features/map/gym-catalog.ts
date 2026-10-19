@@ -106,3 +106,45 @@ export function gymHeroSource(
   }
   return DEFAULT_GYM_IMAGE;
 }
+
+/** Lowercase, accent-free text so "evolve" matches "Évolve" and "tem" matches "təm". */
+export function normalizeGymSearchText(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+/**
+ * Gyms whose name contains every word of `query` (any order), best matches
+ * first: name starts with the query, then nearest to `near` when known.
+ */
+export function searchGyms<T extends GymCatalogItem>(
+  gyms: readonly T[],
+  query: string,
+  near?: { latitude: number; longitude: number } | null,
+): T[] {
+  const words = normalizeGymSearchText(query).split(/\s+/).filter(Boolean);
+  if (words.length === 0) return [];
+  const needle = words.join(" ");
+
+  const distance = (gym: T) =>
+    near == null
+      ? 0
+      : (gym.latitude - near.latitude) ** 2 +
+        ((gym.longitude - near.longitude) *
+          Math.cos((near.latitude * Math.PI) / 180)) **
+          2;
+
+  return gyms
+    .map((gym) => ({ gym, name: normalizeGymSearchText(gym.name) }))
+    .filter(({ name }) => words.every((word) => name.includes(word)))
+    .sort((a, b) => {
+      const aPrefix = a.name.startsWith(needle) ? 0 : 1;
+      const bPrefix = b.name.startsWith(needle) ? 0 : 1;
+      if (aPrefix !== bPrefix) return aPrefix - bPrefix;
+      return distance(a.gym) - distance(b.gym);
+    })
+    .map(({ gym }) => gym);
+}

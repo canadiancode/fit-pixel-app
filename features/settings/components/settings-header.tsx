@@ -1,4 +1,3 @@
-import { Image } from "expo-image";
 import { StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
@@ -10,13 +9,16 @@ import {
   TAB_HEADER_CONTENT_HEIGHT,
   TAB_HEADER_ROW_LAYOUT,
 } from "@/constants/app-shell";
+import { PixelCharacter } from "@/features/pixel/components/pixel-character";
+import { portraitLoadout } from "@/features/pixel/default-loadout";
+import { usePixelLoadout } from "@/features/pixel/pixel-loadout-context";
 import { PROFILE_DISPLAY_NAME_FALLBACK } from "@/lib/db";
 
-import { PIXEL_IMAGE } from "../constants";
 import { usePrefsProfile } from "../prefs-profile-context";
 
 export function SettingsHeader() {
   const { profile } = usePrefsProfile();
+  const { loadout } = usePixelLoadout();
   const displayName =
     profile.displayName.trim() === ""
       ? PROFILE_DISPLAY_NAME_FALLBACK
@@ -33,12 +35,10 @@ export function SettingsHeader() {
       >
         {displayName}
       </ThemedText>
-      <Image
-        accessibilityLabel="Pixel avatar"
-        accessibilityIgnoresInvertColors
-        source={PIXEL_IMAGE}
+      <PixelCharacter
+        loadout={portraitLoadout(loadout)}
+        accessibilityLabel="Your pixel"
         style={styles.pixelImage}
-        contentFit="contain"
       />
     </View>
   );

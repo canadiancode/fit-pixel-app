@@ -25,9 +25,14 @@ export const SETTINGS_ROWS = [
     caption: "Unit, theme, etc",
   },
   {
+    id: "blocked",
+    label: "Blocked Pixels",
+    caption: "People you've blocked in chat",
+  },
+  {
     id: "account",
     label: "Account info",
-    caption: "Email, password, etc",
+    caption: "Email, password, delete account",
   },
   {
     id: "sign-out",

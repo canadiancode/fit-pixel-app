@@ -37,11 +37,69 @@ export type DmListItem = {
   peerDisplayName: string;
   lastMessageBody: string | null;
   lastMessageAt: string | null;
+  /** Peer sent the latest message since you last opened the thread. */
+  hasUnread?: boolean;
 };
+
+/** Your relationship to another Pixel. */
+export type FriendshipStatus =
+  | "self"
+  | "none"
+  | "pending_outgoing"
+  | "pending_incoming"
+  | "friends";
+
+/** Equipped layer → item id map from the server (same shape as `PixelLoadout`). */
+export type EquippedLook = Record<string, string>;
 
 export type PixelSearchItem = {
   userId: string;
   displayName: string;
+  equipped?: EquippedLook;
+  friendship?: Exclude<FriendshipStatus, "self">;
+};
+
+export type PixelProfile = {
+  userId: string;
+  displayName: string;
+  bio?: string;
+  homeGymName?: string | null;
+  equipped?: EquippedLook;
+  friendship?: FriendshipStatus;
+  isBlocked?: boolean;
+};
+
+export type FriendItem = {
+  userId: string;
+  displayName: string;
+  equipped: EquippedLook;
+  since: string;
+};
+
+export type FriendRequestItem = {
+  userId: string;
+  displayName: string;
+  equipped: EquippedLook;
+  requestedAt: string;
+};
+
+export type FriendsOverview = {
+  friends: FriendItem[];
+  incoming: FriendRequestItem[];
+  outgoing: FriendRequestItem[];
+};
+
+export type NotificationKind = "friend_request" | "friend_accepted" | "dm_message";
+
+export type NotificationItem = {
+  id: string;
+  kind: NotificationKind;
+  actorId: string | null;
+  actorDisplayName: string;
+  conversationId: string | null;
+  body: string | null;
+  createdAt: string;
+  read: boolean;
 };
 
 async function getAccessToken(): Promise<string | null> {
@@ -199,9 +257,129 @@ export async function searchPixels(query: string): Promise<PixelSearchItem[]> {
   return Array.isArray(data.pixels) ? data.pixels : [];
 }
 
-export async function getPixel(userId: string): Promise<PixelSearchItem> {
-  const data = await chatFetch<{ ok: true; pixel: PixelSearchItem }>(
+export async function getPixel(userId: string): Promise<PixelProfile> {
+  const data = await chatFetch<{ ok: true; pixel: PixelProfile }>(
     `/v1/pixels/${encodeURIComponent(userId)}`,
   );
   return data.pixel;
+}
+
+/** Batch looks for chat avatars (max 50 ids per call). */
+export async function listPixelLooks(
+  userIds: readonly string[],
+): Promise<{ userId: string; displayName: string; equipped: EquippedLook }[]> {
+  if (userIds.length === 0) return [];
+  const params = new URLSearchParams({ ids: userIds.join(",") });
+  const data = await chatFetch<{
+    ok: true;
+    looks: { userId: string; displayName: string; equipped: EquippedLook }[];
+  }>(`/v1/pixels/looks?${params.toString()}`);
+  return Array.isArray(data.looks) ? data.looks : [];
+}
+
+export async function listFriends(): Promise<FriendsOverview> {
+  const data = await chatFetch<{ ok: true } & Partial<FriendsOverview>>(
+    "/v1/friends",
+  );
+  return {
+    friends: Array.isArray(data.friends) ? data.friends : [],
+    incoming: Array.isArray(data.incoming) ? data.incoming : [],
+    outgoing: Array.isArray(data.outgoing) ? data.outgoing : [],
+  };
+}
+
+export async function sendFriendRequest(
+  userId: string,
+): Promise<FriendshipStatus> {
+  const data = await chatFetch<{ ok: true; friendship: FriendshipStatus }>(
+    "/v1/friends/requests",
+    { method: "POST", json: { userId } },
+  );
+  return data.friendship;
+}
+
+export async function respondToFriendRequest(
+  userId: string,
+  accept: boolean,
+): Promise<FriendshipStatus> {
+  const data = await chatFetch<{ ok: true; friendship: FriendshipStatus }>(
+    `/v1/friends/requests/${encodeURIComponent(userId)}/${accept ? "accept" : "decline"}`,
+    { method: "POST" },
+  );
+  return data.friendship;
+}
+
+/** Unfriend, or cancel a request you sent. */
+export async function removeFriend(userId: string): Promise<void> {
+  await chatFetch<{ ok: true }>(`/v1/friends/${encodeURIComponent(userId)}`, {
+    method: "DELETE",
+  });
+}
+
+export async function listNotifications(): Promise<{
+  notifications: NotificationItem[];
+  unreadCount: number;
+}> {
+  const data = await chatFetch<{
+    ok: true;
+    notifications: NotificationItem[];
+    unreadCount: number;
+  }>("/v1/notifications");
+  return {
+    notifications: Array.isArray(data.notifications) ? data.notifications : [],
+    unreadCount: typeof data.unreadCount === "number" ? data.unreadCount : 0,
+  };
+}
+
+/** Omit `ids` to mark everything read. */
+export async function markNotificationsRead(ids?: string[]): Promise<void> {
+  await chatFetch<{ ok: true }>("/v1/notifications/read", {
+    method: "POST",
+    json: ids ? { ids } : {},
+  });
+}
+
+export type BlockedUserItem = {
+  userId: string;
+  displayName: string;
+  blockedAt: string;
+};
+
+export type ReportReason =
+  | "spam"
+  | "harassment"
+  | "hate"
+  | "sexual"
+  | "violence"
+  | "other";
+
+export async function listBlockedUsers(): Promise<BlockedUserItem[]> {
+  const data = await chatFetch<{ ok: true; blocked: BlockedUserItem[] }>(
+    "/v1/blocks",
+  );
+  return Array.isArray(data.blocked) ? data.blocked : [];
+}
+
+export async function blockUser(userId: string): Promise<void> {
+  await chatFetch<{ ok: true }>("/v1/blocks", {
+    method: "POST",
+    json: { userId },
+  });
+}
+
+export async function unblockUser(userId: string): Promise<void> {
+  await chatFetch<{ ok: true }>(`/v1/blocks/${encodeURIComponent(userId)}`, {
+    method: "DELETE",
+  });
+}
+
+export async function reportUser(input: {
+  reportedUserId: string;
+  messageId?: string;
+  reason: ReportReason;
+}): Promise<void> {
+  await chatFetch<{ ok: true }>("/v1/reports", {
+    method: "POST",
+    json: input,
+  });
 }

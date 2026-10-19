@@ -11,6 +11,7 @@ export {
   ensureSavedMealsSchema,
   ensurePrefsProfileSchema,
   ensureAuthLocalSchema,
+  ensureRestoreStateSchema,
 } from "./migrations";
 export {
   DAILY_GOAL_LIMITS,

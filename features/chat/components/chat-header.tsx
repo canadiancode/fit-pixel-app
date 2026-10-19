@@ -1,7 +1,14 @@
 import { Image } from "expo-image";
 import { router, usePathname } from "expo-router";
 import { useMemo } from "react";
-import { Platform, Pressable, StyleSheet, TextInput, View } from "react-native";
+import {
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 
 import {
   APP_SHELL_INPUT_PLACEHOLDER_COLOR,
@@ -14,6 +21,7 @@ import {
 } from "@/constants/app-shell";
 import { FONT_FAMILY } from "@/constants/fonts";
 import { useChatSearch } from "@/features/chat/chat-search-context";
+import { useNotifications } from "@/features/social/notifications-context";
 
 const SEARCH_INPUT_BACKGROUND = require("@/assets/backgrounds/search-input.png");
 const BELL_ICON = require("@/assets/icons/bell.png");
@@ -45,6 +53,7 @@ function searchFieldCopy(pathname: string): {
 /** Primary header band; same dimensions as Settings / Actions / Map. */
 export function ChatHeader() {
   const { query, setQuery } = useChatSearch();
+  const { unreadCount } = useNotifications();
   const pathname = usePathname();
   const { placeholder, a11yLabel } = useMemo(
     () => searchFieldCopy(pathname),
@@ -80,7 +89,11 @@ export function ChatHeader() {
           </View>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Notifications"
+            accessibilityLabel={
+              unreadCount > 0
+                ? `Notifications, ${unreadCount} unread`
+                : "Notifications"
+            }
             onPress={() => router.push("/(tabs)/chat/notifications")}
             style={({ pressed }) => [
               styles.bellButton,
@@ -93,6 +106,13 @@ export function ChatHeader() {
               contentFit="contain"
               accessibilityIgnoresInvertColors
             />
+            {unreadCount > 0 ? (
+              <View style={styles.bellBadge} pointerEvents="none">
+                <Text style={styles.bellBadgeText}>
+                  {unreadCount > 9 ? "9+" : String(unreadCount)}
+                </Text>
+              </View>
+            ) : null}
           </Pressable>
         </View>
       </View>
@@ -148,5 +168,22 @@ const styles = StyleSheet.create({
   bellIcon: {
     width: BELL_ICON_SIZE,
     height: BELL_ICON_SIZE,
+  },
+  bellBadge: {
+    position: "absolute",
+    top: 4,
+    right: 2,
+    minWidth: 18,
+    height: 18,
+    paddingHorizontal: 4,
+    borderRadius: 9,
+    backgroundColor: "#ff5a5a",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  bellBadgeText: {
+    color: APP_SHELL_MAIN_TEXT_COLOR,
+    fontSize: 10,
+    fontWeight: "700",
   },
 });

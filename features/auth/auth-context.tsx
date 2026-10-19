@@ -18,6 +18,11 @@ import {
 } from "@/features/auth/auth-errors";
 import { deletePixelPersistedState } from "@/features/pixel/pixel-persistence";
 import {
+  forgetDevicePushToken,
+  unregisterDeviceForPushOnSignOut,
+} from "@/features/push/push-registration";
+import { deleteAccount as deleteAccountRequest } from "@/lib/api/account";
+import {
   getLastAuthUserId,
   setLastAuthUserId,
   wipeLocalUserData,
@@ -41,6 +46,9 @@ type AuthContextValue = {
   ) => Promise<{ needsEmailConfirm: boolean }>;
   resetPassword: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
+  /** Remount data providers after local SQLite / pixel state is replaced. */
+  refreshLocalData: () => void;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -171,9 +179,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [client],
   );
 
-  const signOut = useCallback(async () => {
+  const clearLocalSession = useCallback(async () => {
     if (client) {
-      await client.auth.signOut({ scope: "global" });
       const url = process.env.EXPO_PUBLIC_SUPABASE_URL?.trim();
       await wipeSupabaseSecureStore(url ? storageKeyFromUrl(url) : undefined);
     }
@@ -183,6 +190,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(null);
     setDataEpoch((value) => value + 1);
   }, [client, db]);
+
+  const signOut = useCallback(async () => {
+    // Needs the still-valid JWT, so before the session is revoked.
+    await unregisterDeviceForPushOnSignOut(session?.access_token);
+    if (client) {
+      try {
+        // Revokes refresh tokens everywhere; offline or expired sessions fail here.
+        await client.auth.signOut({ scope: "global" });
+      } catch {
+        await client.auth.signOut({ scope: "local" }).catch(() => undefined);
+      }
+    }
+    // Always leave the device signed out, even if the server call failed.
+    await clearLocalSession();
+  }, [client, clearLocalSession, session?.access_token]);
+
+  /** Server deletes the auth user (cascading all rows), then wipe this device. */
+  const deleteAccount = useCallback(async () => {
+    const token = session?.access_token;
+    if (!client || !token) {
+      throw new Error(AUTH_COPY.notConfigured);
+    }
+    await deleteAccountRequest(token);
+    await forgetDevicePushToken();
+    // The user no longer exists server-side; only drop the local session.
+    await client.auth.signOut({ scope: "local" });
+    await clearLocalSession();
+  }, [clearLocalSession, client, session?.access_token]);
+
+  const refreshLocalData = useCallback(() => {
+    setDataEpoch((value) => value + 1);
+  }, []);
 
   const value = useMemo<AuthContextValue>(
     () => ({
@@ -195,6 +234,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signUp,
       resetPassword,
       signOut,
+      deleteAccount,
+      refreshLocalData,
     }),
     [
       session,
@@ -205,6 +246,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signUp,
       resetPassword,
       signOut,
+      deleteAccount,
+      refreshLocalData,
     ],
   );
 

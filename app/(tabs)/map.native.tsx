@@ -1,6 +1,8 @@
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import {
+  APP_SHELL_INPUT_BOARDER_COLOR,
+  APP_SHELL_LABEL_COLOR,
   APP_SHELL_MAIN_TEXT_COLOR,
   APP_SHELL_PRIMARY_BACKGROUND,
   APP_SHELL_SECONDARY_BACKGROUND,
@@ -15,6 +17,7 @@ import { MapHeader } from "@/features/map/components/map-header";
 import {
   FALLBACK_GYMS,
   gymHeroSource,
+  searchGyms,
   type GymCatalogItem,
 } from "@/features/map/gym-catalog";
 import { joinGymChat, listGyms, type GymListItem } from "@/lib/api/chat";
@@ -28,6 +31,7 @@ import {
   Keyboard,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   type TextInput,
   useWindowDimensions,
@@ -90,12 +94,15 @@ const LOCATE_ME_ICON = require("@/assets/icons/locate-me.png");
 const MAP_GYM_SHEET_CARD_BACKGROUND = require("@/assets/backgrounds/blue-square-card.png");
 
 /**
- * Point size for gym pins. Matches Metro/dev-client sizing of the 93×105
- * marker.png on a 3x device (pixels ÷ screen scale). Using a child `Image`
- * instead of Marker `image` so release/TestFlight does not treat the PNG as 1x.
+ * Point size for gym pins (keeps the 93×105 marker.png aspect). Using a child
+ * `Image` instead of Marker `image` so release/TestFlight does not treat the
+ * PNG as 1x.
  */
-const GYM_MARKER_WIDTH = 31;
-const GYM_MARKER_HEIGHT = 35;
+const GYM_MARKER_WIDTH = 18;
+const GYM_MARKER_HEIGHT = 20;
+
+/** Max rows in the gym search dropdown. */
+const GYM_SEARCH_RESULT_LIMIT = 8;
 
 const LOCATE_FAB_SIZE = 48;
 const LOCATE_ICON_SIZE = 24;
@@ -199,6 +206,7 @@ export default function MapScreen() {
   const [joining, setJoining] = useState(false);
   const [userLocationVisible, setUserLocationVisible] = useState(false);
   const [userCoords, setUserCoords] = useState<LatLng | null>(null);
+  const [gymQuery, setGymQuery] = useState("");
   /** Map `onPress` often fires after a marker tap (esp. Android); skip one clear. */
   const skipNextMapDismiss = useRef(false);
   const { height: windowHeight } = useWindowDimensions();
@@ -275,6 +283,13 @@ export default function MapScreen() {
     };
   }, [selectedGym, userLocationVisible]);
 
+  const gymSearchResults = useMemo(
+    () =>
+      searchGyms(gyms, gymQuery, userCoords).slice(0, GYM_SEARCH_RESULT_LIMIT),
+    [gyms, gymQuery, userCoords],
+  );
+  const showGymSearchResults = gymQuery.trim().length > 0;
+
   const driveEta = useMemo(() => {
     if (!selectedGym || !userCoords) return null;
     const km = haversineKm(userCoords, selectedGym);
@@ -302,6 +317,7 @@ export default function MapScreen() {
   const handleSelectGym = useCallback(
     (gym: MapGym) => {
       dismissGymFilterKeyboard();
+      setGymQuery("");
       skipNextMapDismiss.current = true;
       setSelectedGym(gym);
       focusGym(gym);
@@ -311,6 +327,11 @@ export default function MapScreen() {
     },
     [dismissGymFilterKeyboard, focusGym],
   );
+
+  const handleSubmitGymQuery = useCallback(() => {
+    const first = gymSearchResults[0];
+    if (first) handleSelectGym(first);
+  }, [gymSearchResults, handleSelectGym]);
 
   const handleOpenGymChat = useCallback(async () => {
     if (!selectedGym || joining) return;
@@ -398,7 +419,12 @@ export default function MapScreen() {
       darkColor={APP_SHELL_PRIMARY_BACKGROUND}
       style={styles.screenRoot}
     >
-      <MapHeader ref={gymFilterInputRef} />
+      <MapHeader
+        ref={gymFilterInputRef}
+        query={gymQuery}
+        onChangeQuery={setGymQuery}
+        onSubmitQuery={handleSubmitGymQuery}
+      />
       <View style={styles.mapChrome}>
         <View style={styles.mapStack}>
           <MapView
@@ -469,7 +495,73 @@ export default function MapScreen() {
             </Pressable>
           </View>
 
-          {selectedGym ? (
+          {showGymSearchResults ? (
+            <View style={styles.searchResultsCard}>
+              {gymSearchResults.length === 0 ? (
+                <ThemedText
+                  lightColor={APP_SHELL_LABEL_COLOR}
+                  darkColor={APP_SHELL_LABEL_COLOR}
+                  style={styles.searchResultEmpty}
+                >
+                  No gyms match “{gymQuery.trim()}”
+                </ThemedText>
+              ) : (
+                <ScrollView
+                  keyboardShouldPersistTaps="handled"
+                  accessibilityRole="list"
+                  accessibilityLabel="Gym search results"
+                >
+                  {gymSearchResults.map((gym, index) => (
+                    <Pressable
+                      key={gym.id}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Show ${gym.name} on the map`}
+                      onPress={() => handleSelectGym(gym)}
+                      style={({ pressed }) =>
+                        pressed ? styles.searchResultRowPressed : undefined
+                      }
+                    >
+                      <View
+                        style={[
+                          styles.searchResultRow,
+                          index < gymSearchResults.length - 1 &&
+                            styles.searchResultRowDivider,
+                        ]}
+                      >
+                        <Image
+                          source={GYM_MARKER_IMAGE}
+                          style={styles.searchResultPin}
+                          contentFit="contain"
+                          accessibilityIgnoresInvertColors
+                        />
+                        <View style={styles.searchResultText}>
+                          <ThemedText
+                            lightColor={APP_SHELL_MAIN_TEXT_COLOR}
+                            darkColor={APP_SHELL_MAIN_TEXT_COLOR}
+                            style={styles.searchResultName}
+                            numberOfLines={1}
+                          >
+                            {gym.name}
+                          </ThemedText>
+                          {userCoords ? (
+                            <ThemedText
+                              lightColor={APP_SHELL_LABEL_COLOR}
+                              darkColor={APP_SHELL_LABEL_COLOR}
+                              style={styles.searchResultMeta}
+                            >
+                              {haversineKm(userCoords, gym).toFixed(1)}km away
+                            </ThemedText>
+                          ) : null}
+                        </View>
+                      </View>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              )}
+            </View>
+          ) : null}
+
+          {selectedGym && !showGymSearchResults ? (
             <View style={styles.sheetOverlay} pointerEvents="box-none">
               <Pressable
                 accessibilityRole="button"
@@ -646,6 +738,56 @@ const styles = StyleSheet.create({
   locateFabIcon: {
     width: LOCATE_ICON_SIZE,
     height: LOCATE_ICON_SIZE,
+  },
+  searchResultsCard: {
+    position: "absolute",
+    top: 10,
+    left: 12,
+    right: 12,
+    maxHeight: "60%",
+    zIndex: 30,
+    elevation: 30,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: APP_SHELL_PRIMARY_BACKGROUND,
+    backgroundColor: APP_SHELL_SECONDARY_BACKGROUND,
+    overflow: "hidden",
+  },
+  searchResultEmpty: {
+    fontSize: 12,
+    lineHeight: 18,
+    padding: 14,
+  },
+  searchResultRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+  },
+  searchResultRowDivider: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: APP_SHELL_INPUT_BOARDER_COLOR,
+  },
+  searchResultRowPressed: {
+    backgroundColor: "rgba(255,255,255,0.08)",
+  },
+  searchResultPin: {
+    width: GYM_MARKER_WIDTH,
+    height: GYM_MARKER_HEIGHT,
+  },
+  searchResultText: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  searchResultName: {
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  searchResultMeta: {
+    fontSize: 10,
+    lineHeight: 14,
   },
   sheetOverlay: {
     ...StyleSheet.absoluteFillObject,

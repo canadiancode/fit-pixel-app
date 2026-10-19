@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 
 import { BarChart } from "@/components/charts/bar-chart";
@@ -10,19 +9,15 @@ import {
   CALORIES_WEEKLY_CHART_INCREMENT,
   CALORIES_WEEKLY_CHART_Y_DOMAIN_FROM_ZERO,
 } from "@/features/actions/components/calories-weekly-history-section";
-import { HistoryLookbackDropdown } from "@/features/actions/components/history-lookback-dropdown";
 import { useDailyGoals } from "@/features/actions/daily-goals-context";
 import {
   DEFAULT_HISTORY_LOOKBACK,
   historyLookbackLabel,
-  type HistoryLookbackId,
 } from "@/features/actions/history-lookback";
 import { useCaloriesHistoryChart } from "@/features/actions/use-calories-history-chart";
 
 export default function CaloriesBurnedHistoryScreen() {
-  const [lookback, setLookback] = useState<HistoryLookbackId>(
-    DEFAULT_HISTORY_LOOKBACK,
-  );
+  const lookback = DEFAULT_HISTORY_LOOKBACK;
   const { goals } = useDailyGoals();
   const { userData } = useCaloriesHistoryChart(lookback);
   const rangeLabel = historyLookbackLabel(lookback);
@@ -38,9 +33,6 @@ export default function CaloriesBurnedHistoryScreen() {
         >
           Calories burned history
         </ThemedText>
-        <View style={styles.lookback}>
-          <HistoryLookbackDropdown value={lookback} onChange={setLookback} />
-        </View>
         <BarChart
           increment={CALORIES_WEEKLY_CHART_INCREMENT}
           targetLabel={`${String(goals.activeKcal)} KCAL`}
@@ -66,9 +58,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 18,
     fontWeight: "600",
-  },
-  lookback: {
-    alignSelf: "stretch",
-    alignItems: "flex-end",
   },
 });

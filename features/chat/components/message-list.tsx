@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef } from "react";
-import { FlatList, StyleSheet, View } from "react-native";
+import { useCallback, useEffect, useMemo, useRef } from "react";
+import { FlatList, Pressable, StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import {
@@ -8,7 +8,11 @@ import {
   APP_SHELL_PRIMARY_BACKGROUND,
 } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
-import type { ChatMessage } from "@/lib/api/chat";
+import { PixelHeadAvatar } from "@/features/social/components/pixel-head-avatar";
+import { usePixelLooks } from "@/features/social/pixel-looks-store";
+import type { ChatMessage, EquippedLook } from "@/lib/api/chat";
+
+const SENDER_AVATAR_SIZE = 26;
 
 type Props = {
   messages: ChatMessage[];
@@ -17,26 +21,56 @@ type Props = {
   error: string | null;
   emptyHint: string;
   onLoadOlder?: () => void;
+  /** Long-press on someone else's message (report / block). */
+  onPeerMessageLongPress?: (message: ChatMessage) => void;
 };
 
 function MessageBubble({
   message,
   isOwn,
+  senderLook,
+  onLongPress,
 }: {
   message: ChatMessage;
   isOwn: boolean;
+  senderLook: EquippedLook | null | undefined;
+  onLongPress?: (message: ChatMessage) => void;
 }) {
+  const actionable = !isOwn && onLongPress != null;
   return (
-    <View style={[styles.bubbleWrap, isOwn ? styles.bubbleOwn : styles.bubblePeer]}>
+    <Pressable
+      disabled={!actionable}
+      onLongPress={actionable ? () => onLongPress(message) : undefined}
+      delayLongPress={350}
+      accessibilityHint={
+        actionable ? "Long press to view, report or block" : undefined
+      }
+      accessibilityActions={
+        actionable ? [{ name: "longpress", label: "Report or block" }] : undefined
+      }
+      onAccessibilityAction={
+        actionable
+          ? (event) => {
+              if (event.nativeEvent.actionName === "longpress") {
+                onLongPress(message);
+              }
+            }
+          : undefined
+      }
+      style={[styles.bubbleWrap, isOwn ? styles.bubbleOwn : styles.bubblePeer]}
+    >
       {!isOwn ? (
-        <ThemedText
-          lightColor={APP_SHELL_LABEL_COLOR}
-          darkColor={APP_SHELL_LABEL_COLOR}
-          style={styles.author}
-          numberOfLines={1}
-        >
-          {message.senderDisplayName}
-        </ThemedText>
+        <View style={styles.authorRow}>
+          <PixelHeadAvatar equipped={senderLook} size={SENDER_AVATAR_SIZE} />
+          <ThemedText
+            lightColor={APP_SHELL_LABEL_COLOR}
+            darkColor={APP_SHELL_LABEL_COLOR}
+            style={styles.author}
+            numberOfLines={1}
+          >
+            {message.senderDisplayName}
+          </ThemedText>
+        </View>
       ) : null}
       <View style={[styles.bubble, isOwn ? styles.ownFill : styles.peerFill]}>
         <ThemedText
@@ -47,7 +81,7 @@ function MessageBubble({
           {message.body}
         </ThemedText>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -58,8 +92,17 @@ export function MessageList({
   error,
   emptyHint,
   onLoadOlder,
+  onPeerMessageLongPress,
 }: Props) {
   const listRef = useRef<FlatList<ChatMessage>>(null);
+  const peerIds = useMemo(
+    () =>
+      messages
+        .map((message) => message.senderId)
+        .filter((id) => id !== currentUserId),
+    [currentUserId, messages],
+  );
+  const lookFor = usePixelLooks(peerIds);
   const stickToEnd = useRef(true);
 
   useEffect(() => {
@@ -74,9 +117,11 @@ export function MessageList({
       <MessageBubble
         message={item}
         isOwn={currentUserId != null && item.senderId === currentUserId}
+        senderLook={lookFor(item.senderId)}
+        onLongPress={onPeerMessageLongPress}
       />
     ),
-    [currentUserId],
+    [currentUserId, lookFor, onPeerMessageLongPress],
   );
 
   return (
@@ -85,6 +130,7 @@ export function MessageList({
       data={messages}
       keyExtractor={(item) => item.id}
       renderItem={renderItem}
+      extraData={lookFor}
       style={styles.list}
       contentContainerStyle={styles.content}
       onScroll={(event) => {
@@ -148,11 +194,18 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     alignItems: "flex-start",
   },
+  authorRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    maxWidth: "100%",
+  },
   author: {
+    flexShrink: 1,
     fontFamily: FONT_FAMILY,
     fontSize: 9,
     lineHeight: 13,
-    paddingHorizontal: 4,
+    paddingRight: 4,
   },
   bubble: {
     borderRadius: 12,

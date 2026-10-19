@@ -145,6 +145,23 @@ export async function ensurePrefsProfileSchema(
 }
 
 /**
+ * Idempotent server-restore progress per account (v12). Lets an interrupted
+ * restore resume from its habit-log cursor instead of starting over.
+ */
+export async function ensureRestoreStateSchema(
+  db: SQLiteDatabase,
+): Promise<void> {
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS restore_state (
+      userId TEXT PRIMARY KEY NOT NULL,
+      habitCursor TEXT,
+      completedAt TEXT,
+      updatedAt TEXT NOT NULL
+    );
+  `);
+}
+
+/**
  * Idempotent last-account binding (v11). Stores user id only — never JWTs.
  */
 export async function ensureAuthLocalSchema(
@@ -330,6 +347,11 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase): Promise<void> {
     currentVersion = 11;
   }
 
+  if (currentVersion === 11) {
+    await ensureRestoreStateSchema(db);
+    currentVersion = 12;
+  }
+
   // Always repair derived/XP/saved/prefs tables — Fast Refresh can skip onInit while
   // stamping user_version ahead of CREATE TABLE.
   await ensureDailySummarySchema(db);
@@ -337,6 +359,7 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase): Promise<void> {
   await ensureSavedMealsSchema(db);
   await ensurePrefsProfileSchema(db);
   await ensureAuthLocalSchema(db);
+  await ensureRestoreStateSchema(db);
 
   await db.execAsync(`PRAGMA user_version = ${DATABASE_VERSION}`);
 }

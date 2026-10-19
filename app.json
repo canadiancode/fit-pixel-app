@@ -68,6 +68,12 @@
       "expo-dev-client",
       "expo-router",
       "expo-sqlite",
+      [
+        "expo-notifications",
+        {
+          "color": "#000000"
+        }
+      ],
       "react-native-health-connect",
       [
         "expo-build-properties",

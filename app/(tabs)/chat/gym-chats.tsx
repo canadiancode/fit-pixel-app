@@ -11,20 +11,28 @@ import { useChatSearch } from "@/features/chat/chat-search-context";
 import { ChatSubScreenLayout } from "@/features/chat/components/chat-sub-screen-layout";
 import { GymChatListRow } from "@/features/chat/components/gym-chat-list-row";
 import { gymHeroSource } from "@/features/map/gym-catalog";
-import { listJoinedGymChats, type GymChatListItem } from "@/lib/api/chat";
+import { listGyms, type GymListItem } from "@/lib/api/chat";
 import { FitPixelApiError } from "@/lib/api/client";
 
 export default function GymChatsScreen() {
   const { query } = useChatSearch();
-  const [chats, setChats] = useState<GymChatListItem[]>([]);
+  const [chats, setChats] = useState<GymListItem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(() => {
     setLoading(true);
-    void listJoinedGymChats()
+    // Every gym chat is open to everyone; joined ones float to the top.
+    void listGyms()
       .then((rows) => {
-        setChats(rows);
+        setChats(
+          [...rows].sort(
+            (a, b) =>
+              Number(b.joined) - Number(a.joined) ||
+              b.memberCount - a.memberCount ||
+              a.name.localeCompare(b.name),
+          ),
+        );
         setError(null);
       })
       .catch((err) => {
@@ -63,7 +71,7 @@ export default function GymChatsScreen() {
           darkColor={APP_SHELL_LABEL_COLOR}
           style={styles.body}
         >
-          Gyms you&apos;ve joined for community chat.
+          Every gym has an open community chat. Tap one to jump in.
         </ThemedText>
         {error ? (
           <ThemedText
@@ -89,14 +97,14 @@ export default function GymChatsScreen() {
             darkColor={APP_SHELL_LABEL_COLOR}
             style={styles.body}
           >
-            Join a gym from the map to see it here.
+            No gyms match that search.
           </ThemedText>
         ) : null}
         <View style={styles.list} accessibilityRole="list">
           {filtered.map((item, index) => (
             <GymChatListRow
-              key={item.gymId}
-              gymId={item.gymId}
+              key={item.id}
+              gymId={item.id}
               name={item.name}
               memberCount={item.memberCount}
               liveViewerCount={0}

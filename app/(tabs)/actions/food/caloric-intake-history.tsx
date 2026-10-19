@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 
 import { BarChart } from "@/components/charts/bar-chart";
@@ -10,12 +9,10 @@ import {
   FOOD_DAILY_CHART_INCREMENT,
   FOOD_DAILY_CHART_Y_DOMAIN_FROM_ZERO,
 } from "@/features/actions/components/food-daily-history-section";
-import { HistoryLookbackDropdown } from "@/features/actions/components/history-lookback-dropdown";
 import { useDailyGoals } from "@/features/actions/daily-goals-context";
 import {
   DEFAULT_HISTORY_LOOKBACK,
   historyLookbackLabel,
-  type HistoryLookbackId,
 } from "@/features/actions/history-lookback";
 import { useFoodHistoryChart } from "@/features/actions/use-food-history-chart";
 
@@ -23,18 +20,10 @@ import { useFoodHistoryChart } from "@/features/actions/use-food-history-chart";
 const FOOD_MACRO_CHART_INCREMENT = 50;
 
 export default function FoodCaloricIntakeHistoryScreen() {
-  const [kcalLookback, setKcalLookback] = useState<HistoryLookbackId>(
-    DEFAULT_HISTORY_LOOKBACK,
-  );
-  const [proteinLookback, setProteinLookback] = useState<HistoryLookbackId>(
-    DEFAULT_HISTORY_LOOKBACK,
-  );
-  const [carbsLookback, setCarbsLookback] = useState<HistoryLookbackId>(
-    DEFAULT_HISTORY_LOOKBACK,
-  );
-  const [fatLookback, setFatLookback] = useState<HistoryLookbackId>(
-    DEFAULT_HISTORY_LOOKBACK,
-  );
+  const kcalLookback = DEFAULT_HISTORY_LOOKBACK;
+  const proteinLookback = DEFAULT_HISTORY_LOOKBACK;
+  const carbsLookback = DEFAULT_HISTORY_LOOKBACK;
+  const fatLookback = DEFAULT_HISTORY_LOOKBACK;
   const { goals } = useDailyGoals();
   const { userData: kcalUserData } = useFoodHistoryChart(kcalLookback, "kcal");
   const { userData: proteinUserData } = useFoodHistoryChart(
@@ -63,12 +52,6 @@ export default function FoodCaloricIntakeHistoryScreen() {
           >
             Caloric intake history
           </ThemedText>
-          <View style={styles.lookback}>
-            <HistoryLookbackDropdown
-              value={kcalLookback}
-              onChange={setKcalLookback}
-            />
-          </View>
           <BarChart
             increment={FOOD_DAILY_CHART_INCREMENT}
             targetLabel={`${goals.foodKcal.toLocaleString("en-US")} KCAL`}
@@ -88,12 +71,6 @@ export default function FoodCaloricIntakeHistoryScreen() {
           >
             Protein intake history
           </ThemedText>
-          <View style={styles.lookback}>
-            <HistoryLookbackDropdown
-              value={proteinLookback}
-              onChange={setProteinLookback}
-            />
-          </View>
           <BarChart
             increment={FOOD_MACRO_CHART_INCREMENT}
             theme="blue"
@@ -111,12 +88,6 @@ export default function FoodCaloricIntakeHistoryScreen() {
           >
             Carb intake history
           </ThemedText>
-          <View style={styles.lookback}>
-            <HistoryLookbackDropdown
-              value={carbsLookback}
-              onChange={setCarbsLookback}
-            />
-          </View>
           <BarChart
             increment={FOOD_MACRO_CHART_INCREMENT}
             theme="blue"
@@ -134,12 +105,6 @@ export default function FoodCaloricIntakeHistoryScreen() {
           >
             Fat intake history
           </ThemedText>
-          <View style={styles.lookback}>
-            <HistoryLookbackDropdown
-              value={fatLookback}
-              onChange={setFatLookback}
-            />
-          </View>
           <BarChart
             increment={FOOD_MACRO_CHART_INCREMENT}
             theme="blue"
@@ -168,9 +133,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 18,
     fontWeight: "600",
-  },
-  lookback: {
-    alignSelf: "stretch",
-    alignItems: "flex-end",
   },
 });

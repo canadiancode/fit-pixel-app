@@ -1,4 +1,5 @@
-import { usePathname, useRouter } from "expo-router";
+import { CommonActions, StackActions } from "@react-navigation/native";
+import { useNavigation, usePathname, useRouter } from "expo-router";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
@@ -19,6 +20,8 @@ const TOP_LEVEL_ACTION_PATH =
 export function ActionsSubScreenLayout({ children }: Props) {
   const router = useRouter();
   const pathname = usePathname();
+  // The Actions tab's own stack (also reachable from the nested food stack).
+  const actionsStack = useNavigation("/(tabs)/actions");
 
   return (
     <View style={styles.root}>
@@ -29,8 +32,17 @@ export function ActionsSubScreenLayout({ children }: Props) {
           hitSlop={12}
           onPress={() => {
             if (TOP_LEVEL_ACTION_PATH.test(pathname)) {
-              // Skip any prior sibling actions left on the stack from Pixel.
-              router.dismissTo("/(tabs)/actions");
+              // Always land on the Actions list, even when this screen was
+              // pushed from Pixel (router.dismissTo / back could fall through
+              // to the tab history and jump to My Pixel).
+              const routes = actionsStack.getState()?.routes ?? [];
+              if (routes[0]?.name === "index") {
+                actionsStack.dispatch(StackActions.popToTop());
+              } else {
+                actionsStack.dispatch(
+                  CommonActions.reset({ index: 0, routes: [{ name: "index" }] }),
+                );
+              }
               return;
             }
             if (router.canDismiss()) {

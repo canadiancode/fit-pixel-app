@@ -5,10 +5,7 @@ import { ThemedView } from "@/components/themed-view";
 import { APP_SHELL_SECONDARY_BACKGROUND } from "@/constants/app-colors";
 import { TAB_SCREEN_ROOT_ABOVE_TAB_BAR } from "@/constants/app-shell";
 import { PixelCharacter } from "@/features/pixel/components/pixel-character";
-import {
-  PixelLoadoutProvider,
-  usePixelLoadout,
-} from "@/features/pixel/pixel-loadout-context";
+import { usePixelLoadout } from "@/features/pixel/pixel-loadout-context";
 
 export const unstable_settings = {
   initialRouteName: "index",
@@ -19,7 +16,10 @@ function PixelTabChrome() {
   const segments = useSegments();
   const { loadout } = usePixelLoadout();
 
-  const pixelSegments = segments.filter((segment) => segment !== "(tabs)");
+  // Typed segments omit "index", but the runtime value can include it.
+  const pixelSegments: string[] = segments.filter(
+    (segment) => segment !== "(tabs)",
+  );
   const isDashboard =
     (pixelSegments.length === 1 && pixelSegments[0] === "pixel") ||
     (pixelSegments.length === 2 && pixelSegments[1] === "index");
@@ -57,12 +57,9 @@ function PixelTabChrome() {
   );
 }
 
+/** Loadout comes from `PixelLoadoutProvider` in the tabs layout (Settings shows it too). */
 export default function PixelTabLayout() {
-  return (
-    <PixelLoadoutProvider>
-      <PixelTabChrome />
-    </PixelLoadoutProvider>
-  );
+  return <PixelTabChrome />;
 }
 
 const styles = StyleSheet.create({

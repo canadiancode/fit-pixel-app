@@ -27,8 +27,21 @@ const SINGLE_LINE_ANDROID = Platform.select({
   default: {},
 });
 
-export const MapHeader = forwardRef<TextInput>(function MapHeader(_, ref) {
-  const [query, setQuery] = useState("");
+type MapHeaderProps = {
+  /** Controlled search text; falls back to local state when omitted (web stub). */
+  query?: string;
+  onChangeQuery?: (next: string) => void;
+  onSubmitQuery?: () => void;
+  onFocus?: () => void;
+};
+
+export const MapHeader = forwardRef<TextInput, MapHeaderProps>(function MapHeader(
+  { query: controlledQuery, onChangeQuery, onSubmitQuery, onFocus },
+  ref,
+) {
+  const [localQuery, setLocalQuery] = useState("");
+  const query = controlledQuery ?? localQuery;
+  const setQuery = onChangeQuery ?? setLocalQuery;
 
   return (
     <View style={styles.headerRow}>
@@ -53,6 +66,9 @@ export const MapHeader = forwardRef<TextInput>(function MapHeader(_, ref) {
               autoCapitalize="none"
               autoCorrect={false}
               clearButtonMode="while-editing"
+              returnKeyType="search"
+              onSubmitEditing={onSubmitQuery}
+              onFocus={onFocus}
               blurOnSubmit
               underlineColorAndroid="transparent"
               {...SINGLE_LINE_ANDROID}

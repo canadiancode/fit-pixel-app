@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import { StyleSheet, View } from "react-native";
 
+import { useUserSafetyActions } from "@/features/chat/use-user-safety-actions";
 import type { ChatMessage } from "@/lib/api/chat";
 import { FitPixelApiError } from "@/lib/api/client";
 
@@ -31,6 +32,7 @@ export function ChatThreadBody({
   onLoadOlder,
 }: Props) {
   const [sendError, setSendError] = useState<string | null>(null);
+  const safety = useUserSafetyActions();
 
   const handleSend = useCallback(
     async (body: string) => {
@@ -57,12 +59,14 @@ export function ChatThreadBody({
         error={sendError ?? error}
         emptyHint={emptyHint}
         onLoadOlder={onLoadOlder}
+        onPeerMessageLongPress={safety.openMessageActions}
       />
       <MessageComposer
         onSend={handleSend}
         sending={sending}
         disabled={disabled}
       />
+      {safety.sheet}
     </View>
   );
 }

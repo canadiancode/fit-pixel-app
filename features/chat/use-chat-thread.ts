@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useAuth } from "@/features/auth/auth-context";
+import { useBlockedUsers } from "@/features/chat/blocked-users-store";
 import { useConversationRealtime } from "@/features/chat/use-conversation-realtime";
 import type { ChatMessage } from "@/lib/api/chat";
 import { FitPixelApiError } from "@/lib/api/client";
@@ -54,6 +55,7 @@ export function useChatThread(options: {
   send: SendFn;
 }) {
   const { user } = useAuth();
+  const { blockedIds } = useBlockedUsers();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [liveViewerCount, setLiveViewerCount] = useState(0);
@@ -137,8 +139,17 @@ export function useChatThread(options: {
       });
   }, [hasMore, messages]);
 
+  // Server history already excludes blocked senders; realtime inserts do not.
+  const visibleMessages = useMemo(
+    () =>
+      blockedIds.size === 0
+        ? messages
+        : messages.filter((message) => !blockedIds.has(message.senderId)),
+    [blockedIds, messages],
+  );
+
   return {
-    messages,
+    messages: visibleMessages,
     conversationId,
     liveViewerCount,
     loading,

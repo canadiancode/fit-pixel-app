@@ -6,13 +6,52 @@ import {
   APP_SHELL_LABEL_COLOR,
   APP_SHELL_MAIN_TEXT_COLOR,
 } from "@/constants/app-colors";
+import { usePush } from "@/features/push/push-context";
 import { usePrefsProfile } from "@/features/settings/prefs-profile-context";
 
 export function NotificationsSettingsForm() {
   const { prefs, isHydrated, updatePrefs } = usePrefsProfile();
+  const push = usePush();
 
   return (
     <View style={styles.root}>
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <ThemedText
+            lightColor={APP_SHELL_MAIN_TEXT_COLOR}
+            darkColor={APP_SHELL_MAIN_TEXT_COLOR}
+            style={styles.cardTitle}
+            accessibilityRole="header"
+          >
+            Friends and messages
+          </ThemedText>
+          <Switch
+            accessibilityLabel="Friends and messages"
+            accessibilityHint="Toggles push notifications for friend requests and direct messages on this device"
+            value={push.enabled}
+            disabled={!push.loaded}
+            onValueChange={(value) => {
+              void push.setEnabled(value);
+            }}
+            ios_backgroundColor={APP_SHELL_INPUT_BOARDER_COLOR}
+            trackColor={{
+              false: APP_SHELL_INPUT_BOARDER_COLOR,
+              true: "rgba(120,200,255,0.55)",
+            }}
+            thumbColor={APP_SHELL_MAIN_TEXT_COLOR}
+          />
+        </View>
+        <ThemedText
+          lightColor={APP_SHELL_LABEL_COLOR}
+          darkColor={APP_SHELL_LABEL_COLOR}
+          style={styles.cardBody}
+        >
+          Get a push on this phone when a Pixel sends you a friend request,
+          accepts yours, or messages you, even when Fit Pixel is closed.
+          Tapping it opens the chat or their Pixel.
+        </ThemedText>
+      </View>
+
       <View style={styles.card}>
         <View style={styles.cardHeader}>
           <ThemedText
