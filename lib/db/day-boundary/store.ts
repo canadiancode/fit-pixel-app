@@ -155,6 +155,44 @@ export async function setDayBoundary(
 }
 
 /**
+ * Make sure the server buckets days in this device's zone. The server seeds
+ * prefs.time_zone as 'UTC' and only learns the zone from a `prefs` op, which
+ * otherwise is only sent when the user edits Preferences.
+ *
+ * Enqueues `{ timeZone }` only when no earlier `prefs` op in the outbox (any
+ * status, so a rejected zone is not retried every launch) carried the current
+ * zone. The outbox is wiped on sign-out, so this re-sends once per sign-in.
+ * `dayStartsAtMinutes` is left out: it is only ever changed via
+ * `setPrefs`/`setDayBoundary`, which already enqueue it, and sending this
+ * device's default could overwrite a value set on another device.
+ */
+export async function enqueueDayBoundaryTimeZoneIfUnsynced(
+  db: SQLiteDatabase,
+): Promise<boolean> {
+  const boundary = await getDayBoundary(db);
+  const last = await db.getFirstAsync<{ timeZone: string | null }>(
+    `SELECT json_extract(payload_json, '$.timeZone') AS timeZone
+     FROM pending_server_ops
+     WHERE type = 'prefs'
+       AND json_extract(payload_json, '$.timeZone') IS NOT NULL
+     ORDER BY createdAt DESC, rowid DESC
+     LIMIT 1`,
+  );
+  if (last?.timeZone === boundary.timeZone) {
+    return false;
+  }
+
+  const updatedAt = nowIso();
+  await enqueueOp(
+    db,
+    "prefs",
+    { timeZone: boundary.timeZone, updatedAt },
+    { clientClockAt: updatedAt },
+  );
+  return true;
+}
+
+/**
  * Canonical “today” / daily_summary key. All habit day queries should use this
  * (or `getAppDayKey` with a boundary already loaded) — not ad-hoc date math.
  */

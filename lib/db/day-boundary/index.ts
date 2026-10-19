@@ -5,6 +5,7 @@ export {
   getLocalDayKey,
 } from "./day-key";
 export {
+  enqueueDayBoundaryTimeZoneIfUnsynced,
   getDayBoundary,
   getTodayDayKey,
   setDayBoundary,

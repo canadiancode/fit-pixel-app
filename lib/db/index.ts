@@ -81,6 +81,7 @@ export {
   DAY_STARTS_AT_MINUTES_MAX,
   DAY_STARTS_AT_MINUTES_MIN,
   DEFAULT_DAY_STARTS_AT_MINUTES,
+  enqueueDayBoundaryTimeZoneIfUnsynced,
   formatDayKeyInTimeZone,
   getAppDayKey,
   getDayBoundary,
