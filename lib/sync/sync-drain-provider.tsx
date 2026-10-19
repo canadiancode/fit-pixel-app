@@ -3,7 +3,10 @@ import { useEffect, useRef, type ReactNode } from "react";
 import { AppState } from "react-native";
 
 import { useAuth } from "@/features/auth/auth-context";
-import { subscribePendingOpEnqueue } from "@/lib/db";
+import {
+  enqueueDayBoundaryTimeZoneIfUnsynced,
+  subscribePendingOpEnqueue,
+} from "@/lib/db";
 import { drainPendingServerOps } from "@/lib/sync/drain";
 
 const DEBOUNCE_MS = 800;
@@ -27,10 +30,21 @@ export function SyncDrainProvider({ children }: { children: ReactNode }) {
       timerRef.current = setTimeout(run, DEBOUNCE_MS);
     };
 
-    run();
+    // Signed in: tell the server this device's zone if it has not heard it
+    // yet. A new op triggers `schedule` via the enqueue listener.
+    const syncTimeZone = () => {
+      if (!token) return;
+      void enqueueDayBoundaryTimeZoneIfUnsynced(db).catch(() => {
+        // Retried on the next foreground.
+      });
+    };
+
     const unsubscribeEnqueue = subscribePendingOpEnqueue(schedule);
+    syncTimeZone();
+    run();
     const appSub = AppState.addEventListener("change", (state) => {
       if (state === "active") {
+        syncTimeZone();
         schedule();
       }
     });
