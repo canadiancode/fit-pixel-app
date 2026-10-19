@@ -1,10 +1,13 @@
-import { useCallback, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { useCallback, useState, type ReactNode } from "react";
+import { Pressable, StyleSheet, Text } from "react-native";
 
+import { APP_SHELL_MAIN_TEXT_COLOR } from "@/constants/app-colors";
+import { FONT_FAMILY } from "@/constants/fonts";
 import { useUserSafetyActions } from "@/features/chat/use-user-safety-actions";
 import type { ChatMessage } from "@/lib/api/chat";
 import { FitPixelApiError } from "@/lib/api/client";
 
+import { KeyboardAwareView } from "./keyboard-aware-view";
 import { MessageComposer } from "./message-composer";
 import { MessageList } from "./message-list";
 
@@ -13,19 +16,23 @@ type Props = {
   currentUserId: string | null;
   loading: boolean;
   error: string | null;
-  emptyHint: string;
+  /** Shown when the thread has no messages yet. */
+  empty: ReactNode;
+  composerPlaceholder?: string;
   sending: boolean;
   disabled?: boolean;
   onSend: (body: string) => Promise<void>;
   onLoadOlder?: () => void;
 };
 
+/** Message list + composer, lifted above the keyboard as one block. */
 export function ChatThreadBody({
   messages,
   currentUserId,
   loading,
   error,
-  emptyHint,
+  empty,
+  composerPlaceholder,
   sending,
   disabled,
   onSend,
@@ -40,40 +47,75 @@ export function ChatThreadBody({
       try {
         await onSend(body);
       } catch (err) {
-        const message =
+        setSendError(
           err instanceof FitPixelApiError
             ? err.message
-            : "Could not send message.";
-        setSendError(message);
+            : "Could not send message.",
+        );
+        // Rethrow so the composer keeps the draft for another try.
+        throw err;
       }
     },
     [onSend],
   );
 
   return (
-    <View style={styles.root}>
+    <KeyboardAwareView>
       <MessageList
         messages={messages}
         currentUserId={currentUserId}
         loading={loading}
-        error={sendError ?? error}
-        emptyHint={emptyHint}
+        error={error}
+        empty={empty}
         onLoadOlder={onLoadOlder}
         onPeerMessageLongPress={safety.openMessageActions}
       />
+      {sendError ? (
+        <Pressable
+          accessibilityRole="alert"
+          accessibilityLabel={`${sendError}. Tap to dismiss`}
+          onPress={() => setSendError(null)}
+          style={styles.errorBanner}
+        >
+          <Text style={styles.errorText}>{sendError}</Text>
+          <Text style={styles.errorDismiss}>×</Text>
+        </Pressable>
+      ) : null}
       <MessageComposer
         onSend={handleSend}
         sending={sending}
         disabled={disabled}
+        placeholder={composerPlaceholder}
       />
       {safety.sheet}
-    </View>
+    </KeyboardAwareView>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
+  errorBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginHorizontal: 12,
+    marginBottom: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: "#ff8a8a",
+    backgroundColor: "rgba(255, 90, 90, 0.16)",
+  },
+  errorText: {
     flex: 1,
-    minHeight: 0,
+    color: APP_SHELL_MAIN_TEXT_COLOR,
+    fontFamily: FONT_FAMILY,
+    fontSize: 9,
+    lineHeight: 14,
+  },
+  errorDismiss: {
+    color: APP_SHELL_MAIN_TEXT_COLOR,
+    fontSize: 18,
+    lineHeight: 20,
   },
 });

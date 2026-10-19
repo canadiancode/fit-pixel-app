@@ -1,14 +1,5 @@
-import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import { useEffect } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
-import Animated, {
-  Extrapolation,
-  interpolate,
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from "react-native-reanimated";
 
 import { ThemedText } from "@/components/themed-text";
 import {
@@ -16,116 +7,53 @@ import {
   APP_SHELL_MAIN_TEXT_COLOR,
   APP_SHELL_SECONDARY_BACKGROUND,
 } from "@/constants/app-colors";
-
-const RIGHT_ARROW = require("@/assets/icons/right-arrow.png");
-/** Decorative chevron; absolute so toolbar row height matches back-only layout. */
-const TOOLBAR_CHEVRON_SIZE = Math.round(44 * 0.8);
-const CHEVRON_ANIM_MS = 280;
+import { goBackInChat } from "@/features/chat/navigation";
 
 type Props = {
   children: React.ReactNode;
   /**
    * Full-width block below the back row (no horizontal inset). Shares vertical
-   * space with the scroll area when both are set (e.g. gym thread hero).
+   * space with the scroll area when both are set (e.g. the gym info strip).
    */
   stackLeader?: React.ReactNode;
-  /** Gym chat thread only: chevron toggles collapsible hero (pair with collapse props). */
-  showGymToolbarChevron?: boolean;
-  /** Gym thread: hero/title strip is tucked for more message space. */
-  gymThreadHeroCollapsed?: boolean;
-  /** Gym thread: toggles `gymThreadHeroCollapsed`. */
-  onGymThreadHeroCollapseToggle?: () => void;
   /** Skip ScrollView wrapping so the body can host a FlatList + composer. */
   fillBody?: boolean;
+  /** Back row. Threads turn it off: the Chat header band shows Back + title. */
+  toolbar?: boolean;
 };
 
 export function ChatSubScreenLayout({
   children,
   stackLeader,
-  showGymToolbarChevron,
-  gymThreadHeroCollapsed = false,
-  onGymThreadHeroCollapseToggle,
   fillBody = false,
+  toolbar = true,
 }: Props) {
   const router = useRouter();
-  const collapseProgress = useSharedValue(0);
-
-  useEffect(() => {
-    collapseProgress.value = withTiming(gymThreadHeroCollapsed ? 1 : 0, {
-      duration: CHEVRON_ANIM_MS,
-    });
-  }, [gymThreadHeroCollapsed, collapseProgress]);
-
-  const chevronRotateStyle = useAnimatedStyle(() => ({
-    transform: [
-      {
-        rotate: `${interpolate(
-          collapseProgress.value,
-          [0, 1],
-          [-90, 90],
-          Extrapolation.CLAMP,
-        )}deg`,
-      },
-    ],
-  }));
 
   return (
     <View style={styles.root}>
-      <View
-        style={[
-          styles.toolbar,
-          showGymToolbarChevron && styles.toolbarReserveEndGlyph,
-        ]}
-      >
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Back"
-          hitSlop={12}
-          onPress={() => {
-            // Prefer stack dismiss so Map → gym-chat Back stays on Chat
-            // (router.back() can jump to the tabs initial route / Pixel).
-            if (router.canDismiss()) {
-              router.dismiss();
-            } else {
-              router.replace("/(tabs)/chat");
-            }
-          }}
-          style={({ pressed }) => [
-            styles.backHit,
-            pressed && styles.backPressed,
-          ]}
-        >
-          <ThemedText
-            lightColor={APP_SHELL_MAIN_TEXT_COLOR}
-            darkColor={APP_SHELL_MAIN_TEXT_COLOR}
-            style={styles.backLabel}
-          >
-            ‹ Back
-          </ThemedText>
-        </Pressable>
-        {showGymToolbarChevron && onGymThreadHeroCollapseToggle ? (
+      {toolbar ? (
+        <View style={styles.toolbar}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={
-              gymThreadHeroCollapsed
-                ? "Expand gym details"
-                : "Collapse gym details"
-            }
-            hitSlop={10}
-            onPress={onGymThreadHeroCollapseToggle}
-            style={styles.toolbarChevronWrap}
+            accessibilityLabel="Back"
+            hitSlop={12}
+            onPress={() => goBackInChat(router)}
+            style={({ pressed }) => [
+              styles.backHit,
+              pressed && styles.backPressed,
+            ]}
           >
-            <Animated.View style={chevronRotateStyle}>
-              <Image
-                source={RIGHT_ARROW}
-                style={styles.toolbarChevronImage}
-                contentFit="contain"
-                accessibilityIgnoresInvertColors
-              />
-            </Animated.View>
+            <ThemedText
+              lightColor={APP_SHELL_MAIN_TEXT_COLOR}
+              darkColor={APP_SHELL_MAIN_TEXT_COLOR}
+              style={styles.backLabel}
+            >
+              ‹ Back
+            </ThemedText>
           </Pressable>
-        ) : null}
-      </View>
+        </View>
+      ) : null}
       {stackLeader != null ? (
         <View style={styles.splitBody}>
           <View style={styles.stackLeaderSlot}>{stackLeader}</View>
@@ -170,22 +98,6 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: APP_SHELL_INPUT_BOARDER_COLOR,
-  },
-  toolbarReserveEndGlyph: {
-    paddingRight: 52,
-  },
-  toolbarChevronWrap: {
-    position: "absolute",
-    right: 12,
-    top: 0,
-    bottom: 0,
-    width: TOOLBAR_CHEVRON_SIZE + 8,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  toolbarChevronImage: {
-    width: TOOLBAR_CHEVRON_SIZE,
-    height: TOOLBAR_CHEVRON_SIZE,
   },
   backHit: {
     paddingVertical: 4,

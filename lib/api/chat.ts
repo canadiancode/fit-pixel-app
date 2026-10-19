@@ -13,6 +13,10 @@ export type GymListItem = {
   conversationId: string;
   memberCount: number;
   joined: boolean;
+  /** Starred by you. Missing on an older server: treat as false. */
+  favorite?: boolean;
+  /** When you last opened this chat (null if never). */
+  lastVisitedAt?: string | null;
 };
 
 export type GymChatListItem = {
@@ -173,6 +177,18 @@ export async function joinGymChat(gymId: string): Promise<GymListItem> {
   const data = await chatFetch<{ ok: true; gym: GymListItem }>(
     `/v1/gyms/${encodeURIComponent(gymId)}/join`,
     { method: "POST" },
+  );
+  return data.gym;
+}
+
+/** Star / un-star a gym chat. Favouriting a gym you haven't joined joins it. */
+export async function setGymFavorite(
+  gymId: string,
+  favorite: boolean,
+): Promise<GymListItem> {
+  const data = await chatFetch<{ ok: true; gym: GymListItem }>(
+    `/v1/gyms/${encodeURIComponent(gymId)}/favorite`,
+    { method: "POST", json: { favorite } },
   );
   return data.gym;
 }

@@ -1,86 +1,120 @@
+import { Image } from "expo-image";
 import { useCallback, useState } from "react";
 import {
+  ActivityIndicator,
   Platform,
   Pressable,
   StyleSheet,
+  Text,
   TextInput,
   View,
 } from "react-native";
 
-import { ThemedText } from "@/components/themed-text";
 import {
-  APP_SHELL_INPUT_BOARDER_COLOR,
   APP_SHELL_INPUT_PLACEHOLDER_COLOR,
+  APP_SHELL_LABEL_COLOR,
   APP_SHELL_MAIN_TEXT_COLOR,
-  APP_SHELL_PRIMARY_BACKGROUND,
-  APP_SHELL_SECONDARY_BACKGROUND,
 } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
+import {
+  CHAT_CARD_FILL,
+  CHAT_CARD_RIM,
+  CHAT_CARD_RIM_ACTIVE,
+  CHAT_TRACK_FILL,
+} from "@/features/chat/constants";
 
-const SINGLE_LINE_ANDROID = Platform.select({
-  android: {
-    includeFontPadding: false,
-    textAlignVertical: "center" as const,
-  },
-  default: {},
-});
+const SEND_ICON = require("@/assets/icons/send-message.png");
+const MAX_LENGTH = 2000;
+/** Start counting down this close to the limit. */
+const COUNTER_FROM = 1800;
+const SEND_SIZE = 46;
+const BODY_FONT = Platform.select({ ios: "System", default: undefined });
 
 type Props = {
   onSend: (body: string) => Promise<void>;
   sending: boolean;
   disabled?: boolean;
+  placeholder?: string;
 };
 
-export function MessageComposer({ onSend, sending, disabled }: Props) {
+/**
+ * Growing multi-line field (up to ~5 lines, then it scrolls) and a pixel send
+ * button. Return adds a new line; the button sends, like most chat apps.
+ */
+export function MessageComposer({
+  onSend,
+  sending,
+  disabled,
+  placeholder = "Message...",
+}: Props) {
   const [draft, setDraft] = useState("");
+  const [focused, setFocused] = useState(false);
   const canSend = draft.trim().length > 0 && !sending && !disabled;
+  const remaining = MAX_LENGTH - draft.length;
 
   const submit = useCallback(async () => {
     const body = draft.trim();
     if (!body || sending || disabled) return;
-    await onSend(body);
-    setDraft("");
+    try {
+      await onSend(body);
+      setDraft("");
+    } catch {
+      // The thread shows the error; keep the draft so nothing is lost.
+    }
   }, [disabled, draft, onSend, sending]);
 
   return (
     <View style={styles.bar}>
-      <TextInput
-        accessibilityLabel="Message"
-        value={draft}
-        onChangeText={setDraft}
-        placeholder="Say something..."
-        placeholderTextColor={APP_SHELL_INPUT_PLACEHOLDER_COLOR}
-        style={styles.input}
-        maxLength={2000}
-        editable={!disabled}
-        returnKeyType="send"
-        onSubmitEditing={() => {
-          void submit();
-        }}
-        blurOnSubmit={false}
-        underlineColorAndroid="transparent"
-        {...SINGLE_LINE_ANDROID}
-      />
+      <View style={[styles.field, focused && styles.fieldFocused]}>
+        <TextInput
+          accessibilityLabel="Message"
+          value={draft}
+          onChangeText={setDraft}
+          placeholder={placeholder}
+          placeholderTextColor={APP_SHELL_INPUT_PLACEHOLDER_COLOR}
+          style={styles.input}
+          maxLength={MAX_LENGTH}
+          editable={!disabled}
+          multiline
+          textAlignVertical="center"
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          underlineColorAndroid="transparent"
+          keyboardAppearance="dark"
+        />
+        {remaining <= MAX_LENGTH - COUNTER_FROM ? (
+          <Text
+            style={[styles.counter, remaining <= 0 && styles.counterOver]}
+            accessibilityLabel={`${remaining} characters left`}
+          >
+            {remaining}
+          </Text>
+        ) : null}
+      </View>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Send"
+        accessibilityLabel="Send message"
+        accessibilityState={{ disabled: !canSend, busy: sending }}
         disabled={!canSend}
+        hitSlop={6}
         onPress={() => {
           void submit();
         }}
         style={({ pressed }) => [
           styles.send,
-          !canSend && styles.sendDisabled,
+          !canSend && !sending && styles.sendDisabled,
           pressed && canSend && styles.sendPressed,
         ]}
       >
-        <ThemedText
-          lightColor={APP_SHELL_MAIN_TEXT_COLOR}
-          darkColor={APP_SHELL_MAIN_TEXT_COLOR}
-          style={styles.sendLabel}
-        >
-          Send
-        </ThemedText>
+        <Image
+          source={SEND_ICON}
+          style={StyleSheet.absoluteFillObject}
+          contentFit="contain"
+          accessibilityIgnoresInvertColors
+        />
+        {sending ? (
+          <ActivityIndicator color={APP_SHELL_MAIN_TEXT_COLOR} size="small" />
+        ) : null}
       </Pressable>
     </View>
   );
@@ -89,43 +123,66 @@ export function MessageComposer({ onSend, sending, disabled }: Props) {
 const styles = StyleSheet.create({
   bar: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
+    alignItems: "flex-end",
+    gap: 10,
     paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: APP_SHELL_INPUT_BOARDER_COLOR,
-    backgroundColor: APP_SHELL_SECONDARY_BACKGROUND,
+    paddingTop: 10,
+    paddingBottom: 10,
+    borderTopWidth: 2,
+    borderTopColor: CHAT_CARD_RIM,
+    backgroundColor: CHAT_TRACK_FILL,
+  },
+  field: {
+    flex: 1,
+    minWidth: 0,
+    minHeight: SEND_SIZE,
+    maxHeight: 132,
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: CHAT_CARD_RIM,
+    backgroundColor: CHAT_CARD_FILL,
+    paddingLeft: 14,
+    paddingRight: 10,
+  },
+  fieldFocused: {
+    borderColor: CHAT_CARD_RIM_ACTIVE,
   },
   input: {
     flex: 1,
     minWidth: 0,
-    height: 44,
-    borderRadius: 10,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: APP_SHELL_INPUT_BOARDER_COLOR,
-    paddingHorizontal: 12,
-    fontFamily: FONT_FAMILY,
-    fontSize: 12,
+    maxHeight: 128,
+    paddingTop: Platform.OS === "ios" ? 12 : 8,
+    paddingBottom: Platform.OS === "ios" ? 12 : 8,
     color: APP_SHELL_MAIN_TEXT_COLOR,
+    fontFamily: BODY_FONT,
+    fontSize: 16,
+    lineHeight: 21,
+  },
+  counter: {
+    alignSelf: "flex-end",
+    marginBottom: 8,
+    marginLeft: 6,
+    color: APP_SHELL_LABEL_COLOR,
+    fontFamily: FONT_FAMILY,
+    fontSize: 8,
+    lineHeight: 12,
+  },
+  counterOver: {
+    color: "#ff8a8a",
   },
   send: {
-    height: 44,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    backgroundColor: APP_SHELL_PRIMARY_BACKGROUND,
+    width: SEND_SIZE,
+    height: SEND_SIZE,
     alignItems: "center",
     justifyContent: "center",
   },
   sendDisabled: {
-    opacity: 0.45,
+    opacity: 0.4,
   },
   sendPressed: {
-    opacity: 0.85,
-  },
-  sendLabel: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 11,
-    lineHeight: 16,
+    opacity: 0.75,
+    transform: [{ scale: 0.96 }],
   },
 });

@@ -12,6 +12,7 @@ import {
 } from "@/constants/app-shell";
 import { ChatHeader } from "@/features/chat/components/chat-header";
 import { ChatSearchProvider } from "@/features/chat/chat-search-context";
+import { ChatThreadHeaderProvider } from "@/features/chat/chat-thread-header-context";
 
 export const unstable_settings = {
   initialRouteName: "index",
@@ -20,6 +21,7 @@ export const unstable_settings = {
 export default function ChatLayout() {
   return (
     <ChatSearchProvider>
+    <ChatThreadHeaderProvider>
     <ThemedView
       lightColor={APP_SHELL_PRIMARY_BACKGROUND}
       darkColor={APP_SHELL_PRIMARY_BACKGROUND}
@@ -39,6 +41,7 @@ export default function ChatLayout() {
         />
       </View>
     </ThemedView>
+    </ChatThreadHeaderProvider>
     </ChatSearchProvider>
   );
 }
