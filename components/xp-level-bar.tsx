@@ -1,6 +1,14 @@
 import { Image } from "expo-image";
+import type { Ref } from "react";
 import { StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
+import Animated from "react-native-reanimated";
 
+import {
+  BarGlint,
+  BarGlow,
+  useBarPulse,
+  type BarPulse,
+} from "@/components/progress-bar-pulse";
 import { ThemedText } from "@/components/themed-text";
 import { APP_SHELL_MAIN_TEXT_COLOR } from "@/constants/app-colors";
 
@@ -21,10 +29,17 @@ type Props = {
   style?: StyleProp<ViewStyle>;
   /** Bar track height in px. Matches My Pixel tile default. */
   height?: number;
+  /** Replays the glint / glow (gold at 100%) each time its id changes. */
+  pulse?: BarPulse | null;
+  /** Measured as the landing spot for the flying "+amount" token. */
+  barRef?: Ref<View>;
 };
 
 export function XpLevelBar(props: Props) {
-  const { fillPercent, progressPercent, style, height = 28 } = props;
+  const { fillPercent, progressPercent, style, height = 28, pulse, barRef } =
+    props;
+  const { containerStyle, glintStyle, glowStyle, gold, onLayout } =
+    useBarPulse(pulse);
 
   const percentLabel =
     progressPercent != null
@@ -32,8 +47,10 @@ export function XpLevelBar(props: Props) {
       : null;
 
   return (
-    <View
-      style={[styles.barRow, { height }, style]}
+    <Animated.View
+      ref={barRef}
+      onLayout={onLayout}
+      style={[styles.barRow, { height }, style, containerStyle]}
       accessibilityLabel={
         percentLabel != null
           ? `Progress ${percentLabel}`
@@ -54,6 +71,7 @@ export function XpLevelBar(props: Props) {
           ]}
           contentFit="fill"
         />
+        <BarGlint style={glintStyle} />
       </View>
       <View
         style={[
@@ -74,6 +92,7 @@ export function XpLevelBar(props: Props) {
         style={styles.containerImage}
         contentFit="fill"
       />
+      <BarGlow style={glowStyle} gold={gold} height={height} />
       {percentLabel != null ? (
         <View
           pointerEvents="none"
@@ -90,7 +109,7 @@ export function XpLevelBar(props: Props) {
           </ThemedText>
         </View>
       ) : null}
-    </View>
+    </Animated.View>
   );
 }
 
@@ -133,7 +152,7 @@ const styles = StyleSheet.create({
   },
   percentOverlay: {
     ...StyleSheet.absoluteFillObject,
-    zIndex: 3,
+    zIndex: 4,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "flex-end",

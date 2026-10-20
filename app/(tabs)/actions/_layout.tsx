@@ -11,6 +11,7 @@ import {
   TAB_SCREEN_STACK_CHROME_LAYOUT,
 } from "@/constants/app-shell";
 import { ActionsHeader } from "@/features/actions/components/actions-header";
+import { ProgressTokenLayer } from "@/features/actions/components/progress-token-layer";
 import { FoodMealsProvider } from "@/features/actions/food-meals-context";
 
 /** Keeps stack base as `index` so pushes to child routes resolve (see Expo Router settings). */
@@ -39,6 +40,7 @@ export default function ActionsLayout() {
             }}
           />
         </View>
+        <ProgressTokenLayer />
       </ThemedView>
     </FoodMealsProvider>
   );

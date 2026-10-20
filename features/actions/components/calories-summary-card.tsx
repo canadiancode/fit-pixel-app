@@ -8,7 +8,7 @@ import { FONT_FAMILY } from "@/constants/fonts";
 
 import { CALORIES_ACTION_CARD_ICON } from "../constants";
 import { getActionRow, getActionRowBarSources } from "../data";
-import { useActionProgress } from "../use-action-progress";
+import { useCelebratedActionProgress } from "../use-celebrated-progress";
 
 const CALORIES_CARD_TITLE = "Today's progress";
 
@@ -21,7 +21,9 @@ export function CaloriesSummaryCard() {
     percent,
     progressLabel,
     barFillPercent,
-  } = useActionProgress("calories");
+    pulse,
+    barRef,
+  } = useCelebratedActionProgress("calories");
   const progressPercentLabel = `${Math.round(percent)}%`;
 
   return (
@@ -61,6 +63,8 @@ export function CaloriesSummaryCard() {
           </Text>
           <View style={styles.barRow}>
             <ActionProgressBar
+              pulse={pulse}
+              barRef={barRef}
               sources={getActionRowBarSources(caloriesRow)}
               fillPercent={barFillPercent}
               style={styles.progressBar}

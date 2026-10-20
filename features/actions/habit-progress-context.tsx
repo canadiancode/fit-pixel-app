@@ -10,7 +10,11 @@ import {
 } from "react";
 
 import { useDailyGoals } from "@/features/actions/daily-goals-context";
-import type { ActionProgressTotals } from "@/features/actions/data";
+import type {
+  ActionProgressTotals,
+  ActionRouteId,
+} from "@/features/actions/data";
+import { emitProgress } from "@/features/actions/progress-celebration";
 import { useXpState } from "@/features/xp/xp-state-context";
 import { useDashboardHealthMetrics } from "@/hooks/use-dashboard-health-metrics";
 import {
@@ -156,12 +160,18 @@ export function HabitProgressProvider({ children }: { children: ReactNode }) {
     setManualTotals(toActionTotals(day, latestWeight));
   }, [db, goals.waterUnit, goals.weightUnit]);
 
+  /**
+   * `progressRoute` is set when the log added to a daily habit (not a
+   * subtraction or weight); bars then celebrate the totals change.
+   */
   const afterHabitLog = useCallback(
-    async (dayKey: string) => {
+    async (dayKey: string, progressRoute?: ActionRouteId) => {
       await maybeAwardGoalBonusesForDay(db, dayKey, {
         waterUnit: goals.waterUnit,
         weightUnit: goals.weightUnit,
       });
+      // Before the refresh, so bars know the totals change is a celebration.
+      if (progressRoute != null) emitProgress(progressRoute);
       await refreshTotals();
       await refreshXp();
     },
@@ -208,7 +218,7 @@ export function HabitProgressProvider({ children }: { children: ReactNode }) {
         unit: input.unit ?? goals.waterUnit,
         notes: input.notes,
       });
-      await afterHabitLog(log.dayKey);
+      await afterHabitLog(log.dayKey, input.amount > 0 ? "water" : undefined);
       return log;
     },
     [db, goals.waterUnit, afterHabitLog],
@@ -222,7 +232,7 @@ export function HabitProgressProvider({ children }: { children: ReactNode }) {
       },
     ) => {
       const log = await logFood(db, input);
-      await afterHabitLog(log.dayKey);
+      await afterHabitLog(log.dayKey, input.kcal > 0 ? "food" : undefined);
       return log;
     },
     [db, afterHabitLog],
@@ -235,7 +245,10 @@ export function HabitProgressProvider({ children }: { children: ReactNode }) {
       notes?: string | null;
     }) => {
       const log = await logTrain(db, input);
-      await afterHabitLog(log.dayKey);
+      await afterHabitLog(
+        log.dayKey,
+        input.durationMin > 0 ? "train" : undefined,
+      );
       return log;
     },
     [db, afterHabitLog],
@@ -244,7 +257,10 @@ export function HabitProgressProvider({ children }: { children: ReactNode }) {
   const addSleep = useCallback(
     async (input: { durationMin: number; notes?: string | null }) => {
       const log = await logSleep(db, input);
-      await afterHabitLog(log.dayKey);
+      await afterHabitLog(
+        log.dayKey,
+        input.durationMin > 0 ? "sleep" : undefined,
+      );
       return log;
     },
     [db, afterHabitLog],
@@ -270,7 +286,7 @@ export function HabitProgressProvider({ children }: { children: ReactNode }) {
   const addSteps = useCallback(
     async (input: { steps: number; notes?: string | null }) => {
       const log = await logSteps(db, input);
-      await afterHabitLog(log.dayKey);
+      await afterHabitLog(log.dayKey, input.steps > 0 ? "steps" : undefined);
       return log;
     },
     [db, afterHabitLog],
@@ -279,7 +295,10 @@ export function HabitProgressProvider({ children }: { children: ReactNode }) {
   const addActiveKcal = useCallback(
     async (input: { kcal: number; notes?: string | null }) => {
       const log = await logActiveKcal(db, input);
-      await afterHabitLog(log.dayKey);
+      await afterHabitLog(
+        log.dayKey,
+        input.kcal > 0 ? "calories" : undefined,
+      );
       return log;
     },
     [db, afterHabitLog],

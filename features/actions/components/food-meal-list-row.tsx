@@ -15,6 +15,11 @@ import {
   FOOD_MEAL_ROW_HEART_ICON,
   FOOD_QUICK_ADD_MEAL_BUTTON,
 } from "../constants";
+import { PROGRESS_BUTTON_POP_MS } from "../progress-celebration";
+import {
+  ProgressAddFeedbackView,
+  useProgressAddFeedback,
+} from "./progress-add-feedback";
 
 const ADD_HIT_SIZE = 48;
 const HEART_ICON_SIZE = 22;
@@ -28,8 +33,10 @@ type Props = {
   fat: number;
   /** When false, omit bottom border (e.g. last row in a list). */
   showBottomBorder: boolean;
-  /** Logs this meal into today's food total. */
+  /** Logs this meal into today's food total. Resolve `false` when it failed. */
   onQuickAdd?: () => void | Promise<unknown>;
+  /** Runs once the + button's add animation has played (e.g. to navigate back). */
+  onAdded?: () => void;
   /** When set, heart toggles save/unsave. */
   onToggleSave?: () => void | Promise<unknown>;
   /** Visual saved state for the heart control. */
@@ -49,10 +56,12 @@ export function FoodMealListRow({
   fat,
   showBottomBorder,
   onQuickAdd,
+  onAdded,
   onToggleSave,
   isSaved = false,
 }: Props) {
   const [isAdding, setIsAdding] = useState(false);
+  const addFeedback = useProgressAddFeedback();
   const [isTogglingSave, setIsTogglingSave] = useState(false);
   const caloriesLabel = `Calories: ${calories.toLocaleString("en-US")}`;
   const proteinLabel = `Protein: ${protein}g`;
@@ -117,16 +126,30 @@ export function FoodMealListRow({
             onPress={() => {
               if (onQuickAdd == null || isAdding) return;
               setIsAdding(true);
-              void Promise.resolve(onQuickAdd()).finally(() => {
-                setIsAdding(false);
-              });
+              void Promise.resolve(onQuickAdd())
+                .then((result) => {
+                  if (result === false) return;
+                  addFeedback.celebrate({
+                    route: "food",
+                    label: `+${calories.toLocaleString("en-US")}\u00A0KCAL`,
+                  });
+                  if (onAdded != null) {
+                    setTimeout(onAdded, PROGRESS_BUTTON_POP_MS);
+                  }
+                })
+                .finally(() => {
+                  setIsAdding(false);
+                });
             }}
             style={({ pressed }) => [
               styles.addHit,
               pressed && styles.addHitPressed,
             ]}
           >
-            <View style={styles.addVisual}>
+            <ProgressAddFeedbackView
+              feedback={addFeedback}
+              style={styles.addVisual}
+            >
               <Image
                 accessibilityIgnoresInvertColors
                 accessibilityElementsHidden
@@ -138,7 +161,7 @@ export function FoodMealListRow({
               <Text style={styles.plusGlyph} pointerEvents="none">
                 +
               </Text>
-            </View>
+            </ProgressAddFeedbackView>
           </Pressable>
           {onToggleSave != null ? (
             <Pressable

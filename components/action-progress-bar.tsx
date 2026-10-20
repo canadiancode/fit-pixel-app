@@ -1,5 +1,14 @@
 import { Image, type ImageSource } from "expo-image";
+import type { Ref } from "react";
 import { StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
+import Animated from "react-native-reanimated";
+
+import {
+  BarGlint,
+  BarGlow,
+  useBarPulse,
+  type BarPulse,
+} from "@/components/progress-bar-pulse";
 
 /** End-cap width scales from `action-bar-*-end.png` (69×133). */
 function getEndCapMetrics(barHeight: number) {
@@ -19,6 +28,10 @@ type Props = {
   fillPercent: number;
   style?: StyleProp<ViewStyle>;
   height?: number;
+  /** Replays the glint / glow (gold at 100%) each time its id changes. */
+  pulse?: BarPulse | null;
+  /** Measured as the landing spot for the flying "+amount" token. */
+  barRef?: Ref<View>;
 };
 
 export function ActionProgressBar({
@@ -26,11 +39,19 @@ export function ActionProgressBar({
   fillPercent,
   style,
   height = 22,
+  pulse,
+  barRef,
 }: Props) {
   const { width: endWidth, offset: endOffset } = getEndCapMetrics(height);
+  const { containerStyle, glintStyle, glowStyle, gold, onLayout } =
+    useBarPulse(pulse);
 
   return (
-    <View style={[styles.barRow, { height }, style]}>
+    <Animated.View
+      ref={barRef}
+      onLayout={onLayout}
+      style={[styles.barRow, { height }, style, containerStyle]}
+    >
       <View style={[styles.fillClip, { width: `${fillPercent}%` }]}>
         <Image
           accessibilityIgnoresInvertColors
@@ -43,6 +64,7 @@ export function ActionProgressBar({
           ]}
           contentFit="fill"
         />
+        <BarGlint style={glintStyle} />
       </View>
       <View
         style={[
@@ -67,7 +89,8 @@ export function ActionProgressBar({
         style={styles.containerImage}
         contentFit="fill"
       />
-    </View>
+      <BarGlow style={glowStyle} gold={gold} height={height} />
+    </Animated.View>
   );
 }
 

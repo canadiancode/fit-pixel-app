@@ -9,6 +9,11 @@ import { useHabitProgress } from "@/features/actions/habit-progress-context";
 import { useHoldToRepeat } from "@/hooks/use-hold-to-repeat";
 
 import {
+  ProgressAddFeedbackView,
+  useProgressAddFeedback,
+} from "./progress-add-feedback";
+
+import {
   CALORIES_ADD_CALORIES_BUTTON_BACKGROUND,
   CALORIES_ADD_CARD_BACKGROUND,
   CALORIES_BULK_ADD_BACKGROUND,
@@ -30,6 +35,7 @@ function formatKcalDelta(n: number): string {
 
 export function CaloriesAddCard() {
   const { addActiveKcal } = useHabitProgress();
+  const addFeedback = useProgressAddFeedback();
   const [servingKcal, setServingKcal] = useState(CALORIES_SERVING_KCAL);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -72,11 +78,14 @@ export function CaloriesAddCard() {
       setIsSaving(true);
       try {
         await addActiveKcal({ kcal });
+        if (kcal > 0) {
+          addFeedback.celebrate({ route: "calories", label: `${formatKcalDelta(kcal)}\u00A0KCAL` });
+        }
       } finally {
         setIsSaving(false);
       }
     },
-    [addActiveKcal, isSaving],
+    [addActiveKcal, isSaving, addFeedback],
   );
 
   return (
@@ -183,6 +192,9 @@ export function CaloriesAddCard() {
                       lightColor={APP_SHELL_MAIN_TEXT_COLOR}
                       darkColor={APP_SHELL_MAIN_TEXT_COLOR}
                       style={styles.bulkLabel}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.6}
                     >
                       {opt.label}
                     </ThemedText>
@@ -203,7 +215,10 @@ export function CaloriesAddCard() {
               pressed && styles.stepperPressed,
             ]}
           >
-            <View style={styles.addButtonShell}>
+            <ProgressAddFeedbackView
+              feedback={addFeedback}
+              style={styles.addButtonShell}
+            >
               <Image
                 accessibilityElementsHidden
                 importantForAccessibility="no-hide-descendants"
@@ -218,7 +233,7 @@ export function CaloriesAddCard() {
               >
                 {commitButtonLabel}
               </ThemedText>
-            </View>
+            </ProgressAddFeedbackView>
           </Pressable>
         </View>
       </View>
@@ -283,17 +298,16 @@ const styles = StyleSheet.create({
     alignSelf: "stretch",
   },
   bulkRowWrap: {
-    width: "100%",
-    alignItems: "center",
+    alignSelf: "stretch",
   },
   bulkRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 6,
   },
   bulkColumn: {
     flex: 1,
-    minWidth: 76,
+    minWidth: 0,
   },
   bulkCellShell: {
     width: "100%",
@@ -307,8 +321,8 @@ const styles = StyleSheet.create({
   },
   bulkLabel: {
     fontFamily: FONT_FAMILY,
-    fontSize: 11,
-    lineHeight: 14,
+    fontSize: 10,
+    lineHeight: 13,
     textAlign: "center",
   },
   addButton: {

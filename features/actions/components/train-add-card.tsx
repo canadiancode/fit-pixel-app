@@ -9,6 +9,11 @@ import { useHabitProgress } from "@/features/actions/habit-progress-context";
 import { useHoldToRepeat } from "@/hooks/use-hold-to-repeat";
 
 import {
+  ProgressAddFeedbackView,
+  useProgressAddFeedback,
+} from "./progress-add-feedback";
+
+import {
   TRAIN_ADD_CARD_BACKGROUND,
   TRAIN_ADD_TIME_BUTTON_BACKGROUND,
   TRAIN_BULK_ADD_BACKGROUND,
@@ -25,6 +30,7 @@ const SERVING_STEP_MIN = 5;
 
 export function TrainAddCard() {
   const { addTrain } = useHabitProgress();
+  const addFeedback = useProgressAddFeedback();
   const [servingMinutes, setServingMinutes] =
     useState<number>(TRAIN_SERVING_MINUTES);
   const [isSaving, setIsSaving] = useState(false);
@@ -69,11 +75,14 @@ export function TrainAddCard() {
       setIsSaving(true);
       try {
         await addTrain({ durationMin });
+        if (durationMin > 0) {
+          addFeedback.celebrate({ route: "train", label: `+${durationMin}M` });
+        }
       } finally {
         setIsSaving(false);
       }
     },
-    [addTrain, isSaving],
+    [addTrain, isSaving, addFeedback],
   );
 
   return (
@@ -177,6 +186,9 @@ export function TrainAddCard() {
                       lightColor={APP_SHELL_MAIN_TEXT_COLOR}
                       darkColor={APP_SHELL_MAIN_TEXT_COLOR}
                       style={styles.bulkLabel}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.6}
                     >
                       {opt.label}
                     </ThemedText>
@@ -197,7 +209,10 @@ export function TrainAddCard() {
               pressed && styles.stepperPressed,
             ]}
           >
-            <View style={styles.addTimeButtonShell}>
+            <ProgressAddFeedbackView
+              feedback={addFeedback}
+              style={styles.addTimeButtonShell}
+            >
               <Image
                 accessibilityElementsHidden
                 importantForAccessibility="no-hide-descendants"
@@ -212,7 +227,7 @@ export function TrainAddCard() {
               >
                 {commitButtonLabel}
               </ThemedText>
-            </View>
+            </ProgressAddFeedbackView>
           </Pressable>
         </View>
       </View>
@@ -267,16 +282,16 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   bulkRowWrap: {
-    width: "100%",
-    alignItems: "center",
+    alignSelf: "stretch",
   },
   bulkRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 6,
   },
   bulkColumn: {
-    width: 76,
+    flex: 1,
+    minWidth: 0,
   },
   bulkCellShell: {
     width: "100%",
@@ -290,8 +305,8 @@ const styles = StyleSheet.create({
   },
   bulkLabel: {
     fontFamily: FONT_FAMILY,
-    fontSize: 11,
-    lineHeight: 14,
+    fontSize: 10,
+    lineHeight: 13,
     textAlign: "center",
   },
   addTimeButton: {

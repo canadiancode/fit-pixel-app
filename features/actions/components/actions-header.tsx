@@ -11,9 +11,15 @@ import {
   TAB_HEADER_ROW_LAYOUT,
 } from "@/constants/app-shell";
 import { useTodaysProgress } from "@/features/actions/use-action-progress";
+import {
+  useCelebratedTotals,
+  useProgressTarget,
+} from "@/features/actions/use-celebrated-progress";
 
 export function ActionsHeader() {
-  const { fillPercent, progressPercent } = useTodaysProgress();
+  const { totals, pulse } = useCelebratedTotals("today");
+  const { fillPercent, progressPercent } = useTodaysProgress(totals);
+  const barRef = useProgressTarget("today");
 
   return (
     <View style={styles.headerRow}>
@@ -30,6 +36,8 @@ export function ActionsHeader() {
         <XpLevelBar
           fillPercent={fillPercent}
           progressPercent={progressPercent}
+          pulse={pulse}
+          barRef={barRef}
           style={styles.bar}
         />
       </View>

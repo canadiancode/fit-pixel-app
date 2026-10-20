@@ -8,6 +8,11 @@ import { FONT_FAMILY } from "@/constants/fonts";
 import { useHabitProgress } from "@/features/actions/habit-progress-context";
 import { useHoldToRepeat } from "@/hooks/use-hold-to-repeat";
 
+import {
+  ProgressAddFeedbackView,
+  useProgressAddFeedback,
+} from "./progress-add-feedback";
+
 import { SleepDurationParts } from "./sleep-duration-parts";
 import {
   SLEEP_ADD_CARD_BACKGROUND,
@@ -35,6 +40,7 @@ function formatSleepAbsLabel(totalMinutes: number): string {
 
 export function SleepAddCard() {
   const { addSleep } = useHabitProgress();
+  const addFeedback = useProgressAddFeedback();
   const [servingMinutes, setServingMinutes] =
     useState<number>(SLEEP_SERVING_MINUTES);
   const [isSaving, setIsSaving] = useState(false);
@@ -85,11 +91,14 @@ export function SleepAddCard() {
       setIsSaving(true);
       try {
         await addSleep({ durationMin });
+        if (durationMin > 0) {
+          addFeedback.celebrate({ route: "sleep", label: `+${formatSleepAbsLabel(durationMin)}` });
+        }
       } finally {
         setIsSaving(false);
       }
     },
-    [addSleep, isSaving],
+    [addSleep, isSaving, addFeedback],
   );
 
   return (
@@ -199,6 +208,9 @@ export function SleepAddCard() {
                       lightColor={APP_SHELL_MAIN_TEXT_COLOR}
                       darkColor={APP_SHELL_MAIN_TEXT_COLOR}
                       style={styles.bulkLabel}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.6}
                     >
                       {opt.label}
                     </ThemedText>
@@ -219,7 +231,10 @@ export function SleepAddCard() {
               pressed && styles.stepperPressed,
             ]}
           >
-            <View style={styles.addButtonShell}>
+            <ProgressAddFeedbackView
+              feedback={addFeedback}
+              style={styles.addButtonShell}
+            >
               <Image
                 accessibilityElementsHidden
                 importantForAccessibility="no-hide-descendants"
@@ -234,7 +249,7 @@ export function SleepAddCard() {
               >
                 {commitButtonLabel}
               </ThemedText>
-            </View>
+            </ProgressAddFeedbackView>
           </Pressable>
         </View>
       </View>
@@ -300,17 +315,16 @@ const styles = StyleSheet.create({
     color: APP_SHELL_MAIN_TEXT_COLOR,
   },
   bulkRowWrap: {
-    width: "100%",
-    alignItems: "center",
+    alignSelf: "stretch",
   },
   bulkRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 6,
   },
   bulkColumn: {
     flex: 1,
-    minWidth: 88,
+    minWidth: 0,
   },
   bulkCellShell: {
     width: "100%",
@@ -324,8 +338,8 @@ const styles = StyleSheet.create({
   },
   bulkLabel: {
     fontFamily: FONT_FAMILY,
-    fontSize: 11,
-    lineHeight: 14,
+    fontSize: 10,
+    lineHeight: 13,
     textAlign: "center",
   },
   addButton: {

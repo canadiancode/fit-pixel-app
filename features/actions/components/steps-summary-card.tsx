@@ -8,7 +8,7 @@ import { FONT_FAMILY } from "@/constants/fonts";
 
 import { STEPS_ACTION_CARD_ICON } from "../constants";
 import { getActionRow, getActionRowBarSources } from "../data";
-import { useActionProgress } from "../use-action-progress";
+import { useCelebratedActionProgress } from "../use-celebrated-progress";
 
 const STEPS_CARD_TITLE = "Today's progress";
 
@@ -21,7 +21,9 @@ export function StepsSummaryCard() {
     percent,
     progressLabel,
     barFillPercent,
-  } = useActionProgress("steps");
+    pulse,
+    barRef,
+  } = useCelebratedActionProgress("steps");
   const progressPercentLabel = `${Math.round(percent)}%`;
 
   return (
@@ -61,6 +63,8 @@ export function StepsSummaryCard() {
           </Text>
           <View style={styles.barRow}>
             <ActionProgressBar
+              pulse={pulse}
+              barRef={barRef}
               sources={getActionRowBarSources(stepsRow)}
               fillPercent={barFillPercent}
               style={styles.progressBar}

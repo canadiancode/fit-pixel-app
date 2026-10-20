@@ -9,6 +9,11 @@ import { useHabitProgress } from "@/features/actions/habit-progress-context";
 import { useHoldToRepeat } from "@/hooks/use-hold-to-repeat";
 
 import {
+  ProgressAddFeedbackView,
+  useProgressAddFeedback,
+} from "./progress-add-feedback";
+
+import {
   WATER_ADD_CARD_BACKGROUND,
   WATER_ADD_ICON,
   WATER_ADD_WATER_BUTTON_BACKGROUND,
@@ -25,6 +30,7 @@ const SERVING_STEP_OZ = 1;
 
 export function WaterAddCard() {
   const { addWater } = useHabitProgress();
+  const addFeedback = useProgressAddFeedback();
   const [servingOz, setServingOz] = useState<number>(WATER_SERVING_OZ);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -68,11 +74,14 @@ export function WaterAddCard() {
       setIsSaving(true);
       try {
         await addWater({ amount: amountOz, unit: "oz" });
+        if (amountOz > 0) {
+          addFeedback.celebrate({ route: "water", label: `+${amountOz}oz` });
+        }
       } finally {
         setIsSaving(false);
       }
     },
-    [addWater, isSaving],
+    [addWater, isSaving, addFeedback],
   );
 
   return (
@@ -176,6 +185,9 @@ export function WaterAddCard() {
                       lightColor={APP_SHELL_MAIN_TEXT_COLOR}
                       darkColor={APP_SHELL_MAIN_TEXT_COLOR}
                       style={styles.bulkLabel}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.6}
                     >
                       +{oz}oz
                     </ThemedText>
@@ -196,7 +208,10 @@ export function WaterAddCard() {
               pressed && styles.stepperPressed,
             ]}
           >
-            <View style={styles.addWaterButtonShell}>
+            <ProgressAddFeedbackView
+              feedback={addFeedback}
+              style={styles.addWaterButtonShell}
+            >
               <Image
                 accessibilityElementsHidden
                 importantForAccessibility="no-hide-descendants"
@@ -211,7 +226,7 @@ export function WaterAddCard() {
               >
                 {commitButtonLabel}
               </ThemedText>
-            </View>
+            </ProgressAddFeedbackView>
           </Pressable>
         </View>
       </View>
@@ -266,16 +281,16 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   bulkRowWrap: {
-    width: "100%",
-    alignItems: "center",
+    alignSelf: "stretch",
   },
   bulkRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 6,
   },
   bulkColumn: {
-    width: 76,
+    flex: 1,
+    minWidth: 0,
   },
   bulkCellShell: {
     width: "100%",
@@ -284,13 +299,13 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 6,
+    paddingHorizontal: 4,
     paddingVertical: 12,
   },
   bulkLabel: {
     fontFamily: FONT_FAMILY,
-    fontSize: 11,
-    lineHeight: 14,
+    fontSize: 10,
+    lineHeight: 13,
     textAlign: "center",
   },
   addWaterButton: {

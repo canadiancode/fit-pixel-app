@@ -6,15 +6,47 @@ import { APP_SHELL_MAIN_TEXT_COLOR } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
 
 import { FOOD_ADD_ACTION_BUTTON_BACKGROUND } from "../constants";
+import {
+  ProgressAddFeedbackView,
+  type ProgressAddFeedback,
+} from "./progress-add-feedback";
 
 type Props = {
   title: string;
   onPress: () => void;
   accessibilityLabel?: string;
+  /** Lets the pill pop and flash when it adds to today's progress. */
+  feedback?: ProgressAddFeedback;
 };
 
 /** Full-width pill using the same lime asset as “Search for food” on the food hub. */
-export function FoodLimePillButton({ title, onPress, accessibilityLabel }: Props) {
+export function FoodLimePillButton({
+  title,
+  onPress,
+  accessibilityLabel,
+  feedback,
+}: Props) {
+  const content = (
+    <>
+      <Image
+        accessibilityIgnoresInvertColors
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+        source={FOOD_ADD_ACTION_BUTTON_BACKGROUND}
+        style={StyleSheet.absoluteFillObject}
+        contentFit="fill"
+      />
+      <ThemedText
+        lightColor={APP_SHELL_MAIN_TEXT_COLOR}
+        darkColor={APP_SHELL_MAIN_TEXT_COLOR}
+        style={styles.label}
+        numberOfLines={2}
+      >
+        {title}
+      </ThemedText>
+    </>
+  );
+
   return (
     <Pressable
       accessibilityRole="button"
@@ -23,24 +55,13 @@ export function FoodLimePillButton({ title, onPress, accessibilityLabel }: Props
       onPress={onPress}
       style={({ pressed }) => [styles.outer, pressed && styles.outerPressed]}
     >
-      <View style={styles.shell}>
-        <Image
-          accessibilityIgnoresInvertColors
-          accessibilityElementsHidden
-          importantForAccessibility="no-hide-descendants"
-          source={FOOD_ADD_ACTION_BUTTON_BACKGROUND}
-          style={StyleSheet.absoluteFillObject}
-          contentFit="fill"
-        />
-        <ThemedText
-          lightColor={APP_SHELL_MAIN_TEXT_COLOR}
-          darkColor={APP_SHELL_MAIN_TEXT_COLOR}
-          style={styles.label}
-          numberOfLines={2}
-        >
-          {title}
-        </ThemedText>
-      </View>
+      {feedback != null ? (
+        <ProgressAddFeedbackView feedback={feedback} style={styles.shell}>
+          {content}
+        </ProgressAddFeedbackView>
+      ) : (
+        <View style={styles.shell}>{content}</View>
+      )}
     </Pressable>
   );
 }

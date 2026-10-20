@@ -6,21 +6,26 @@ import { ThemedText } from "@/components/themed-text";
 import { APP_SHELL_MAIN_TEXT_COLOR } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
 import { useDailyGoals } from "@/features/actions/daily-goals-context";
-import { useHabitProgress } from "@/features/actions/habit-progress-context";
 
 import { SleepDurationParts } from "./sleep-duration-parts";
 import { SLEEP_ACTION_CARD_ICON } from "../constants";
 import { getActionRow, getActionRowBarSources } from "../data";
-import { useActionProgress } from "../use-action-progress";
+import { useCelebratedActionProgress } from "../use-celebrated-progress";
 
 const SLEEP_CARD_TITLE = "Today's progress";
 
 export function SleepSummaryCard() {
   const sleepRow = getActionRow("sleep");
   const { goals } = useDailyGoals();
-  const { totals } = useHabitProgress();
-  const { accentColor, percent, progressLabel, barFillPercent } =
-    useActionProgress("sleep");
+  const {
+    accentColor,
+    percent,
+    progressLabel,
+    barFillPercent,
+    totals,
+    pulse,
+    barRef,
+  } = useCelebratedActionProgress("sleep");
   const progressPercentLabel = `${Math.round(percent)}%`;
   const currentHours = totals.sleepHours ?? 0;
   const goalHours = goals.sleepHours;
@@ -70,6 +75,8 @@ export function SleepSummaryCard() {
           </Text>
           <View style={styles.barRow}>
             <ActionProgressBar
+              pulse={pulse}
+              barRef={barRef}
               sources={getActionRowBarSources(sleepRow)}
               fillPercent={barFillPercent}
               style={styles.progressBar}

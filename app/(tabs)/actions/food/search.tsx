@@ -107,11 +107,12 @@ export default function FoodSearchScreen() {
           ? { portionSize: payload.portionSize }
           : {}),
       });
-      router.back();
+      return true;
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Could not add this food.";
       Alert.alert("Could not add food", message);
+      return false;
     }
   };
 
@@ -222,6 +223,7 @@ export default function FoodSearchScreen() {
               fat={listItem.fat}
               showBottomBorder={index < results.length - 1}
               onQuickAdd={() => onQuickAdd(item)}
+              onAdded={() => router.back()}
               onToggleSave={() => onToggleSave(item)}
             />
           );

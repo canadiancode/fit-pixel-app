@@ -9,6 +9,11 @@ import { useHabitProgress } from "@/features/actions/habit-progress-context";
 import { useHoldToRepeat } from "@/hooks/use-hold-to-repeat";
 
 import {
+  ProgressAddFeedbackView,
+  useProgressAddFeedback,
+} from "./progress-add-feedback";
+
+import {
   STEPS_ADD_CARD_BACKGROUND,
   STEPS_ADD_STEPS_BUTTON_BACKGROUND,
   STEPS_BULK_ADD_BACKGROUND,
@@ -30,6 +35,7 @@ function formatStepsDelta(n: number): string {
 
 export function StepsAddCard() {
   const { addSteps } = useHabitProgress();
+  const addFeedback = useProgressAddFeedback();
   const [servingSteps, setServingSteps] = useState(STEPS_SERVING_AMOUNT);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -72,11 +78,14 @@ export function StepsAddCard() {
       setIsSaving(true);
       try {
         await addSteps({ steps });
+        if (steps > 0) {
+          addFeedback.celebrate({ route: "steps", label: formatStepsDelta(steps) });
+        }
       } finally {
         setIsSaving(false);
       }
     },
-    [addSteps, isSaving],
+    [addSteps, isSaving, addFeedback],
   );
 
   return (
@@ -180,6 +189,9 @@ export function StepsAddCard() {
                       lightColor={APP_SHELL_MAIN_TEXT_COLOR}
                       darkColor={APP_SHELL_MAIN_TEXT_COLOR}
                       style={styles.bulkLabel}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.6}
                     >
                       {opt.label}
                     </ThemedText>
@@ -200,7 +212,10 @@ export function StepsAddCard() {
               pressed && styles.stepperPressed,
             ]}
           >
-            <View style={styles.addStepsButtonShell}>
+            <ProgressAddFeedbackView
+              feedback={addFeedback}
+              style={styles.addStepsButtonShell}
+            >
               <Image
                 accessibilityElementsHidden
                 importantForAccessibility="no-hide-descendants"
@@ -215,7 +230,7 @@ export function StepsAddCard() {
               >
                 {commitButtonLabel}
               </ThemedText>
-            </View>
+            </ProgressAddFeedbackView>
           </Pressable>
         </View>
       </View>
@@ -270,17 +285,16 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   bulkRowWrap: {
-    width: "100%",
-    alignItems: "center",
+    alignSelf: "stretch",
   },
   bulkRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 6,
   },
   bulkColumn: {
     flex: 1,
-    minWidth: 88,
+    minWidth: 0,
   },
   bulkCellShell: {
     width: "100%",
@@ -294,8 +308,8 @@ const styles = StyleSheet.create({
   },
   bulkLabel: {
     fontFamily: FONT_FAMILY,
-    fontSize: 11,
-    lineHeight: 14,
+    fontSize: 10,
+    lineHeight: 13,
     textAlign: "center",
   },
   addStepsButton: {

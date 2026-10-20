@@ -19,8 +19,10 @@ import {
 import { FONT_FAMILY } from "@/constants/fonts";
 import { ActionsSubScreenLayout } from "@/features/actions/components/actions-sub-screen-layout";
 import { FoodLimePillButton } from "@/features/actions/components/food-lime-pill-button";
+import { useProgressAddFeedback } from "@/features/actions/components/progress-add-feedback";
 import { useFoodMeals } from "@/features/actions/food-meals-context";
 import { useHabitProgress } from "@/features/actions/habit-progress-context";
+import { PROGRESS_BUTTON_POP_MS } from "@/features/actions/progress-celebration";
 
 const BG_LONG = require("@/assets/backgrounds/text-input-long.png");
 const BG_MED = require("@/assets/backgrounds/text-input-med.png");
@@ -51,6 +53,7 @@ function parseOptionalNonNegative(raw: string, label: string): number | undefine
 
 export default function FoodCustomMealScreen() {
   const { addFood } = useHabitProgress();
+  const addFeedback = useProgressAddFeedback();
   const { saveMeal } = useFoodMeals();
   const [mealName, setMealName] = useState("");
   const [mealCalories, setMealCalories] = useState("");
@@ -118,6 +121,9 @@ export default function FoodCustomMealScreen() {
           ...(carbsG !== undefined ? { carbsG } : {}),
           ...(fatG !== undefined ? { fatG } : {}),
         });
+        if (kcal > 0) {
+          addFeedback.celebrate({ route: "food", label: `+${kcal}\u00A0KCAL` });
+        }
         // Same-flow: persist as a reusable saved meal (local draft / favorite).
         await saveMeal({
           name,
@@ -126,6 +132,10 @@ export default function FoodCustomMealScreen() {
           ...(carbsG !== undefined ? { carbsG } : {}),
           ...(fatG !== undefined ? { fatG } : {}),
         });
+        // Let the pop play before the screen slides away.
+        await new Promise((resolve) =>
+          setTimeout(resolve, PROGRESS_BUTTON_POP_MS),
+        );
         router.back();
       } finally {
         setIsSubmitting(false);
@@ -281,6 +291,7 @@ export default function FoodCustomMealScreen() {
         <FoodLimePillButton
           title={isSubmitting ? "Adding…" : "+ Add meal"}
           accessibilityLabel="Add custom meal"
+          feedback={addFeedback}
           onPress={() => {
             void onAddMeal();
           }}
