@@ -141,7 +141,7 @@ export function CaloriesAddCard() {
                 style={styles.servingLabel}
                 numberOfLines={1}
                 adjustsFontSizeToFit
-                minimumFontScale={0.65}
+                minimumFontScale={0.5}
               >
                 {servingAmountDisplay}
               </ThemedText>
@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
     minHeight: 48,
   },
   stepperValue: {
-    flex: 1,
+    flex: 2,
     minWidth: 0,
     alignItems: "center",
     justifyContent: "center",

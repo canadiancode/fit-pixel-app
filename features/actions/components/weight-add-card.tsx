@@ -113,11 +113,14 @@ export function WeightAddCard() {
                 contentFit="contain"
               />
             </Pressable>
-            <View style={styles.stepperColumn}>
+            <View style={[styles.stepperColumn, styles.servingColumn]}>
               <ThemedText
                 lightColor={APP_SHELL_MAIN_TEXT_COLOR}
                 darkColor={APP_SHELL_MAIN_TEXT_COLOR}
                 style={styles.servingLabel}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.5}
               >
                 {displayValue}
               </ThemedText>
@@ -209,6 +212,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     minHeight: 48,
+  },
+  servingColumn: {
+    flex: 2,
+    paddingHorizontal: 4,
   },
   stepperIcon: {
     width: 40,
