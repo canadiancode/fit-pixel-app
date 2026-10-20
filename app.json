@@ -27,6 +27,7 @@
       },
       "infoPlist": {
         "NSHealthShareUsageDescription": "Fit Pixel reads metrics such as heart rate, activity, sleep, and weight from Apple Health to show them on your dashboard.",
+        "NSHealthUpdateUsageDescription": "Fit Pixel only reads from Apple Health and never writes data to it.",
         "ITSAppUsesNonExemptEncryption": false
       },
       "config": {},
@@ -166,6 +167,7 @@
         "@kingstinct/react-native-healthkit",
         {
           "NSHealthShareUsageDescription": "Fit Pixel reads metrics such as heart rate, activity, sleep, and weight from Apple Health to show them on your dashboard.",
+          "NSHealthUpdateUsageDescription": "Fit Pixel only reads from Apple Health and never writes data to it.",
           "background": false
         }
       ],
