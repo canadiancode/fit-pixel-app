@@ -12,6 +12,7 @@ import {
   createRandomPixelLoadout,
   getPixelItem,
 } from "./layer-assets";
+import { REWARD_ITEM_IDS } from "./shop-catalog";
 import { PIXEL_LAYER_Z_INDEX, type PixelItemId, type PixelLoadout } from "./types";
 
 /** Persisted under the app documents directory (already in the Expo native binary). */
@@ -22,7 +23,7 @@ const STATE_FILENAME = "pixel-user-state-v1.json";
  * Missing/old versions re-seed inventory from DEFAULT_PIXEL_INVENTORY so
  * pre-shop "everything owned" grants do not keep shop items forever.
  */
-export const PIXEL_INVENTORY_GRANT_VERSION = 2;
+export const PIXEL_INVENTORY_GRANT_VERSION = 3;
 
 const LAYER_IDS = Object.keys(PIXEL_LAYER_Z_INDEX) as (keyof typeof PIXEL_LAYER_Z_INDEX)[];
 
@@ -55,12 +56,17 @@ function normalizeInventory(
   raw: unknown,
   grantVersion: number,
 ): PixelItemId[] {
-  if (grantVersion < PIXEL_INVENTORY_GRANT_VERSION) {
+  if (grantVersion < 2) {
     return [...DEFAULT_PIXEL_INVENTORY];
   }
-  const saved = Array.isArray(raw)
+  let saved = Array.isArray(raw)
     ? raw.filter(isItemId)
     : ([] as PixelItemId[]);
+  // v3: weight rewards briefly leaked into the starter set (build 21). Drop
+  // them; the weight journey re-grants any its milestones actually earned.
+  if (grantVersion < 3) {
+    saved = saved.filter((id) => !REWARD_ITEM_IDS.has(id));
+  }
   return Array.from(new Set([...DEFAULT_PIXEL_INVENTORY, ...saved]));
 }
 

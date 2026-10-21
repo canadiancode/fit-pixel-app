@@ -149,6 +149,23 @@ export const PIXEL_SHOP_OFFERS: readonly PixelShopOffer[] = [
   },
 ];
 
+/**
+ * Earned-only collectibles: never sold, never in the starter set. Granted by
+ * the weight journey (milestones, then the goal).
+ */
+export const PIXEL_WEIGHT_MILESTONE_REWARDS = [
+  { itemId: "def-item-left-green-potion", label: "Green Potion" },
+  { itemId: "def-item-left-think-purple-bottle", label: "Purple Bottle" },
+] as const;
+export const PIXEL_WEIGHT_GOAL_REWARD = {
+  itemId: "def-item-right-gold-black-king-bag",
+  label: "Gold Black King Bag",
+} as const;
+export const REWARD_ITEM_IDS: ReadonlySet<PixelItemId> = new Set([
+  ...PIXEL_WEIGHT_MILESTONE_REWARDS.map((reward) => reward.itemId),
+  PIXEL_WEIGHT_GOAL_REWARD.itemId,
+]);
+
 export const SHOP_ITEM_IDS: ReadonlySet<PixelItemId> = new Set(
   PIXEL_SHOP_OFFERS.map((offer) => offer.itemId),
 );

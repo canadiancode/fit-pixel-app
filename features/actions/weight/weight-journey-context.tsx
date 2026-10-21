@@ -22,6 +22,7 @@ import {
   getHabitLog,
   getTodayDayKey,
   getWeightJourney,
+  hasWeightXpAward,
   listWeightEntries,
   logWeight,
   updateWeightJourney,
@@ -184,7 +185,7 @@ export function WeightJourneyProvider({ children }: { children: ReactNode }) {
 
       const start = startInUnit(journeySettings);
       const latest = loaded.at(-1);
-      if (options.award && start != null && latest != null) {
+      if (start != null && latest != null) {
         const journey = computeJourney({
           start,
           current: latest.value,
@@ -193,6 +194,14 @@ export function WeightJourneyProvider({ children }: { children: ReactNode }) {
         });
         for (const milestone of journey.milestones) {
           if (!milestone.reached) continue;
+          if (!options.award) {
+            // Restore rewards for milestones already paid (e.g. after a
+            // reinstall); never pays XP without a new weigh-in.
+            if (milestone.reward != null && (await hasWeightXpAward(db, milestone.awardKey))) {
+              await grantItem(milestone.reward.itemId, "weight_milestone");
+            }
+            continue;
+          }
           const event = await claimWeightXpAward(db, {
             awardKey: milestone.awardKey,
             amount: milestone.isGoal

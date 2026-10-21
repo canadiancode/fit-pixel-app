@@ -1,3 +1,7 @@
+import {
+  PIXEL_WEIGHT_GOAL_REWARD,
+  PIXEL_WEIGHT_MILESTONE_REWARDS,
+} from "@/features/pixel/shop-catalog";
 import type { WeightEntry, WeightUnit } from "@/lib/db";
 
 /**
@@ -8,19 +12,9 @@ import type { WeightEntry, WeightUnit } from "@/lib/db";
 
 export type JourneyDirection = "lose" | "gain" | "maintain";
 
-/** Pixel items earned on the journey; removed from the level shop. */
-export const WEIGHT_MILESTONE_REWARD_ITEMS = [
-  { itemId: "def-item-left-green-potion", label: "Green Potion" },
-  { itemId: "def-item-left-think-purple-bottle", label: "Purple Bottle" },
-] as const;
-export const WEIGHT_GOAL_REWARD_ITEM = {
-  itemId: "def-item-right-gold-black-king-bag",
-  label: "Gold Black King Bag",
-} as const;
-export const WEIGHT_REWARD_ITEM_IDS: ReadonlySet<string> = new Set([
-  ...WEIGHT_MILESTONE_REWARD_ITEMS.map((reward) => reward.itemId),
-  WEIGHT_GOAL_REWARD_ITEM.itemId,
-]);
+/** Pixel items earned on the journey (earned-only; see shop-catalog). */
+export const WEIGHT_MILESTONE_REWARD_ITEMS = PIXEL_WEIGHT_MILESTONE_REWARDS;
+export const WEIGHT_GOAL_REWARD_ITEM = PIXEL_WEIGHT_GOAL_REWARD;
 
 export type WeightMilestone = {
   /** 1-based position along the journey. */
