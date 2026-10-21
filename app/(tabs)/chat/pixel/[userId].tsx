@@ -14,7 +14,10 @@ import { useBlockedUsers } from "@/features/chat/blocked-users-store";
 import { ChatSubScreenLayout } from "@/features/chat/components/chat-sub-screen-layout";
 import { useUserSafetyActions } from "@/features/chat/use-user-safety-actions";
 import { FriendshipButton } from "@/features/social/components/friendship-button";
-import { PixelAvatar } from "@/features/social/components/pixel-avatar";
+import {
+  PixelCollection,
+  PixelShowcase,
+} from "@/features/social/components/pixel-showcase";
 import { useNotifications } from "@/features/social/notifications-context";
 import { useFriendshipActions } from "@/features/social/use-friendship-actions";
 import {
@@ -26,7 +29,6 @@ import {
 import { FitPixelApiError } from "@/lib/api/client";
 
 const BLOCK_COLOR = "#ff8a8a";
-const PROFILE_AVATAR_SIZE = 96;
 
 export default function PixelProfileScreen() {
   const { userId: rawId } = useLocalSearchParams<{ userId: string }>();
@@ -96,12 +98,11 @@ export default function PixelProfileScreen() {
 
   return (
     <ChatSubScreenLayout>
+      <PixelShowcase
+        equipped={pixel == null ? undefined : (pixel.equipped ?? null)}
+        accessibilityLabel={`${target.displayName}'s pixel`}
+      />
       <View style={styles.hero}>
-        <PixelAvatar
-          equipped={pixel?.equipped}
-          size={PROFILE_AVATAR_SIZE}
-          accessibilityLabel={`${target.displayName}'s pixel`}
-        />
         <View style={styles.heroText}>
           <ThemedText
             type="title"
@@ -187,6 +188,16 @@ export default function PixelProfileScreen() {
           </Pressable>
         ) : null}
       </View>
+      {pixel && !isBlocked ? (
+        <PixelCollection
+          equipped={pixel.equipped ?? null}
+          subtitle={
+            isSelf
+              ? "What you're showing off."
+              : `What ${target.displayName} is showing off.`
+          }
+        />
+      ) : null}
       {userId && !isSelf ? (
         <View style={styles.safetyActions}>
           <Pressable
@@ -247,9 +258,7 @@ export default function PixelProfileScreen() {
 
 const styles = StyleSheet.create({
   hero: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
+    marginTop: 14,
   },
   heroText: {
     flex: 1,

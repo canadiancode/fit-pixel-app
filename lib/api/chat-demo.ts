@@ -50,6 +50,9 @@ function look(parts: {
   shoes: string;
   eyes: string;
   mouth: string;
+  /** Held items (bottle, bag); every demo Pixel carries both. */
+  itemLeft: string;
+  itemRight: string;
 }): EquippedLook {
   return {
     background: "def-background-basic-gym",
@@ -60,6 +63,8 @@ function look(parts: {
     shoes: `def-shoe-casual-${parts.shoes}`,
     eyes: `def-eyes-${parts.eyes}`,
     mouth: `def-mouth-${parts.mouth}`,
+    item_left: `def-item-left-${parts.itemLeft}`,
+    item_right: `def-item-right-${parts.itemRight}`,
   };
 }
 
@@ -77,6 +82,8 @@ const USERS: DemoUser[] = [
       shoes: "red-white",
       eyes: "simple-angry",
       mouth: "angrey-all-teeth",
+      itemLeft: "water-bottle",
+      itemRight: "black-bag",
     }),
     relation: "friend",
   },
@@ -93,6 +100,8 @@ const USERS: DemoUser[] = [
       shoes: "purple-white",
       eyes: "complex-wink",
       mouth: "smile-all-teeth",
+      itemLeft: "blue-w-straw-bottle",
+      itemRight: "pink-bag",
     }),
     relation: "friend",
   },
@@ -109,6 +118,8 @@ const USERS: DemoUser[] = [
       shoes: "green-white",
       eyes: "simple-neutral",
       mouth: "simple-smile",
+      itemLeft: "green-thin-bottle",
+      itemRight: "green-bag",
     }),
     relation: "friend",
   },
@@ -125,6 +136,8 @@ const USERS: DemoUser[] = [
       shoes: "grey-white",
       eyes: "complex-neutral",
       mouth: "simple-neutral",
+      itemLeft: "red-w-straw-bottle",
+      itemRight: "blue-bag",
     }),
     relation: "friend",
   },
@@ -141,6 +154,8 @@ const USERS: DemoUser[] = [
       shoes: "orange-white",
       eyes: "complex-neutral",
       mouth: "smile-open-mouth",
+      itemLeft: "wide-orange-bottle",
+      itemRight: "green-militay-bag",
     }),
     relation: "friend",
   },
@@ -157,6 +172,8 @@ const USERS: DemoUser[] = [
       shoes: "checkered-white-black",
       eyes: "simple-neutral",
       mouth: "smile-all-teeth",
+      itemLeft: "blue-potion",
+      itemRight: "blue-w-white-bag",
     }),
     relation: "incoming",
   },
@@ -173,6 +190,8 @@ const USERS: DemoUser[] = [
       shoes: "yellow-white",
       eyes: "simple-angry",
       mouth: "smile-open-mouth",
+      itemLeft: "water-bottle",
+      itemRight: "black-bag",
     }),
     relation: "incoming",
   },
@@ -189,6 +208,8 @@ const USERS: DemoUser[] = [
       shoes: "long-white",
       eyes: "complex-neutral",
       mouth: "angrey-all-teeth",
+      itemLeft: "green-thin-bottle",
+      itemRight: "blue-bag",
     }),
     relation: "outgoing",
   },
@@ -205,6 +226,8 @@ const USERS: DemoUser[] = [
       shoes: "brown",
       eyes: "complex-wink",
       mouth: "simple-smile",
+      itemLeft: "blue-w-straw-bottle",
+      itemRight: "pink-bag",
     }),
     relation: "none",
   },
@@ -221,6 +244,8 @@ const USERS: DemoUser[] = [
       shoes: "red-white",
       eyes: "simple-neutral",
       mouth: "smile-all-teeth",
+      itemLeft: "wide-orange-bottle",
+      itemRight: "green-militay-bag",
     }),
     relation: "none",
   },
