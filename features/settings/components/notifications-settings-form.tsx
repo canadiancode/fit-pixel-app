@@ -1,15 +1,12 @@
 import { StyleSheet, View } from "react-native";
 
 import {
-  SettingsDivider,
   SettingsSection,
   SettingsToggleRow,
 } from "@/features/settings/components/settings-ui";
 import { usePush } from "@/features/push/push-context";
-import { usePrefsProfile } from "@/features/settings/prefs-profile-context";
 
 export function NotificationsSettingsForm() {
-  const { prefs, isHydrated, updatePrefs } = usePrefsProfile();
   const push = usePush();
 
   return (
@@ -34,30 +31,8 @@ export function NotificationsSettingsForm() {
         />
       </SettingsSection>
 
-      <SettingsSection
-        title="coming soon"
-        footer="These aren't sent yet. We'll use your choice when they launch."
-      >
-        <SettingsToggleRow
-          title="Accountability reminders"
-          description="Nudges during the day to log your habits and hit your goals."
-          value={prefs.notifAccountability}
-          disabled={!isHydrated}
-          onValueChange={(value) => {
-            void updatePrefs({ notifAccountability: value });
-          }}
-        />
-        <SettingsDivider />
-        <SettingsToggleRow
-          title="News & updates"
-          description="Now and then: new features, items and fixes. No spam."
-          value={prefs.notifNews}
-          disabled={!isHydrated}
-          onValueChange={(value) => {
-            void updatePrefs({ notifNews: value });
-          }}
-        />
-      </SettingsSection>
+      {/* Accountability reminders and news pushes are hidden until they are
+          sent; prefs.notifAccountability / notifNews keep any saved choice. */}
     </View>
   );
 }
