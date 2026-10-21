@@ -15,7 +15,7 @@ type Props = {
 
 /** Habit roots under Actions — Back should clear sibling stacks (e.g. weight then sleep). */
 const TOP_LEVEL_ACTION_PATH =
-  /^\/actions\/(weight|sleep|water|steps|calories|train|food)\/?$/;
+  /^\/actions\/(weight|sleep|water|steps|calories|train|food|heart)\/?$/;
 
 export function ActionsSubScreenLayout({ children }: Props) {
   const router = useRouter();
