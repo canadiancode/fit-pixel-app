@@ -20,11 +20,8 @@ const ACTION_ROWS = [
     label: "Input custom meal",
     href: FOOD_ACTION_HREFS.customMeal,
   },
-  {
-    key: "barcode",
-    label: "Barcode scanner",
-    href: FOOD_ACTION_HREFS.barcode,
-  },
+  // Barcode scanner (FOOD_ACTION_HREFS.barcode) is hidden until scanning
+  // works; its screen only says it is unavailable.
 ] as const;
 
 /** Full-width food logging shortcuts between saved and recent meal lists. */

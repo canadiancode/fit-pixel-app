@@ -43,6 +43,12 @@ function formatDayStart(minutes: number): string {
   return `${hour12}:${m.toString().padStart(2, "0")} ${suffix}`;
 }
 
+/**
+ * Themes aren't applied yet, so the picker stays hidden; unlocks still
+ * accrue below and a saved pick is kept for when they ship.
+ */
+const SHOW_THEME_PICKER = false;
+
 export function PreferencesSettingsForm() {
   const { prefs, isHydrated, updatePrefs, unlockAppTheme } = usePrefsProfile();
   const { xp } = useXpState();
@@ -72,53 +78,61 @@ export function PreferencesSettingsForm() {
 
   return (
     <View style={styles.root}>
-      <SettingsSection
-        title="theme"
-        footer="Color themes are coming soon. Your pick is saved and applies when they launch."
-        bare
-      >
-        <View style={styles.themeGrid}>
-          {APP_THEME_CATALOG.map((theme) => {
-            const owned = prefs.unlockedThemeIds.includes(theme.id);
-            const selected = owned && prefs.selectedThemeId === theme.id;
-            return (
-              <Pressable
-                key={theme.id}
-                accessibilityRole="radio"
-                accessibilityLabel={
-                  owned
-                    ? theme.name
-                    : `${theme.name}, locked until level ${theme.unlockLevel}`
-                }
-                accessibilityState={{ selected, disabled: !owned }}
-                disabled={!owned || !isHydrated}
-                onPress={() => selectTheme(theme.id)}
-                style={({ pressed }) => [
-                  styles.themeTile,
-                  selected && styles.themeTileSelected,
-                  !owned && styles.themeTileLocked,
-                  pressed && styles.pressed,
-                ]}
-              >
-                <View style={[styles.swatch, { backgroundColor: theme.swatch }]}>
-                  {selected ? <Text style={styles.check}>✓</Text> : null}
-                </View>
-                <View style={styles.themeText}>
-                  <Text style={styles.themeName} numberOfLines={1}>
-                    {theme.name}
-                  </Text>
-                  <Text
-                    style={[styles.themeMeta, selected && styles.themeMetaOn]}
-                    numberOfLines={1}
+      {SHOW_THEME_PICKER ? (
+        <SettingsSection
+          title="theme"
+          footer="Color themes are coming soon. Your pick is saved and applies when they launch."
+          bare
+        >
+          <View style={styles.themeGrid}>
+            {APP_THEME_CATALOG.map((theme) => {
+              const owned = prefs.unlockedThemeIds.includes(theme.id);
+              const selected = owned && prefs.selectedThemeId === theme.id;
+              return (
+                <Pressable
+                  key={theme.id}
+                  accessibilityRole="radio"
+                  accessibilityLabel={
+                    owned
+                      ? theme.name
+                      : `${theme.name}, locked until level ${theme.unlockLevel}`
+                  }
+                  accessibilityState={{ selected, disabled: !owned }}
+                  disabled={!owned || !isHydrated}
+                  onPress={() => selectTheme(theme.id)}
+                  style={({ pressed }) => [
+                    styles.themeTile,
+                    selected && styles.themeTileSelected,
+                    !owned && styles.themeTileLocked,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <View
+                    style={[styles.swatch, { backgroundColor: theme.swatch }]}
                   >
-                    {selected ? "In use" : owned ? "Tap to use" : `LV ${theme.unlockLevel}`}
-                  </Text>
-                </View>
-              </Pressable>
-            );
-          })}
-        </View>
-      </SettingsSection>
+                    {selected ? <Text style={styles.check}>✓</Text> : null}
+                  </View>
+                  <View style={styles.themeText}>
+                    <Text style={styles.themeName} numberOfLines={1}>
+                      {theme.name}
+                    </Text>
+                    <Text
+                      style={[styles.themeMeta, selected && styles.themeMetaOn]}
+                      numberOfLines={1}
+                    >
+                      {selected
+                        ? "In use"
+                        : owned
+                          ? "Tap to use"
+                          : `LV ${theme.unlockLevel}`}
+                    </Text>
+                  </View>
+                </Pressable>
+              );
+            })}
+          </View>
+        </SettingsSection>
+      ) : null}
 
       <SettingsSection
         title="units"
