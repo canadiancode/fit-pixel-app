@@ -50,7 +50,13 @@ function sleepPartsFromHours(hours: number): { h: number; m: number } {
   };
 }
 
-type ActionMetricRoute = "weight" | "steps" | "calories" | "sleep" | "water";
+type ActionMetricRoute =
+  | "heart"
+  | "weight"
+  | "steps"
+  | "calories"
+  | "sleep"
+  | "water";
 
 function pushActionRoute(id: ActionMetricRoute) {
   // Back on the action screen pops the Actions stack to its list, so prior
@@ -88,7 +94,12 @@ export function PixelDashboardMetrics() {
   return (
     <View style={styles.root}>
       <View style={styles.row}>
-        <View style={styles.metricTileWrapper}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Resting heart rate"
+          style={styles.metricTileWrapper}
+          onPress={() => pushActionRoute("heart")}
+        >
           <FloatingShellSurface
             gutterColor={APP_SHELL_SECONDARY_BACKGROUND}
             tileSource={require("@/assets/backgrounds/red-rect-card.png")}
@@ -135,7 +146,7 @@ export function PixelDashboardMetrics() {
               contentFit="contain"
             />
           </View>
-        </View>
+        </Pressable>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Weight"

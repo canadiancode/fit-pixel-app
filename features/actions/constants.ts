@@ -149,6 +149,13 @@ export const FOOD_ADD_ACTION_BUTTON_BACKGROUND = WATER_ADD_WATER_BUTTON_BACKGROU
 export const FOOD_CUSTOM_MEAL_BUTTON_BACKGROUND = FOOD_ADD_ACTION_BUTTON_BACKGROUND;
 export const FOOD_BARCODE_SCANNER_BUTTON_BACKGROUND = FOOD_ADD_ACTION_BUTTON_BACKGROUND;
 
+/** Heart detail: read-only resting HR synced from Apple Health / Health Connect. */
+export const HEART_ACTION_CARD_ICON = require("@/assets/icons/heart.png");
+/** Same red as the food row; heart has no progress bar of its own. */
+export const HEART_ACCENT_COLOR = "#FF5C5C";
+/** Y-axis tick step (BPM) for the weekly resting HR chart. */
+export const HEART_WEEKLY_CHART_INCREMENT = 20;
+
 export const ACTION_CARD_GEAR_ICON = require("@/assets/icons/alt-gear.png");
 export const ACTION_CARD_PLUS_ICON = require("@/assets/icons/plus-alt.png");
 
