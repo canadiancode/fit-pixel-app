@@ -1,25 +1,8 @@
-import {
-  useCallback,
-  useMemo,
-  useRef,
-  type ReactNode,
-  type RefObject,
-} from "react";
-import {
-  StyleSheet,
-  type StyleProp,
-  type View,
-  type ViewStyle,
-} from "react-native";
-import Animated, {
-  Easing,
-  useAnimatedStyle,
-  useReducedMotion,
-  useSharedValue,
-  withSequence,
-  withTiming,
-  type SharedValue,
-} from "react-native-reanimated";
+import { useCallback, useMemo, type ReactNode } from "react";
+import { type StyleProp, type ViewStyle } from "react-native";
+import { useReducedMotion } from "react-native-reanimated";
+
+import { PopFlashView, usePopFlash, type PopFlash } from "@/components/pop-flash";
 
 import type { ActionRouteId } from "../data";
 import {
@@ -28,47 +11,34 @@ import {
   playProgressAddHaptic,
 } from "../progress-celebration";
 
-export type ProgressAddFeedback = {
-  ref: RefObject<View | null>;
-  scale: SharedValue<number>;
-  flash: SharedValue<number>;
+export type ProgressAddFeedback = Omit<PopFlash, "play"> & {
   /** Call after the add succeeded: haptic, pop + flash, and the flying token. */
   celebrate: (input: { route: ActionRouteId; label: string }) => void;
 };
 
 /** Feedback for a button that adds to today's progress. Pair with `ProgressAddFeedbackView`. */
 export function useProgressAddFeedback(): ProgressAddFeedback {
-  const ref = useRef<View>(null);
-  const scale = useSharedValue(1);
-  const flash = useSharedValue(0);
+  const popFlash = usePopFlash();
   const reduceMotion = useReducedMotion();
+  const { ref, scale, flash, play } = popFlash;
 
   const celebrate = useCallback(
     ({ route, label }: { route: ActionRouteId; label: string }) => {
       playProgressAddHaptic();
-      flash.value = withSequence(
-        withTiming(0.8, { duration: 60 }),
-        withTiming(0, { duration: 240 }),
-      );
+      play();
       if (reduceMotion) return;
-      // Stepped easing keeps the squash-and-pop chunky, like sprite frames.
-      scale.value = withSequence(
-        withTiming(0.9, { duration: 70, easing: Easing.steps(2) }),
-        withTiming(1.07, { duration: 110, easing: Easing.steps(2) }),
-        withTiming(1, { duration: 120, easing: Easing.steps(2) }),
-      );
       const view = ref.current;
       if (view == null) return;
       void measureInWindowAsync(view).then((from) => {
         if (from != null) void launchProgressToken({ route, label, from });
       });
     },
-    [flash, scale, reduceMotion],
+    [play, ref, reduceMotion],
   );
 
   return useMemo(
     () => ({ ref, scale, flash, celebrate }),
-    [scale, flash, celebrate],
+    [ref, scale, flash, celebrate],
   );
 }
 
@@ -84,26 +54,9 @@ export function ProgressAddFeedbackView({
   flashRadius?: number;
   children: ReactNode;
 }) {
-  const { ref, scale, flash } = feedback;
-  const popStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-  const flashStyle = useAnimatedStyle(() => ({ opacity: flash.value }));
-
   return (
-    <Animated.View ref={ref} style={[style, popStyle]}>
+    <PopFlashView popFlash={feedback} style={style} flashRadius={flashRadius}>
       {children}
-      <Animated.View
-        pointerEvents="none"
-        style={[styles.flash, { borderRadius: flashRadius }, flashStyle]}
-      />
-    </Animated.View>
+    </PopFlashView>
   );
 }
-
-const styles = StyleSheet.create({
-  flash: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "#FFFFFF",
-  },
-});

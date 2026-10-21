@@ -17,7 +17,7 @@ const LAYER_ORDER = (
   Object.keys(PIXEL_LAYER_Z_INDEX) as PixelLayerId[]
 ).sort((a, b) => PIXEL_LAYER_Z_INDEX[a] - PIXEL_LAYER_Z_INDEX[b]);
 
-function resolveLayers(loadout: PixelLoadout): PixelLayerSpec[] {
+export function resolveLayers(loadout: PixelLoadout): PixelLayerSpec[] {
   const layers: PixelLayerSpec[] = [];
   for (const id of LAYER_ORDER) {
     const itemId = loadout[id];

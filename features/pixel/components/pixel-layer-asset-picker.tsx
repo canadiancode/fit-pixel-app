@@ -1,5 +1,7 @@
+import * as Haptics from "expo-haptics";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 
+import { PopFlashView, usePopFlash } from "@/components/pop-flash";
 import { ThemedText } from "@/components/themed-text";
 import {
   APP_SHELL_INPUT_BOARDER_COLOR,
@@ -9,7 +11,7 @@ import { FONT_FAMILY } from "@/constants/fonts";
 
 import { getOwnedItemsForLayer } from "../layer-assets";
 import { PixelItemThumb } from "./pixel-item-thumb";
-import type { PixelItemId, PixelLayerId } from "../types";
+import type { PixelItem, PixelItemId, PixelLayerId } from "../types";
 
 const THUMB_SIZE = 72;
 const LABEL_FONT_SIZE = 12;
@@ -46,45 +48,68 @@ export function PixelLayerAssetPicker({
           const showBottomBorder = index < options.length - 1;
 
           return (
-            <View
+            <PixelLayerAssetRow
               key={option.id}
-              style={[styles.cell, showBottomBorder && styles.cellBorderBottom]}
-            >
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`${option.label}${isSelected ? ", selected" : ""}`}
-                accessibilityState={{ selected: isSelected }}
-                onPress={() => onSelectItem(option.id)}
-                style={({ pressed }) => [
-                  styles.hit,
-                  pressed && styles.hitPressed,
-                ]}
-              >
-                <View style={styles.row}>
-                  <View
-                    style={[
-                      styles.thumbShell,
-                      isSelected && styles.thumbSelected,
-                    ]}
-                  >
-                    <PixelItemThumb item={option} size={THUMB_SIZE - 4} />
-                  </View>
-                  <View style={styles.textColumn}>
-                    <ThemedText
-                      lightColor={APP_SHELL_MAIN_TEXT_COLOR}
-                      darkColor={APP_SHELL_MAIN_TEXT_COLOR}
-                      style={styles.label}
-                    >
-                      {option.label}
-                    </ThemedText>
-                  </View>
-                </View>
-              </Pressable>
-            </View>
+              option={option}
+              isSelected={isSelected}
+              showBottomBorder={showBottomBorder}
+              onSelect={() => onSelectItem(option.id)}
+            />
           );
         })}
       </View>
     </ScrollView>
+  );
+}
+
+function PixelLayerAssetRow({
+  option,
+  isSelected,
+  showBottomBorder,
+  onSelect,
+}: {
+  option: PixelItem;
+  isSelected: boolean;
+  showBottomBorder: boolean;
+  onSelect: () => void;
+}) {
+  const popFlash = usePopFlash();
+
+  return (
+    <View style={[styles.cell, showBottomBorder && styles.cellBorderBottom]}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`${option.label}${isSelected ? ", selected" : ""}`}
+        accessibilityState={{ selected: isSelected }}
+        onPress={() => {
+          if (!isSelected) {
+            void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            popFlash.play();
+          }
+          onSelect();
+        }}
+        style={({ pressed }) => [styles.hit, pressed && styles.hitPressed]}
+      >
+        <View style={styles.row}>
+          <PopFlashView
+            popFlash={popFlash}
+            flashRadius={10}
+            style={[styles.thumbShell, isSelected && styles.thumbSelected]}
+          >
+            <PixelItemThumb item={option} size={THUMB_SIZE - 4} />
+          </PopFlashView>
+          <View style={styles.textColumn}>
+            <ThemedText
+              lightColor={APP_SHELL_MAIN_TEXT_COLOR}
+              darkColor={APP_SHELL_MAIN_TEXT_COLOR}
+              style={styles.label}
+            >
+              {option.label}
+            </ThemedText>
+          </View>
+        </View>
+      </Pressable>
+    </View>
   );
 }
 

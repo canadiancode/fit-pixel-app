@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { ThemedView } from "@/components/themed-view";
 import { APP_SHELL_SECONDARY_BACKGROUND } from "@/constants/app-colors";
 import { TAB_SCREEN_ROOT_ABOVE_TAB_BAR } from "@/constants/app-shell";
-import { PixelCharacter } from "@/features/pixel/components/pixel-character";
+import { AnimatedPixelCharacter } from "@/features/pixel/components/animated-pixel-character";
 import { usePixelLoadout } from "@/features/pixel/pixel-loadout-context";
 
 export const unstable_settings = {
@@ -38,7 +38,10 @@ function PixelTabChrome() {
           onPress={() => router.push("/(tabs)/pixel/customize")}
           style={styles.heroShell}
         >
-          <PixelCharacter loadout={loadout} style={styles.heroCharacter} />
+          <AnimatedPixelCharacter
+            loadout={loadout}
+            style={styles.heroCharacter}
+          />
         </Pressable>
       </View>
       <View style={styles.lowerSection}>
