@@ -16,6 +16,7 @@ import {
   journeyTitle,
   nextMilestoneLine,
 } from "@/features/actions/weight/weight-copy";
+import { clampActionBarPercent } from "@/lib/action-bar-progress";
 
 import { WEIGHT_ACTION_CARD_ICON } from "../constants";
 import {
@@ -83,7 +84,7 @@ export function WeightSummaryCard() {
           <View>
             <ActionProgressBar
               sources={getActionRowBarSources(weightRow)}
-              fillPercent={(journey?.progress ?? 0) * 100}
+              fillPercent={clampActionBarPercent((journey?.progress ?? 0) * 100)}
               pulse={pulse}
             />
             {journey?.milestones
@@ -94,7 +95,9 @@ export function WeightSummaryCard() {
                   pointerEvents="none"
                   style={[
                     styles.tick,
-                    { left: `${milestone.position * 100}%` },
+                    // Same mapping as the fill so a tick meets the end-cap
+                    // exactly when its milestone is reached.
+                    { left: `${clampActionBarPercent(milestone.position * 100)}%` },
                     milestone.reached && styles.tickReached,
                   ]}
                 />
