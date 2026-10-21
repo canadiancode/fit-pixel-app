@@ -31,13 +31,13 @@ export const SETTINGS_ROWS = [
     id: "notifications",
     group: "app",
     label: "Notifications",
-    caption: "Messages, friends and reminders",
+    caption: "Messages and friend requests",
   },
   {
     id: "preferences",
     group: "app",
     label: "Preferences",
-    caption: "Theme, units and when your day starts",
+    caption: "Units and when your day starts",
   },
   {
     id: "blocked",
