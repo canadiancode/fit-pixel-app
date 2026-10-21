@@ -204,7 +204,7 @@ function MessageRow({
                 onPress={() => openProfile(message.senderId)}
                 style={styles.avatarFrame}
               >
-                <PixelHeadAvatar equipped={senderLook} size={AVATAR_SIZE - 4} />
+                <PixelHeadAvatar equipped={senderLook} size={AVATAR_SIZE} />
               </Pressable>
             ) : null}
           </View>
@@ -373,16 +373,12 @@ const styles = StyleSheet.create({
   avatarSlot: {
     width: AVATAR_GUTTER,
   },
+  /** Tap target only: the circular avatar sits on the chat background. */
   avatarFrame: {
     width: AVATAR_SIZE,
     height: AVATAR_SIZE,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: CHAT_CARD_RIM,
-    backgroundColor: CHAT_CARD_FILL,
     alignItems: "center",
     justifyContent: "center",
-    overflow: "hidden",
   },
   peerColumn: {
     flexShrink: 1,
