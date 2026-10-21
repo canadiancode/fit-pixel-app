@@ -74,19 +74,22 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     if (!userId) return;
     const client = getSupabaseClient();
     if (!client) return;
-    const channel = client.channel(`notifications:${userId}`).on(
-      "postgres_changes",
-      {
-        event: "*",
-        schema: "public",
-        table: "notifications",
-        filter: `user_id=eq.${userId}`,
-      },
-      () => {
-        setChangeKey((key) => key + 1);
-        void refresh();
-      },
-    );
+    // Private: only this user may join (server 20261026000000_realtime_channel_auth.sql).
+    const channel = client
+      .channel(`notifications:${userId}`, { config: { private: true } })
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "notifications",
+          filter: `user_id=eq.${userId}`,
+        },
+        () => {
+          setChangeKey((key) => key + 1);
+          void refresh();
+        },
+      );
     void channel.subscribe();
     return () => {
       void client.removeChannel(channel);
