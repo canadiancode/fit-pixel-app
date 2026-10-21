@@ -51,8 +51,10 @@ export function useConversationRealtime({
     const client = getSupabaseClient();
     if (!client) return;
 
+    // Private: Realtime only lets conversation members join (see the server's
+    // 20261026000000_realtime_channel_auth.sql).
     const channel = client.channel(`conversation:${conversationId}`, {
-      config: { presence: { key: userId } },
+      config: { private: true, presence: { key: userId } },
     });
 
     channel.on(
