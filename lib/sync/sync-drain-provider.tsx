@@ -11,6 +11,9 @@ import { drainPendingServerOps } from "@/lib/sync/drain";
 
 const DEBOUNCE_MS = 800;
 const POLL_MS = 20_000;
+/** After a failed POST: 5 s, 10 s, 20 s … capped at 5 min. */
+const BACKOFF_BASE_MS = 5_000;
+const BACKOFF_MAX_MS = 5 * 60_000;
 
 export function SyncDrainProvider({ children }: { children: ReactNode }) {
   const db = useSQLiteContext();
@@ -19,8 +22,34 @@ export function SyncDrainProvider({ children }: { children: ReactNode }) {
   const token = session?.access_token ?? null;
 
   useEffect(() => {
+    let inFlight = false;
+    let failures = 0;
+    let retryAt = 0;
+
+    // A failed drain marks its ops failed, which fires the enqueue listener;
+    // without the backoff gate that re-sent the batch every ~800 ms while
+    // offline or rate limited.
     const run = () => {
-      void drainPendingServerOps(db, token);
+      if (inFlight || Date.now() < retryAt) return;
+      inFlight = true;
+      void drainPendingServerOps(db, token)
+        .then((outcome) => {
+          if (outcome === "failed") {
+            failures += 1;
+            retryAt =
+              Date.now() +
+              Math.min(BACKOFF_MAX_MS, BACKOFF_BASE_MS * 2 ** (failures - 1));
+          } else {
+            failures = 0;
+            retryAt = 0;
+          }
+        })
+        .catch(() => {
+          // Local DB error: next poll retries.
+        })
+        .finally(() => {
+          inFlight = false;
+        });
     };
 
     const schedule = () => {
@@ -44,6 +73,8 @@ export function SyncDrainProvider({ children }: { children: ReactNode }) {
     run();
     const appSub = AppState.addEventListener("change", (state) => {
       if (state === "active") {
+        // Back in the foreground the network may be back: retry now.
+        retryAt = 0;
         syncTimeZone();
         schedule();
       }

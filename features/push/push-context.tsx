@@ -95,6 +95,9 @@ export function PushProvider({ children }: { children: ReactNode }) {
   const [canAskAgain, setCanAskAgain] = useState(true);
   const [optOut, setOptOut] = useState<boolean | null>(null);
   const registeredFor = useRef<string | null>(null);
+  /** Device token last registered; the OS re-emits it on every fetch. */
+  const lastDeviceToken = useRef<string | null>(null);
+  const registering = useRef(false);
   const asking = useRef(false);
 
   const pathname = usePathname();
@@ -121,16 +124,24 @@ export function PushProvider({ children }: { children: ReactNode }) {
 
   const enabled = permission === "granted" && optOut === false;
 
-  const register = useCallback(async (token?: string) => {
-    const accessToken = accessTokenRef.current;
-    if (!accessToken) return;
-    try {
-      await registerDeviceForPush(accessToken, token);
-    } catch {
-      // Older API / offline / simulator without APNs: retried next launch.
-      registeredFor.current = null;
-    }
-  }, []);
+  const register = useCallback(
+    async (rotated?: Notifications.DevicePushToken) => {
+      const accessToken = accessTokenRef.current;
+      if (!accessToken || registering.current) return;
+      registering.current = true;
+      try {
+        const device = rotated ?? (await Notifications.getDevicePushTokenAsync());
+        lastDeviceToken.current = String(device.data);
+        await registerDeviceForPush(accessToken, device);
+      } catch {
+        // Older API / offline / simulator without APNs: retried next launch.
+        registeredFor.current = null;
+      } finally {
+        registering.current = false;
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!enabled || !userId || registeredFor.current === userId) return;
@@ -140,8 +151,13 @@ export function PushProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!enabled) return;
-    // APNs / FCM rotated the device token: re-register the new Expo token.
-    const sub = Notifications.addPushTokenListener(() => void register());
+    // Fetching the device token re-emits it here, so only a token that
+    // actually changed (APNs / FCM rotation) is worth re-registering;
+    // reacting to every event re-registered in a tight loop.
+    const sub = Notifications.addPushTokenListener((device) => {
+      if (String(device.data) === lastDeviceToken.current) return;
+      void register(device);
+    });
     return () => sub.remove();
   }, [enabled, register]);
 
