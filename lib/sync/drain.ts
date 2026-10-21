@@ -47,6 +47,9 @@ function drainErrorMessage(err: unknown): string {
   return "Could not reach Fit Pixel API.";
 }
 
+/** `failed`: the POST did not complete; the caller should back off. */
+export type DrainOutcome = "idle" | "sent" | "failed";
+
 /**
  * Drain pending/failed outbox rows to POST /v1/sync.
  * No-ops without a user JWT.
@@ -54,12 +57,12 @@ function drainErrorMessage(err: unknown): string {
 export async function drainPendingServerOps(
   db: SQLiteDatabase,
   accessToken: string | null | undefined,
-): Promise<void> {
+): Promise<DrainOutcome> {
   const token = accessToken?.trim() ?? "";
-  if (!token) return;
+  if (!token) return "idle";
 
   const rows = await listDrainableOps(db, 50);
-  if (rows.length === 0) return;
+  if (rows.length === 0) return "idle";
 
   const ops: SyncOpWire[] = [];
   const skippedInvalid: string[] = [];
@@ -83,16 +86,18 @@ export async function drainPendingServerOps(
     }
   }
 
-  if (ops.length === 0) return;
+  if (ops.length === 0) return "idle";
 
   try {
     const response = await postSyncOps(token, ops);
     const acks = Array.isArray(response.acks) ? response.acks : [];
     const byId = new Map(acks.map((ack) => [ack.id, ack]));
+    let missingAck = false;
 
     for (const op of ops) {
       const ack = byId.get(op.id);
       if (ack == null) {
+        missingAck = true;
         await markOpFailed(db, op.id);
         continue;
       }
@@ -106,6 +111,8 @@ export async function drainPendingServerOps(
       });
     }
     setLastDrainError(null);
+    // An op the server skipped would otherwise be resent right away.
+    return missingAck ? "failed" : "sent";
   } catch (err) {
     setLastDrainError(drainErrorMessage(err));
     for (const op of ops) {
@@ -115,5 +122,6 @@ export async function drainPendingServerOps(
         // Already terminal.
       }
     }
+    return "failed";
   }
 }
