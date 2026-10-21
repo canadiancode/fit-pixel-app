@@ -72,20 +72,23 @@ function pushPlatform(): "ios" | "android" | null {
 }
 
 /**
- * Fetch this device's Expo push token and register it for the signed-in user.
- * Caller must already hold notification permission.
+ * Register this device's Expo push token for the signed-in user. Pass the
+ * APNs / FCM token you already hold: fetching it again makes the OS re-emit
+ * it to push token listeners. Caller must already hold notification permission.
  */
 export async function registerDeviceForPush(
   accessToken: string,
-  token?: string,
+  devicePushToken: Notifications.DevicePushToken,
 ): Promise<string | null> {
   const platform = pushPlatform();
   if (!platform) return null;
   await ensureAndroidChannel();
-  const expoToken =
-    token ??
-    (await Notifications.getExpoPushTokenAsync({ projectId: easProjectId() }))
-      .data;
+  const expoToken = (
+    await Notifications.getExpoPushTokenAsync({
+      projectId: easProjectId(),
+      devicePushToken,
+    })
+  ).data;
   await registerPushToken(accessToken, expoToken, platform);
   await writeKey(TOKEN_KEY, expoToken);
   return expoToken;
