@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from "react-native";
 import { APP_SHELL_MAIN_TEXT_COLOR } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
 
-import type { ActionRouteId } from "../data";
+import { getActionRowAccentColor, type ActionRouteId } from "../data";
 import { useActionProgress } from "../use-action-progress";
 
 type Props = {
@@ -23,6 +23,23 @@ export function ActionRowProgressLabel({ actionId }: Props) {
       >
         <Text style={[styles.current, { color: accentColor }]}>{current}</Text>
         <Text style={styles.rest}>{rest}</Text>
+      </Text>
+    </View>
+  );
+}
+
+/** Single-colour label for the weight journey row. */
+export function WeightRowProgressLabel({ label }: { label: string }) {
+  return (
+    <View style={styles.row}>
+      <Text
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.75}
+        ellipsizeMode="tail"
+        style={[styles.current, { color: getActionRowAccentColor("weight") }]}
+      >
+        {label}
       </Text>
     </View>
   );

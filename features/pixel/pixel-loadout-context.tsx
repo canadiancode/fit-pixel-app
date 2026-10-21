@@ -49,6 +49,11 @@ type PixelLoadoutContextValue = {
    * SECURITY: local level/XP checks are honor-system until server re-validates.
    */
   unlockItem: (itemId: PixelItemId) => Promise<UnlockItemResult>;
+  /**
+   * Add an earned item (e.g. a weight milestone reward) to the inventory.
+   * Resolves false when it was already owned.
+   */
+  grantItem: (itemId: PixelItemId, reason: string) => Promise<boolean>;
 };
 
 const PixelLoadoutContext = createContext<PixelLoadoutContextValue | null>(
@@ -180,6 +185,33 @@ export function PixelLoadoutProvider({ children }: { children: ReactNode }) {
     [db, xp.level, xp.lifetimeXp],
   );
 
+  const grantItem = useCallback(
+    async (itemId: PixelItemId, reason: string): Promise<boolean> => {
+      if (getPixelItem(itemId) == null) return false;
+      if (inventoryRef.current.includes(itemId)) return false;
+      inventoryRef.current = [...inventoryRef.current, itemId];
+      setInventory((current) =>
+        current.includes(itemId) ? current : [...current, itemId],
+      );
+      const unlockedAt = nowIso();
+      // SECURITY: untrusted_client like level unlocks; server re-validates.
+      await enqueueOp(
+        db,
+        "inventory_unlock",
+        {
+          itemId,
+          reason,
+          clientLevel: xp.level,
+          clientLifetimeXp: xp.lifetimeXp,
+          unlockedAt,
+        },
+        { id: uuid(), clientClockAt: unlockedAt },
+      );
+      return true;
+    },
+    [db, xp.level, xp.lifetimeXp],
+  );
+
   // Shop offers are free: reaching an offer's level puts it straight into the
   // inventory, no "Unlock" tap. Runs after hydration and on every level change.
   // SECURITY: still honor-system until the server re-validates entitlement.
@@ -226,8 +258,9 @@ export function PixelLoadoutProvider({ children }: { children: ReactNode }) {
       ownsItem,
       selectItem,
       unlockItem,
+      grantItem,
     }),
-    [loadout, inventory, isHydrated, ownsItem, selectItem, unlockItem],
+    [loadout, inventory, isHydrated, ownsItem, selectItem, unlockItem, grantItem],
   );
 
   if (!isHydrated) {

@@ -71,7 +71,7 @@ export async function ensureXpSchema(db: SQLiteDatabase): Promise<void> {
       id TEXT PRIMARY KEY NOT NULL,
       amount INTEGER NOT NULL CHECK (amount > 0),
       reason TEXT NOT NULL CHECK (reason IN (
-        'habit_log', 'goal_met', 'day_complete'
+        'habit_log', 'goal_met', 'day_complete', 'weigh_in', 'weight_milestone'
       )),
       relatedEntityId TEXT,
       dayKey TEXT,
@@ -90,6 +90,36 @@ export async function ensureXpSchema(db: SQLiteDatabase): Promise<void> {
   await db.runAsync(
     `INSERT OR IGNORE INTO xp_state (id, lifetimeXp, level, updatedAt)
      VALUES (1, 0, 0, ?)`,
+    nowIso(),
+  );
+}
+
+/**
+ * Idempotent weight journey schema (v13): long-term weight settings singleton
+ * plus once-only award keys for weekly weigh-ins and milestones. Local only.
+ */
+export async function ensureWeightJourneySchema(db: SQLiteDatabase): Promise<void> {
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS weight_journey (
+      id INTEGER PRIMARY KEY NOT NULL CHECK (id = 1),
+      startWeight REAL,
+      startUnit TEXT CHECK (startUnit IN ('lb', 'kg')),
+      startDayKey TEXT,
+      weighInWeekday INTEGER NOT NULL DEFAULT 1 CHECK (weighInWeekday BETWEEN 0 AND 6),
+      reminderEnabled INTEGER NOT NULL DEFAULT 1,
+      reminderNotificationId TEXT,
+      hideNumbers INTEGER NOT NULL DEFAULT 0,
+      lastHealthSyncAt TEXT,
+      updatedAt TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS weight_xp_awards (
+      awardKey TEXT PRIMARY KEY NOT NULL,
+      xpEventId TEXT NOT NULL,
+      createdAt TEXT NOT NULL
+    );
+  `);
+  await db.runAsync(
+    `INSERT OR IGNORE INTO weight_journey (id, updatedAt) VALUES (1, ?)`,
     nowIso(),
   );
 }
@@ -352,6 +382,31 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase): Promise<void> {
     currentVersion = 12;
   }
 
+  if (currentVersion === 12) {
+    // SQLite can't alter a CHECK: rebuild xp_events to allow the weight reasons.
+    await ensureXpSchema(db);
+    await db.execAsync(`
+      CREATE TABLE xp_events_v13 (
+        id TEXT PRIMARY KEY NOT NULL,
+        amount INTEGER NOT NULL CHECK (amount > 0),
+        reason TEXT NOT NULL CHECK (reason IN (
+          'habit_log', 'goal_met', 'day_complete', 'weigh_in', 'weight_milestone'
+        )),
+        relatedEntityId TEXT,
+        dayKey TEXT,
+        createdAt TEXT NOT NULL
+      );
+      INSERT INTO xp_events_v13 (id, amount, reason, relatedEntityId, dayKey, createdAt)
+      SELECT id, amount, reason, relatedEntityId, dayKey, createdAt FROM xp_events;
+      DROP TABLE xp_events;
+      ALTER TABLE xp_events_v13 RENAME TO xp_events;
+      CREATE INDEX IF NOT EXISTS idx_xp_events_created
+        ON xp_events (createdAt);
+    `);
+    await ensureWeightJourneySchema(db);
+    currentVersion = 13;
+  }
+
   // Always repair derived/XP/saved/prefs tables — Fast Refresh can skip onInit while
   // stamping user_version ahead of CREATE TABLE.
   await ensureDailySummarySchema(db);
@@ -360,6 +415,7 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase): Promise<void> {
   await ensurePrefsProfileSchema(db);
   await ensureAuthLocalSchema(db);
   await ensureRestoreStateSchema(db);
+  await ensureWeightJourneySchema(db);
 
   await db.execAsync(`PRAGMA user_version = ${DATABASE_VERSION}`);
 }

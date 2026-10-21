@@ -387,7 +387,9 @@ export async function insertHabitLog<T extends HabitLogType>(
   const timestamp = assertIsoTimestamp(input.timestamp ?? nowIso());
   const payload = normalizePayload(type, input.payload);
 
-  const { id, createdAt } = newLocalRecord();
+  const record = newLocalRecord();
+  const id = input.id ?? record.id;
+  const { createdAt } = record;
   const boundary = await getDayBoundary(db);
   const dayKey = getAppDayKey(new Date(timestamp), boundary);
 
@@ -427,12 +429,14 @@ export async function insertHabitLog<T extends HabitLogType>(
   await invalidateDailySummary(db, dayKey);
 
   // Local XP prototype — not enqueued; server will recompute from habit facts.
-  await awardXp(db, {
-    amount: XP_PER_HABIT_LOG,
-    reason: "habit_log",
-    relatedEntityId: log.id,
-    dayKey: log.dayKey,
-  });
+  if (input.skipXp !== true) {
+    await awardXp(db, {
+      amount: XP_PER_HABIT_LOG,
+      reason: "habit_log",
+      relatedEntityId: log.id,
+      dayKey: log.dayKey,
+    });
+  }
 
   return log;
 }
@@ -524,6 +528,8 @@ export async function logWeight(
     timestamp?: string;
     source?: HabitLogSource;
     notes?: string | null;
+    id?: string;
+    skipXp?: boolean;
   },
 ): Promise<HabitLog<"weight">> {
   return insertHabitLog(db, {
@@ -532,6 +538,8 @@ export async function logWeight(
     timestamp: input.timestamp,
     source: input.source,
     notes: input.notes,
+    id: input.id,
+    skipXp: input.skipXp,
   });
 }
 

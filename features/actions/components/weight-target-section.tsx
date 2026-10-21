@@ -1,11 +1,14 @@
 import { Image } from "expo-image";
 import { useCallback } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import { APP_SHELL_MAIN_TEXT_COLOR } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
 import { useDailyGoals } from "@/features/actions/daily-goals-context";
+import { useWeightFormat } from "@/features/actions/weight/use-weight-format";
+import { targetCaption } from "@/features/actions/weight/weight-copy";
+import { useWeightJourney } from "@/features/actions/weight/weight-journey-context";
 import { useHoldToRepeat } from "@/hooks/use-hold-to-repeat";
 import { weightGoalLimits } from "@/lib/db";
 
@@ -22,6 +25,22 @@ const TARGET_STEP = 1;
 export function WeightTargetSection() {
   const accentColor = getActionRowAccentColor("weight");
   const { goals, updateGoals } = useDailyGoals();
+  const { journey, entries, restartJourney } = useWeightJourney();
+  const { format } = useWeightFormat();
+  const latest = entries.at(-1)?.value;
+  const canRestart =
+    latest != null && journey != null && latest !== journey.start;
+
+  const confirmRestart = () => {
+    Alert.alert(
+      "Start a new journey?",
+      `Your journey will start again from ${format(latest)}. Milestones you've already earned stay unlocked.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Start new journey", onPress: () => void restartJourney() },
+      ],
+    );
+  };
   const targetWeight = goals.weightGoal;
   const unit = goals.weightUnit;
   const { min: targetMin, max: targetMax } = weightGoalLimits(unit);
@@ -139,6 +158,19 @@ export function WeightTargetSection() {
               />
             </Pressable>
           </View>
+          <Text style={styles.caption}>
+            {targetCaption(journey?.direction ?? null)}
+          </Text>
+          {canRestart ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Start a new journey from your latest weight"
+              onPress={confirmRestart}
+              style={({ pressed }) => [styles.restart, pressed && styles.stepperPressed]}
+            >
+              <Text style={styles.restartLabel}>Start a new journey</Text>
+            </Pressable>
+          ) : null}
         </View>
       </View>
     </View>
@@ -206,6 +238,26 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILY,
     fontSize: 27.5,
     lineHeight: 35,
+  },
+  caption: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 9,
+    lineHeight: 13,
+    textAlign: "center",
+    color: APP_SHELL_MAIN_TEXT_COLOR,
+    opacity: 0.75,
+  },
+  restart: {
+    alignSelf: "center",
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+  },
+  restartLabel: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 9,
+    lineHeight: 12,
+    color: APP_SHELL_MAIN_TEXT_COLOR,
+    textDecorationLine: "underline",
   },
   valueSuffix: {
     fontFamily: FONT_FAMILY,

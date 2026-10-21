@@ -1,33 +1,58 @@
 import { Image } from "expo-image";
+import { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 import { ActionProgressBar } from "@/components/action-progress-bar";
 import { ThemedText } from "@/components/themed-text";
-import { APP_SHELL_MAIN_TEXT_COLOR } from "@/constants/app-colors";
+import {
+  APP_SHELL_LABEL_COLOR,
+  APP_SHELL_MAIN_TEXT_COLOR,
+} from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
+import { useWeightFormat } from "@/features/actions/weight/use-weight-format";
+import { useWeightJourney } from "@/features/actions/weight/weight-journey-context";
+import {
+  journeyHeadline,
+  journeyTitle,
+  nextMilestoneLine,
+} from "@/features/actions/weight/weight-copy";
 
 import { WEIGHT_ACTION_CARD_ICON } from "../constants";
-import { getActionRow, getActionRowBarSources } from "../data";
-import { useActionProgress } from "../use-action-progress";
+import {
+  getActionRow,
+  getActionRowAccentColor,
+  getActionRowBarSources,
+} from "../data";
 
-const WEIGHT_CARD_TITLE = "Current weight";
+const GOLD = "#FFD23F";
 
+/**
+ * Long-term weight progress: a start → target bar with milestone ticks that
+ * fills over weeks, plus the next milestone and its reward. Flashes gold when
+ * a weigh-in reaches a milestone.
+ */
 export function WeightSummaryCard() {
   const weightRow = getActionRow("weight");
-  const {
-    current,
-    rest,
-    accentColor,
-    percent,
-    progressLabel,
-    barFillPercent,
-  } = useActionProgress("weight");
-  const progressPercentLabel = `${Math.round(percent)}%`;
+  const accentColor = getActionRowAccentColor("weight");
+  const { journey, celebration } = useWeightJourney();
+  const { format, hidden } = useWeightFormat();
+
+  const pulse = useMemo(
+    () =>
+      celebration == null
+        ? null
+        : { id: celebration.id, gold: celebration.kind !== "weigh_in" },
+    [celebration],
+  );
+
+  const title = journeyTitle(journey?.direction ?? null);
+  const headline = journeyHeadline(journey, format, hidden);
+  const nextLine = nextMilestoneLine(journey, format, hidden);
 
   return (
     <View
       accessible
-      accessibilityLabel={`${WEIGHT_CARD_TITLE}. ${progressLabel}. ${progressPercentLabel}`}
+      accessibilityLabel={`${title}. ${headline}. ${nextLine}`}
       style={styles.section}
     >
       <ThemedText
@@ -35,7 +60,7 @@ export function WeightSummaryCard() {
         darkColor={APP_SHELL_MAIN_TEXT_COLOR}
         style={styles.title}
       >
-        {WEIGHT_CARD_TITLE}
+        {title}
       </ThemedText>
       <View style={styles.bodyRow}>
         <Image
@@ -50,31 +75,58 @@ export function WeightSummaryCard() {
           <Text
             numberOfLines={1}
             adjustsFontSizeToFit
-            minimumFontScale={0.75}
-            ellipsizeMode="tail"
-            style={styles.valueText}
+            minimumFontScale={0.6}
+            style={[styles.headline, { color: accentColor }]}
           >
-            <Text style={[styles.valueCurrent, { color: accentColor }]}>
-              {current}
-            </Text>
-            <Text style={styles.valueRest}>{rest}</Text>
+            {headline}
           </Text>
-          <View style={styles.barRow}>
+          <View>
             <ActionProgressBar
               sources={getActionRowBarSources(weightRow)}
-              fillPercent={barFillPercent}
-              style={styles.progressBar}
+              fillPercent={(journey?.progress ?? 0) * 100}
+              pulse={pulse}
             />
-            <ThemedText
-              lightColor={APP_SHELL_MAIN_TEXT_COLOR}
-              darkColor={APP_SHELL_MAIN_TEXT_COLOR}
-              style={styles.barPercentLabel}
-            >
-              {progressPercentLabel}
-            </ThemedText>
+            {journey?.milestones
+              .filter((m) => !m.isGoal)
+              .map((milestone) => (
+                <View
+                  key={milestone.awardKey}
+                  pointerEvents="none"
+                  style={[
+                    styles.tick,
+                    { left: `${milestone.position * 100}%` },
+                    milestone.reached && styles.tickReached,
+                  ]}
+                />
+              ))}
           </View>
+          {journey != null ? (
+            <View style={styles.endpoints}>
+              <Endpoint label="Start" value={format(journey.start, { withUnit: false })} />
+              <Endpoint label="Now" value={format(journey.current, { withUnit: false })} />
+              <Endpoint label="Goal" value={format(journey.target, { withUnit: false })} />
+            </View>
+          ) : null}
         </View>
       </View>
+      <ThemedText
+        lightColor={APP_SHELL_LABEL_COLOR}
+        darkColor={APP_SHELL_LABEL_COLOR}
+        style={styles.nextLine}
+      >
+        {nextLine}
+      </ThemedText>
+    </View>
+  );
+}
+
+function Endpoint({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.endpoint}>
+      <Text style={styles.endpointLabel}>{label}</Text>
+      <Text numberOfLines={1} style={styles.endpointValue}>
+        {value}
+      </Text>
     </View>
   );
 }
@@ -108,34 +160,47 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
   },
-  barRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    alignSelf: "stretch",
+  headline: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 18,
+    lineHeight: 24,
   },
-  progressBar: {
-    flex: 1,
+  tick: {
+    position: "absolute",
+    top: 3,
+    bottom: 3,
+    width: 3,
+    marginLeft: -1.5,
+    backgroundColor: "rgba(255,255,255,0.55)",
+    zIndex: 5,
+  },
+  tickReached: {
+    backgroundColor: GOLD,
+  },
+  endpoints: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  endpoint: {
+    alignItems: "center",
     minWidth: 0,
   },
-  barPercentLabel: {
-    flexShrink: 0,
+  endpointLabel: {
     fontFamily: FONT_FAMILY,
-    fontSize: 12,
-    lineHeight: 16,
+    fontSize: 8,
+    lineHeight: 11,
+    color: APP_SHELL_LABEL_COLOR,
   },
-  valueText: {
+  endpointValue: {
     fontFamily: FONT_FAMILY,
-  },
-  valueCurrent: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 22,
-    lineHeight: 28,
-  },
-  valueRest: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 16,
-    lineHeight: 20,
+    fontSize: 11,
+    lineHeight: 14,
     color: APP_SHELL_MAIN_TEXT_COLOR,
+  },
+  nextLine: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 10,
+    lineHeight: 15,
+    textAlign: "center",
   },
 });

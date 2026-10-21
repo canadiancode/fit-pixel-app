@@ -13,6 +13,7 @@ import {
 } from "@/constants/app-colors";
 import { DailyGoalsProvider } from "@/features/actions/daily-goals-context";
 import { HabitProgressProvider } from "@/features/actions/habit-progress-context";
+import { WeightJourneyProvider } from "@/features/actions/weight/weight-journey-context";
 import { useAuth } from "@/features/auth/auth-context";
 import { PixelLoadoutProvider } from "@/features/pixel/pixel-loadout-context";
 import { PushProvider } from "@/features/push/push-context";
@@ -91,11 +92,13 @@ export default function TabLayout() {
           <DailyGoalsProvider>
             <HabitProgressProvider>
             <PixelLoadoutProvider>
+            <WeightJourneyProvider>
             <NotificationsProvider>
             <PushProvider>
               <AppTabs />
             </PushProvider>
             </NotificationsProvider>
+            </WeightJourneyProvider>
             </PixelLoadoutProvider>
             </HabitProgressProvider>
           </DailyGoalsProvider>

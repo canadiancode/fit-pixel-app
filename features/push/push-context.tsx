@@ -12,6 +12,7 @@ import {
 } from "react";
 import { Alert, AppState, Linking } from "react-native";
 
+import { WEIGH_IN_REMINDER_KIND } from "@/features/actions/weight/weigh-in-reminder";
 import { useAuth } from "@/features/auth/auth-context";
 import {
   canSoftAsk,
@@ -27,7 +28,11 @@ import { markNotificationsRead } from "@/lib/api/chat";
 /** Matches the server's push `data` (fit-pixel-server/src/services/expo-push.ts). */
 type PushData = {
   notificationId?: string;
-  kind?: "friend_request" | "friend_accepted" | "dm_message";
+  kind?:
+    | "friend_request"
+    | "friend_accepted"
+    | "dm_message"
+    | typeof WEIGH_IN_REMINDER_KIND;
   actorId?: string | null;
   conversationId?: string | null;
 };
@@ -165,6 +170,10 @@ export function PushProvider({ children }: { children: ReactNode }) {
       Notifications.clearLastNotificationResponse();
 
       const data = (response.notification.request.content.data ?? {}) as PushData;
+      if (data.kind === WEIGH_IN_REMINDER_KIND) {
+        router.push("/(tabs)/actions/weight");
+        return;
+      }
       if (data.kind === "dm_message" && data.conversationId) {
         // Opening the thread clears its notification server-side.
         router.push({

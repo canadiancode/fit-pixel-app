@@ -13,7 +13,10 @@ export type PixelShopOffer = {
 /**
  * Items not in the day-1 starter inventory.
  * Level 1: hair + most shoes / bottles / bags.
- * Level 2: Italy gym + premium shoe/bag.
+ * Level 2: Italy gym + premium shoe.
+ *
+ * Green Potion, Purple Bottle and the Gold Black King Bag are not sold here:
+ * they're weight-journey milestone rewards (see features/actions/weight).
  */
 export const PIXEL_SHOP_OFFERS: readonly PixelShopOffer[] = [
   // Hair (half of catalog; default bun stays free)
@@ -99,11 +102,6 @@ export const PIXEL_SHOP_OFFERS: readonly PixelShopOffer[] = [
     requiredLevel: 1,
   },
   {
-    itemId: "def-item-left-green-potion",
-    label: "Green Potion",
-    requiredLevel: 1,
-  },
-  {
     itemId: "def-item-left-green-thin-bottle",
     label: "Green Thin Bottle",
     requiredLevel: 1,
@@ -111,11 +109,6 @@ export const PIXEL_SHOP_OFFERS: readonly PixelShopOffer[] = [
   {
     itemId: "def-item-left-red-w-straw-bottle",
     label: "Red Straw Bottle",
-    requiredLevel: 1,
-  },
-  {
-    itemId: "def-item-left-think-purple-bottle",
-    label: "Purple Bottle",
     requiredLevel: 1,
   },
   {
@@ -147,11 +140,6 @@ export const PIXEL_SHOP_OFFERS: readonly PixelShopOffer[] = [
     requiredLevel: 1,
   },
   { itemId: "def-item-right-pink-bag", label: "Pink Bag", requiredLevel: 1 },
-  {
-    itemId: "def-item-right-gold-black-king-bag",
-    label: "Gold Black King Bag",
-    requiredLevel: 2,
-  },
 
   // Background — Italy semi-outdoor only
   {

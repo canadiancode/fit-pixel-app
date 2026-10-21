@@ -6,9 +6,10 @@ import {
   APP_SHELL_MAIN_TEXT_COLOR,
 } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
-import { useDailyGoals } from "@/features/actions/daily-goals-context";
 import { formatSleepDurationLabel } from "@/features/actions/data";
 import { useHabitProgress } from "@/features/actions/habit-progress-context";
+import { useWeightFormat } from "@/features/actions/weight/use-weight-format";
+import { useWeightJourney } from "@/features/actions/weight/weight-journey-context";
 
 const EM_DASH = "\u2014";
 
@@ -82,16 +83,20 @@ export function CaloriesManualConnectedSection() {
 }
 
 /** Latest logged weight; no connected (HealthKit) weight source yet. */
+/** Latest manual weigh-in vs. latest Apple Health reading (synced automatically). */
 export function WeightManualConnectedSection() {
-  const { manualTotals } = useHabitProgress();
-  const { goals } = useDailyGoals();
-  const unit = goals.weightUnit === "kg" ? "KG" : "LBS";
-  const weight = manualTotals.weight;
+  const { entries, latestHealthWeight } = useWeightJourney();
+  const { format } = useWeightFormat();
+  const latestManual = [...entries]
+    .reverse()
+    .find((entry) => entry.source === "manual")?.value;
 
   return (
     <ActionManualConnectedSection
-      manualValueLabel={weight == null ? EM_DASH : `${formatInt(weight)} ${unit}`}
-      connectedValueLabel={EM_DASH}
+      manualValueLabel={latestManual == null ? EM_DASH : format(latestManual)}
+      connectedValueLabel={
+        latestHealthWeight == null ? EM_DASH : format(latestHealthWeight)
+      }
     />
   );
 }

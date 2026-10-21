@@ -12,6 +12,7 @@ export {
   ensurePrefsProfileSchema,
   ensureAuthLocalSchema,
   ensureRestoreStateSchema,
+  ensureWeightJourneySchema,
 } from "./migrations";
 export {
   DAILY_GOAL_LIMITS,
@@ -211,9 +212,24 @@ export {
   XP_EVENT_REASONS,
   XP_PER_GOAL_MET,
   XP_PER_HABIT_LOG,
+  XP_WEIGH_IN_BASE,
+  XP_WEIGH_IN_STREAK_MAX_BONUS,
+  XP_WEIGH_IN_STREAK_STEP,
+  XP_WEIGHT_GOAL_REACHED,
+  XP_WEIGHT_MILESTONE,
   type AwardXpInput,
   type GoalBonusAwardResult,
   type XpEvent,
   type XpEventReason,
   type XpState,
 } from "./xp";
+export {
+  claimWeightXpAward,
+  getWeightJourney,
+  hasWeightXpAward,
+  listWeightEntries,
+  updateWeightJourney,
+  type WeightEntry,
+  type WeightJourney,
+  type WeightJourneyUpdate,
+} from "./weight-journey";

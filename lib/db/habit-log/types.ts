@@ -100,4 +100,11 @@ export type HabitLogInsertInput<T extends HabitLogType = HabitLogType> = {
   /** Defaults to `manual`. */
   source?: HabitLogSource;
   notes?: string | null;
+  /**
+   * Stable id for imported facts (e.g. the Apple Health sample UUID) so a
+   * re-import is a no-op. Defaults to a fresh UUID.
+   */
+  id?: string;
+  /** Imports skip the per-log XP so syncing history doesn't flood XP. */
+  skipXp?: boolean;
 };

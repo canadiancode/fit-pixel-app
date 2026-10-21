@@ -20,6 +20,8 @@ import {
   getXpBarFillPercent,
   getXpRemainingToNextLevel,
 } from "@/lib/xp-progress";
+import { HIDDEN_WEIGHT } from "@/features/actions/weight/use-weight-format";
+import { useWeightJourney } from "@/features/actions/weight/weight-journey-context";
 
 const CELL_HEADING_FONT_FAMILY = "PixeloidSans";
 
@@ -77,6 +79,8 @@ export function PixelDashboardMetrics() {
   const xpRemainingToNextLevel = getXpRemainingToNextLevel(lifetimeXp);
 
   const weightActive = isHydrated && totals.weight !== undefined;
+  const { settings: weightSettings } = useWeightJourney();
+  const weightHidden = weightActive && weightSettings.hideNumbers;
   const waterUnitLabel = goals.waterUnit === "ml" ? "ML" : "OZ";
   const weightUnitLabel = goals.weightUnit === "kg" ? "KG" : "LBS";
   const sleep = sleepPartsFromHours(totals.sleepHours ?? 0);
@@ -158,9 +162,11 @@ export function PixelDashboardMetrics() {
                   darkColor={APP_SHELL_MAIN_TEXT_COLOR}
                   style={styles.metricTileValue}
                 >
-                  {formatIntMetric(totals.weight ?? 0, weightActive)}
+                  {weightHidden
+                    ? HIDDEN_WEIGHT
+                    : formatIntMetric(totals.weight ?? 0, weightActive)}
                 </ThemedText>
-                {weightActive ? (
+                {weightActive && !weightHidden ? (
                   <ThemedText
                     lightColor={APP_SHELL_MAIN_TEXT_COLOR}
                     darkColor={APP_SHELL_MAIN_TEXT_COLOR}

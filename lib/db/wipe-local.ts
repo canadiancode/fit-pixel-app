@@ -20,6 +20,10 @@ export async function wipeLocalUserData(db: SQLiteDatabase): Promise<void> {
     DELETE FROM goal_bonus_awarded;
     DELETE FROM saved_meals;
     DELETE FROM restore_state;
+    DELETE FROM weight_xp_awards;
+    UPDATE weight_journey SET startWeight = NULL, startUnit = NULL,
+      startDayKey = NULL, reminderNotificationId = NULL, lastHealthSyncAt = NULL
+      WHERE id = 1;
   `);
 
   await db.runAsync(

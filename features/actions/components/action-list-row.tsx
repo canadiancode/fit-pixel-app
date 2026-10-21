@@ -5,6 +5,9 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { ActionProgressBar } from "@/components/action-progress-bar";
 import { ThemedText } from "@/components/themed-text";
 import { APP_SHELL_MAIN_TEXT_COLOR } from "@/constants/app-colors";
+import { useWeightFormat } from "@/features/actions/weight/use-weight-format";
+import { journeyHeadline } from "@/features/actions/weight/weight-copy";
+import { useWeightJourney } from "@/features/actions/weight/weight-journey-context";
 
 import {
   ACTION_CARD_GEAR_ICON,
@@ -13,16 +16,35 @@ import {
 } from "../constants";
 import { ACTION_ROWS, getActionRowBarSources } from "../data";
 import { useActionProgress } from "../use-action-progress";
-import { ActionRowProgressLabel } from "./action-row-progress-label";
+import {
+  ActionRowProgressLabel,
+  WeightRowProgressLabel,
+} from "./action-row-progress-label";
 
 type ActionRow = (typeof ACTION_ROWS)[number];
+
+/** Long-term row: journey headline + start → target fill, not a daily total. */
+function useWeightRowProgress() {
+  const { journey, weighIn } = useWeightJourney();
+  const { format, hidden } = useWeightFormat();
+  const headline = journeyHeadline(journey, format, hidden);
+  const weekly = weighIn.doneThisWeek ? "Weighed in" : "Weigh-in due";
+  return {
+    label: journey == null ? headline : `${headline} · ${weekly}`,
+    fillPercent: (journey?.progress ?? 0) * 100,
+  };
+}
 
 type Props = {
   row: ActionRow;
 };
 
 export function ActionListRow({ row }: Props) {
-  const { progressLabel, barFillPercent } = useActionProgress(row.id);
+  const daily = useActionProgress(row.id);
+  const weight = useWeightRowProgress();
+  const isWeight = row.id === "weight";
+  const progressLabel = isWeight ? weight.label : daily.progressLabel;
+  const barFillPercent = isWeight ? weight.fillPercent : daily.barFillPercent;
 
   return (
     <Pressable
@@ -73,7 +95,11 @@ export function ActionListRow({ row }: Props) {
                 fillPercent={barFillPercent}
                 style={styles.listRowBar}
               />
-              <ActionRowProgressLabel actionId={row.id} />
+              {isWeight ? (
+                <WeightRowProgressLabel label={weight.label} />
+              ) : (
+                <ActionRowProgressLabel actionId={row.id} />
+              )}
             </View>
           </View>
           <View
