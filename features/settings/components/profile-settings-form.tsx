@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 
+import { HomeGymPicker } from "@/features/settings/components/home-gym-picker";
 import {
   SettingsBioTextField,
   SettingsSingleLineTextField,
@@ -15,31 +16,24 @@ import { usePrefsProfile } from "@/features/settings/prefs-profile-context";
 const SAVE_DEBOUNCE_MS = 300;
 const NAME_MAX = 80;
 const BIO_MAX = 500;
-const GYM_MAX = 120;
 
 export function ProfileSettingsForm() {
   const { profile, isHydrated, updateProfile } = usePrefsProfile();
   const [displayName, setDisplayName] = useState(profile.displayName);
   const [bio, setBio] = useState(profile.bio);
-  const [homeGymName, setHomeGymName] = useState(profile.homeGymName ?? "");
 
   useEffect(() => {
     setDisplayName(profile.displayName);
     setBio(profile.bio);
-    setHomeGymName(profile.homeGymName ?? "");
-  }, [profile.displayName, profile.bio, profile.homeGymName]);
+  }, [profile.displayName, profile.bio]);
 
   useEffect(() => {
     if (!isHydrated) return;
     const handle = setTimeout(() => {
-      void updateProfile({
-        displayName,
-        bio,
-        homeGymName: homeGymName.trim() === "" ? null : homeGymName,
-      });
+      void updateProfile({ displayName, bio });
     }, SAVE_DEBOUNCE_MS);
     return () => clearTimeout(handle);
-  }, [displayName, bio, homeGymName, isHydrated, updateProfile]);
+  }, [displayName, bio, isHydrated, updateProfile]);
 
   return (
     <View style={styles.root}>
@@ -83,16 +77,16 @@ export function ProfileSettingsForm() {
           </SettingsField>
 
           <SettingsField label="Home gym" hint="Where you usually train.">
-            <SettingsSingleLineTextField
-              accessibilityLabel="Home gym name"
-              value={homeGymName}
-              onChangeText={setHomeGymName}
-              placeholder="No gym selected"
-              autoCapitalize="words"
-              autoCorrect
-              maxLength={GYM_MAX}
-              editable={isHydrated}
-              returnKeyType="done"
+            <HomeGymPicker
+              homeGymId={profile.homeGymId}
+              homeGymName={profile.homeGymName}
+              disabled={!isHydrated}
+              onChange={(gym) => {
+                void updateProfile({
+                  homeGymId: gym?.id ?? null,
+                  homeGymName: gym?.name ?? null,
+                });
+              }}
             />
           </SettingsField>
         </View>
