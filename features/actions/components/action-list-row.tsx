@@ -8,6 +8,7 @@ import { APP_SHELL_MAIN_TEXT_COLOR } from "@/constants/app-colors";
 import { useWeightFormat } from "@/features/actions/weight/use-weight-format";
 import { journeyHeadline } from "@/features/actions/weight/weight-copy";
 import { useWeightJourney } from "@/features/actions/weight/weight-journey-context";
+import { clampActionBarPercent } from "@/lib/action-bar-progress";
 
 import {
   ACTION_CARD_GEAR_ICON,
@@ -31,7 +32,7 @@ function useWeightRowProgress() {
   const weekly = weighIn.doneThisWeek ? "Weighed in" : "Weigh-in due";
   return {
     label: journey == null ? headline : `${headline} · ${weekly}`,
-    fillPercent: (journey?.progress ?? 0) * 100,
+    fillPercent: clampActionBarPercent((journey?.progress ?? 0) * 100),
   };
 }
 
