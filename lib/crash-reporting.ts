@@ -2,15 +2,23 @@ import * as Sentry from "@sentry/react-native";
 import * as Updates from "expo-updates";
 
 /**
- * Crash reporting via Sentry. Off until EXPO_PUBLIC_SENTRY_DSN is set (EAS env
- * for builds and `eas update`), and always off in development.
+ * Fit Pixel's Sentry project. A DSN only lets clients send events, so it is
+ * safe to ship; keeping it here means builds and `eas update` bundles both get
+ * it. EXPO_PUBLIC_SENTRY_DSN overrides it (e.g. to point at a test project).
+ */
+const SENTRY_DSN =
+  "https://6f03b440a8752fec2688358cc5b3dc48@o4512295722418176.ingest.us.sentry.io/4512295736573952";
+
+/**
+ * Crash reporting via Sentry, in release builds only (always off in
+ * development).
  *
  * Privacy: no user id, email, IP or request bodies (sendDefaultPii false), and
  * query strings are cut from network breadcrumbs because search terms ride in
  * them. Matches "Crash data, not linked to you" in the privacy manifest.
  */
 export function initCrashReporting(): void {
-  const dsn = process.env.EXPO_PUBLIC_SENTRY_DSN?.trim();
+  const dsn = process.env.EXPO_PUBLIC_SENTRY_DSN?.trim() || SENTRY_DSN;
   if (!dsn || __DEV__) return;
 
   Sentry.init({
