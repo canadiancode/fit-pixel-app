@@ -9,8 +9,8 @@ import {
   TAB_HEADER_CONTENT_HEIGHT,
   TAB_HEADER_ROW_LAYOUT,
 } from "@/constants/app-shell";
-import { PixelCharacter } from "@/features/pixel/components/pixel-character";
-import { portraitLoadout } from "@/features/pixel/default-loadout";
+import { PixelFigure } from "@/features/pixel/components/pixel-character";
+import { PIXEL_FIGURE_ASPECT_RATIO } from "@/features/pixel/figure-geometry";
 import { usePixelLoadout } from "@/features/pixel/pixel-loadout-context";
 import { PROFILE_DISPLAY_NAME_FALLBACK } from "@/lib/db";
 
@@ -35,8 +35,8 @@ export function SettingsHeader() {
       >
         {displayName}
       </ThemedText>
-      <PixelCharacter
-        loadout={portraitLoadout(loadout)}
+      <PixelFigure
+        loadout={loadout}
         accessibilityLabel="Your pixel"
         style={styles.pixelImage}
       />
@@ -60,7 +60,7 @@ const styles = StyleSheet.create({
     lineHeight: 28,
   },
   pixelImage: {
-    width: TAB_HEADER_CONTENT_HEIGHT,
+    width: TAB_HEADER_CONTENT_HEIGHT * PIXEL_FIGURE_ASPECT_RATIO,
     height: TAB_HEADER_CONTENT_HEIGHT,
   },
 });

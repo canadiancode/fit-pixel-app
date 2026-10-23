@@ -1,3 +1,4 @@
+import { CASUAL_TIER_ITEMS, CASUAL_TIER_LEVEL } from "./character-catalog";
 import type { PixelItemId } from "./types";
 
 /**
@@ -12,89 +13,14 @@ export type PixelShopOffer = {
 
 /**
  * Items not in the day-1 starter inventory.
- * Level 1: hair + most shoes / bottles / bags.
- * Level 2: Italy gym + premium shoe.
+ * Level 1: most bottles / bags. Level 2: Italy gym.
+ * Level 3: the casual clothing tier (hoodies, sport tanks, gym shorts,
+ * tights and casual sneakers) for both genders.
  *
  * Green Potion, Purple Bottle and the Gold Black King Bag are not sold here:
  * they're weight-journey milestone rewards (see features/actions/weight).
  */
 export const PIXEL_SHOP_OFFERS: readonly PixelShopOffer[] = [
-  // Hair (half of catalog; default bun stays free)
-  {
-    itemId: "def-hair-long-bun-blonde",
-    label: "Long Bun Blonde",
-    requiredLevel: 1,
-  },
-  {
-    itemId: "def-hair-long-bun-brown",
-    label: "Long Bun Brown",
-    requiredLevel: 1,
-  },
-  {
-    itemId: "def-hair-long-dreads-black",
-    label: "Long Dreads Black",
-    requiredLevel: 1,
-  },
-  { itemId: "def-hair-long-pink", label: "Long Pink", requiredLevel: 1 },
-  {
-    itemId: "def-hair-long-red-straight",
-    label: "Long Red Straight",
-    requiredLevel: 1,
-  },
-  {
-    itemId: "def-hair-mid-blonde-spikey",
-    label: "Mid Blonde Spikey",
-    requiredLevel: 1,
-  },
-  {
-    itemId: "def-hair-short-shaggy-brown",
-    label: "Short Shaggy Brown",
-    requiredLevel: 1,
-  },
-
-  // Shoes (all except default black/white)
-  { itemId: "def-shoe-casual-brown", label: "Casual Brown", requiredLevel: 1 },
-  {
-    itemId: "def-shoe-casual-checkered-white-black",
-    label: "Casual Checkered",
-    requiredLevel: 1,
-  },
-  {
-    itemId: "def-shoe-casual-green-white",
-    label: "Casual Green White",
-    requiredLevel: 1,
-  },
-  {
-    itemId: "def-shoe-casual-grey-white",
-    label: "Casual Grey White",
-    requiredLevel: 1,
-  },
-  {
-    itemId: "def-shoe-casual-orange-white",
-    label: "Casual Orange White",
-    requiredLevel: 1,
-  },
-  {
-    itemId: "def-shoe-casual-purple-white",
-    label: "Casual Purple White",
-    requiredLevel: 1,
-  },
-  {
-    itemId: "def-shoe-casual-red-white",
-    label: "Casual Red White",
-    requiredLevel: 1,
-  },
-  {
-    itemId: "def-shoe-casual-yellow-white",
-    label: "Casual Yellow White",
-    requiredLevel: 1,
-  },
-  {
-    itemId: "def-shoe-casual-long-white",
-    label: "Casual Long White",
-    requiredLevel: 2,
-  },
-
   // Item left (all except default blue potion)
   {
     itemId: "def-item-left-blue-w-straw-bottle",
@@ -147,6 +73,12 @@ export const PIXEL_SHOP_OFFERS: readonly PixelShopOffer[] = [
     label: "Italy Semi-Outdoor Gym",
     requiredLevel: 2,
   },
+
+  ...CASUAL_TIER_ITEMS.map((item) => ({
+    itemId: item.id,
+    label: item.label,
+    requiredLevel: CASUAL_TIER_LEVEL,
+  })),
 ];
 
 /**

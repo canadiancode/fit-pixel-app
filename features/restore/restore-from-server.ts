@@ -1,5 +1,9 @@
 import type { SQLiteDatabase } from "expo-sqlite";
 
+import {
+  completeLoadout,
+  genderOfLoadout,
+} from "@/features/pixel/default-loadout";
 import { getPixelItem } from "@/features/pixel/layer-assets";
 import {
   loadPixelPersistedState,
@@ -374,10 +378,13 @@ async function applyServerLoadout(
     inventory.add(itemId);
   }
 
+  // A look on the current art says which body it wears: no gender prompt.
+  const gender = genderOfLoadout(loadout) ?? state.gender;
   await savePixelPersistedState({
-    loadout,
+    loadout: completeLoadout(loadout),
     inventory: [...inventory],
     inventoryGrantVersion: PIXEL_INVENTORY_GRANT_VERSION,
+    gender,
   });
 }
 

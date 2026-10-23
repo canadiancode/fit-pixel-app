@@ -7,7 +7,7 @@ import {
 } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
 import {
-  PIXEL_CANVAS_ASPECT_RATIO,
+  PIXEL_SCENE_ASPECT_RATIO,
   PixelCharacter,
 } from "@/features/pixel/components/pixel-character";
 import { PixelItemThumb } from "@/features/pixel/components/pixel-item-thumb";
@@ -129,7 +129,7 @@ export function PixelCollection({
             >
               <View style={styles.cardTop}>
                 <View style={styles.thumbShell}>
-                  <PixelItemThumb item={item} size={THUMB_SIZE} />
+                  <PixelItemThumb item={item} size={THUMB_SIZE} wearer={loadout} />
                 </View>
                 <View style={[styles.badge, { backgroundColor: color }]}>
                   <Text style={styles.badgeLabel}>{origin.badge}</Text>
@@ -156,7 +156,7 @@ export function PixelCollection({
 const styles = StyleSheet.create({
   showcase: {
     alignSelf: "stretch",
-    aspectRatio: PIXEL_CANVAS_ASPECT_RATIO,
+    aspectRatio: PIXEL_SCENE_ASPECT_RATIO,
     borderRadius: 14,
     borderWidth: 2,
     borderColor: SHOWCASE_RIM,

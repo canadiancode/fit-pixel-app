@@ -14,7 +14,17 @@ import { useXpState } from "@/features/xp/xp-state-context";
 import { useAuth } from "@/features/auth/auth-context";
 import { enqueueOp, nowIso, uuid } from "@/lib/db";
 
-import { DEFAULT_PIXEL_LOADOUT } from "./default-loadout";
+import {
+  bodyId,
+  bodySizeForLevel,
+  fitsGender,
+  parseBodyId,
+} from "./character-catalog";
+import {
+  createStarterLook,
+  DEFAULT_PIXEL_LOADOUT,
+  retargetLoadout,
+} from "./default-loadout";
 import {
   DEFAULT_PIXEL_INVENTORY,
   getPixelItem,
@@ -25,7 +35,14 @@ import {
   savePixelPersistedState,
 } from "./pixel-persistence";
 import { getShopOffer, PIXEL_SHOP_OFFERS } from "./shop-catalog";
-import { PIXEL_LAYER_Z_INDEX, type PixelItemId, type PixelLayerId, type PixelLoadout } from "./types";
+import {
+  PIXEL_LAYER_Z_INDEX,
+  type PixelBodySize,
+  type PixelGender,
+  type PixelItemId,
+  type PixelLayerId,
+  type PixelLoadout,
+} from "./types";
 
 export type UnlockItemResult =
   | { ok: true }
@@ -41,6 +58,14 @@ type PixelLoadoutContextValue = {
   inventory: readonly PixelItemId[];
   /** False until device storage has been read once. */
   isHydrated: boolean;
+  /** `null` until picked on first launch (the default look shows meanwhile). */
+  gender: PixelGender | null;
+  /** Body size from level: Small, Medium at 5, Big at 15. */
+  bodySize: PixelBodySize;
+  /** First launch: pick a gender and wear `look` (default: a random beginner look). */
+  chooseStarterLook: (gender: PixelGender, look?: PixelLoadout) => void;
+  /** Settings: switch body, keeping tone and the matching cut of each garment. */
+  changeGender: (gender: PixelGender) => void;
   ownsItem: (itemId: PixelItemId) => boolean;
   /** Equip an owned catalog item on its layer. */
   selectItem: (layerId: PixelLayerId, itemId: PixelItemId) => void;
@@ -93,7 +118,9 @@ export function PixelLoadoutProvider({ children }: { children: ReactNode }) {
   const [inventory, setInventory] = useState<readonly PixelItemId[]>(
     DEFAULT_PIXEL_INVENTORY,
   );
+  const [gender, setGender] = useState<PixelGender | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
+  const bodySize = bodySizeForLevel(xp.level);
   const hasHydratedRef = useRef(false);
   const inventoryRef = useRef(inventory);
   inventoryRef.current = inventory;
@@ -108,6 +135,7 @@ export function PixelLoadoutProvider({ children }: { children: ReactNode }) {
       if (cancelled) return;
       setLoadout(saved.loadout);
       setInventory(saved.inventory);
+      setGender(saved.gender);
       hasHydratedRef.current = true;
       setIsHydrated(true);
     })();
@@ -123,8 +151,22 @@ export function PixelLoadoutProvider({ children }: { children: ReactNode }) {
       loadout,
       inventory,
       inventoryGrantVersion: PIXEL_INVENTORY_GRANT_VERSION,
+      gender,
     });
-  }, [loadout, inventory]);
+  }, [loadout, inventory, gender]);
+
+  // The body follows level (and the picked gender), keeping its skin tone.
+  useEffect(() => {
+    if (!isHydrated || gender == null) return;
+    const body = parseBodyId(loadout.skin);
+    if (body != null && body.gender === gender && body.size === bodySize) return;
+    const next = {
+      ...loadout,
+      skin: bodyId(gender, bodySize, body?.tone ?? "b"),
+    };
+    setLoadout(next);
+    void enqueueLoadoutSnapshot(db, next);
+  }, [db, isHydrated, gender, bodySize, loadout]);
 
   const ownsItem = useCallback(
     (itemId: PixelItemId) => inventory.includes(itemId),
@@ -135,14 +177,42 @@ export function PixelLoadoutProvider({ children }: { children: ReactNode }) {
     (layerId: PixelLayerId, itemId: PixelItemId) => {
       const item = getPixelItem(itemId);
       if (item == null || item.layer !== layerId) return;
-      if (!inventory.includes(itemId)) return;
+      if (!inventory.includes(itemId) || !fitsGender(item, gender)) return;
+      if (layerId === "skin" && parseBodyId(itemId)?.size !== bodySize) return;
       setLoadout((current) => {
         const next = { ...current, [layerId]: itemId };
         void enqueueLoadoutSnapshot(db, next);
         return next;
       });
     },
-    [db, inventory],
+    [db, inventory, gender, bodySize],
+  );
+
+  const chooseStarterLook = useCallback(
+    (picked: PixelGender, look?: PixelLoadout) => {
+      setGender(picked);
+      setLoadout((current) => {
+        const next = look ?? createStarterLook(picked, bodySize, current);
+        void enqueueLoadoutSnapshot(db, next);
+        return next;
+      });
+    },
+    [db, bodySize],
+  );
+
+  const changeGender = useCallback(
+    (picked: PixelGender) => {
+      if (picked === gender) return;
+      setGender(picked);
+      setLoadout((current) => {
+        const next = retargetLoadout(current, picked, bodySize, (itemId) =>
+          inventoryRef.current.includes(itemId),
+        );
+        void enqueueLoadoutSnapshot(db, next);
+        return next;
+      });
+    },
+    [db, gender, bodySize],
   );
 
   const unlockItem = useCallback(
@@ -255,12 +325,28 @@ export function PixelLoadoutProvider({ children }: { children: ReactNode }) {
       loadout,
       inventory,
       isHydrated,
+      gender,
+      bodySize,
+      chooseStarterLook,
+      changeGender,
       ownsItem,
       selectItem,
       unlockItem,
       grantItem,
     }),
-    [loadout, inventory, isHydrated, ownsItem, selectItem, unlockItem, grantItem],
+    [
+      loadout,
+      inventory,
+      isHydrated,
+      gender,
+      bodySize,
+      chooseStarterLook,
+      changeGender,
+      ownsItem,
+      selectItem,
+      unlockItem,
+      grantItem,
+    ],
   );
 
   if (!isHydrated) {

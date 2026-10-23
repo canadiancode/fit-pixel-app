@@ -1,7 +1,10 @@
 import { Image } from "expo-image";
 import { StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
 
-import type { PixelItem, PixelLayerId } from "../types";
+import { completeLoadout, DEFAULT_PIXEL_LOADOUT } from "../default-loadout";
+import { figureFrameForCrop, PIXEL_THUMB_CROP } from "../figure-geometry";
+import type { PixelItem, PixelLayerId, PixelLoadout } from "../types";
+import { PixelFigure } from "./pixel-character";
 
 type Props = {
   item: PixelItem;
@@ -9,17 +12,46 @@ type Props = {
   style?: StyleProp<ViewStyle>;
   /** Dim + desaturate-ish look for items you don't own yet. */
   dimmed?: boolean;
+  /**
+   * Whose Pixel character parts are tried on (defaults to the starter look).
+   * Clothing, hair and face parts show worn, zoomed to that part.
+   */
+  wearer?: PixelLoadout;
 };
 
 /**
- * One layer asset framed for a list thumbnail. Every layer is drawn on the
- * full 1:1 character canvas, so each needs its own zoom / nudge to show the
- * part that matters (the transforms are tuned at BASE_SIZE and scale with
- * `size`).
+ * One item framed for a list thumbnail. Character parts are drawn on the
+ * wearer at the part's crop; scene items (backgrounds, held items) are drawn
+ * on the full scene canvas with a per-layer zoom / nudge (tuned at BASE_SIZE,
+ * scaled with `size`).
  */
-export function PixelItemThumb({ item, size, style, dimmed = false }: Props) {
+export function PixelItemThumb({
+  item,
+  size,
+  style,
+  dimmed = false,
+  wearer = DEFAULT_PIXEL_LOADOUT,
+}: Props) {
+  const crop = PIXEL_THUMB_CROP[item.layer];
+  if (crop != null) {
+    const look = completeLoadout({ ...wearer, [item.layer]: item.id });
+    return (
+      <View style={[styles.shell, { width: size, height: size }, style]}>
+        <PixelFigure
+          loadout={look}
+          accessibilityLabel={item.label}
+          style={[
+            styles.figure,
+            figureFrameForCrop(crop, size),
+            dimmed && styles.dimmed,
+          ]}
+        />
+      </View>
+    );
+  }
+
   const factor = size / BASE_SIZE;
-  const zoom = LAYER_ZOOM[item.layer];
+  const zoom = SCENE_LAYER_ZOOM[item.layer];
   return (
     <View style={[styles.shell, { width: size, height: size }, style]}>
       <Image
@@ -45,16 +77,9 @@ export function PixelItemThumb({ item, size, style, dimmed = false }: Props) {
 /** Size the transforms were tuned at (the picker's 72pt frame minus its 2pt border). */
 const BASE_SIZE = 68;
 
-const LAYER_ZOOM: Partial<
+const SCENE_LAYER_ZOOM: Partial<
   Record<PixelLayerId, { x: number; y: number; scale: number }>
 > = {
-  skin: { x: 0, y: -8, scale: 1.5 },
-  eyes: { x: -7, y: 35, scale: 6 },
-  mouth: { x: -12, y: 38, scale: 12 },
-  top: { x: 0, y: -10, scale: 3 },
-  bottom: { x: 0, y: -38, scale: 2.6 },
-  shoes: { x: 0, y: -60, scale: 3 },
-  hair: { x: 4, y: 20, scale: 2.3 },
   item_left: { x: 55, y: -55, scale: 3 },
   item_right: { x: -46, y: -40, scale: 2.2 },
 };
@@ -67,6 +92,9 @@ const styles = StyleSheet.create({
   image: {
     width: "100%",
     height: "100%",
+  },
+  figure: {
+    position: "absolute",
   },
   dimmed: {
     opacity: 0.55,

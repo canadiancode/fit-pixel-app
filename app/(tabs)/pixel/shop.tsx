@@ -17,6 +17,7 @@ import {
   APP_SHELL_SECONDARY_BACKGROUND,
 } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
+import { fitsGender } from "@/features/pixel/character-catalog";
 import { PixelItemThumb } from "@/features/pixel/components/pixel-item-thumb";
 import { PixelSubScreenToolbar } from "@/features/pixel/components/pixel-sub-screen-toolbar";
 import { PIXEL_LAYER_CATEGORIES } from "@/features/pixel/data";
@@ -26,7 +27,11 @@ import {
   PIXEL_SHOP_OFFERS,
   type PixelShopOffer,
 } from "@/features/pixel/shop-catalog";
-import type { PixelItem, PixelLayerId } from "@/features/pixel/types";
+import type {
+  PixelItem,
+  PixelLayerId,
+  PixelLoadout,
+} from "@/features/pixel/types";
 import { useXpState } from "@/features/xp/xp-state-context";
 import {
   getXpBarFillPercent,
@@ -57,7 +62,7 @@ type CategoryFilter = PixelLayerId | "all";
 export default function PixelShopScreen() {
   const router = useRouter();
   const { xp } = useXpState();
-  const { ownsItem } = usePixelLoadout();
+  const { ownsItem, gender, loadout } = usePixelLoadout();
   const { width: windowWidth } = useWindowDimensions();
   const [panelWidth, setPanelWidth] = useState(windowWidth);
   const [filter, setFilter] = useState<CategoryFilter>("all");
@@ -67,7 +72,8 @@ export default function PixelShopScreen() {
     for (const offer of PIXEL_SHOP_OFFERS) {
       if (ownsItem(offer.itemId)) continue;
       const item = getPixelItem(offer.itemId);
-      if (!item) continue;
+      // Clothes cut for the other body aren't shown.
+      if (!item || !fitsGender(item, gender)) continue;
       const list = groups.get(item.layer) ?? [];
       list.push({ offer, item });
       groups.set(item.layer, list);
@@ -83,7 +89,7 @@ export default function PixelShopScreen() {
     return PIXEL_LAYER_CATEGORIES.filter((category) =>
       groups.has(category.id),
     ).map((category) => ({ category, offers: groups.get(category.id)! }));
-  }, [ownsItem]);
+  }, [ownsItem, gender]);
 
   const visible =
     filter === "all"
@@ -206,6 +212,7 @@ export default function PixelShopScreen() {
                   offer={offer}
                   item={item}
                   width={cardWidth}
+                  wearer={loadout}
                   levelsAway={offer.requiredLevel - xp.level}
                 />
               ))}
@@ -255,11 +262,13 @@ function OfferCard({
   offer,
   item,
   width,
+  wearer,
   levelsAway,
 }: {
   offer: PixelShopOffer;
   item: PixelItem;
   width: number;
+  wearer: PixelLoadout;
   levelsAway: number;
 }) {
   const thumb = width - 16;
@@ -272,7 +281,7 @@ function OfferCard({
       }`}
     >
       <View style={styles.thumbWell}>
-        <PixelItemThumb item={item} size={thumb} dimmed />
+        <PixelItemThumb item={item} size={thumb} wearer={wearer} dimmed />
         <View style={styles.levelBadge}>
           <ThemedText
             lightColor={APP_SHELL_MAIN_TEXT_COLOR}

@@ -1,4 +1,8 @@
-export { PixelCharacter, PIXEL_CANVAS_ASPECT_RATIO } from "./components/pixel-character";
+export {
+  PixelCharacter,
+  PixelFigure,
+  PIXEL_SCENE_ASPECT_RATIO,
+} from "./components/pixel-character";
 export { PixelDashboardMetrics } from "./components/pixel-dashboard-metrics";
 export { PixelSubScreenToolbar } from "./components/pixel-sub-screen-toolbar";
 export {
@@ -7,13 +11,16 @@ export {
   isPixelLayerId,
   type PixelLayerCategory,
 } from "./data";
-export { DEFAULT_PIXEL_LOADOUT } from "./default-loadout";
-export { useRandomPixelLoadout } from "./hooks/use-random-pixel-loadout";
+export {
+  DEFAULT_PIXEL_LOADOUT,
+  completeLoadout,
+  createStarterLook,
+  genderOfLoadout,
+} from "./default-loadout";
 export {
   DEFAULT_PIXEL_INVENTORY,
   PIXEL_ITEM_BY_ID,
   PIXEL_LAYER_ASSETS,
-  createRandomPixelLoadout,
   getOwnedItemsForLayer,
   getPixelItem,
   getPixelItemSource,
@@ -39,6 +46,7 @@ export {
 } from "./shop-catalog";
 export {
   PIXEL_LAYER_Z_INDEX,
+  type PixelGender,
   type PixelItem,
   type PixelItemId,
   type PixelLayerId,

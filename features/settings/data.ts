@@ -13,7 +13,7 @@ export const SETTINGS_ROWS = [
     id: "profile",
     group: "you",
     label: "Profile",
-    caption: "Name, bio, home gym and who can see them",
+    caption: "Male or female, name, bio and home gym",
   },
   {
     id: "social",

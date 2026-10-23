@@ -15,6 +15,7 @@ import { DailyGoalsProvider } from "@/features/actions/daily-goals-context";
 import { HabitProgressProvider } from "@/features/actions/habit-progress-context";
 import { WeightJourneyProvider } from "@/features/actions/weight/weight-journey-context";
 import { useAuth } from "@/features/auth/auth-context";
+import { PixelGenderOnboarding } from "@/features/pixel/components/pixel-gender-onboarding";
 import { PixelLoadoutProvider } from "@/features/pixel/pixel-loadout-context";
 import { PushProvider } from "@/features/push/push-context";
 import { RestoreGate } from "@/features/restore/restore-gate";
@@ -96,6 +97,7 @@ export default function TabLayout() {
             <NotificationsProvider>
             <PushProvider>
               <AppTabs />
+              <PixelGenderOnboarding />
             </PushProvider>
             </NotificationsProvider>
             </WeightJourneyProvider>
