@@ -14,6 +14,7 @@ import {
 import { FONT_FAMILY } from "@/constants/fonts";
 import { FIT_PIXEL_GOOGLE_MAP_STYLE } from "@/constants/google-map-style";
 import { useAuth } from "@/features/auth/auth-context";
+import { AddGymSheet } from "@/features/map/components/add-gym-sheet";
 import { MapFilterSheet } from "@/features/map/components/map-filter-sheet";
 import { MapHeader } from "@/features/map/components/map-header";
 import {
@@ -33,7 +34,7 @@ import { joinGymChat, listGyms, type GymListItem } from "@/lib/api/chat";
 import { FitPixelApiError } from "@/lib/api/client";
 import Constants from "expo-constants";
 import { Image } from "expo-image";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import * as Location from "expo-location";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -102,6 +103,8 @@ const GYM_MARKER_IMAGE = require("@/assets/icons/marker.png");
 const USER_ICON_MAP_CARD = require("@/assets/icons/user.png");
 const USER_CAR_ICON = require("@/assets/icons/car.png");
 const LOCATE_ME_ICON = require("@/assets/icons/locate-me.png");
+const ADD_GYM_ICON = require("@/assets/icons/add.png");
+const PRIMARY_BUTTON_BACKGROUND = require("@/assets/backgrounds/add-action.png");
 /** Popup card behind gym name, hero image, distance, etc. */
 const MAP_GYM_SHEET_CARD_BACKGROUND = require("@/assets/backgrounds/blue-square-card.png");
 
@@ -126,6 +129,8 @@ const LOCATE_ICON_SIZE = 24;
 const LOCATE_FAB_TOP_OFFSET = 25;
 /** Inset from the trailing screen edge (right in LTR); increase to move the locate FAB inward. */
 const LOCATE_FAB_RIGHT_OFFSET = 25;
+/** Space between the locate and add-a-gym buttons. */
+const FAB_GAP = 12;
 /** Zoom span when centering on the user from the locate FAB. */
 const USER_REGION_LATITUDE_DELTA = 0.02;
 const USER_REGION_LONGITUDE_DELTA = 0.02;
@@ -176,6 +181,15 @@ function formatDriveDurationMinutes(totalMinutes: number): string {
 const FOCUSED_LATITUDE_DELTA = 0.004;
 const FOCUSED_LONGITUDE_DELTA = 0.006;
 const FOCUS_ANIMATION_MS = 650;
+
+/** Placing a new gym: zoom in at least this far so the pin lands on the right building. */
+const ADD_GYM_MAX_LATITUDE_DELTA = 0.012;
+/** Placement pin is a bit bigger than gym pins so it reads as "the one you're moving". */
+const ADD_PIN_WIDTH = Math.round(GYM_MARKER_WIDTH * 1.3);
+const ADD_PIN_HEIGHT = Math.round(GYM_MARKER_HEIGHT * 1.3);
+
+/** Re-check the gym list when the tab is shown again, at most this often. */
+const GYMS_REFRESH_MS = 60_000;
 
 /** Gap under the gym sheet; keep in step with `sheetOverlay.paddingBottom`. */
 const SHEET_BOTTOM_GAP = 10;
@@ -234,12 +248,15 @@ export default function MapScreen() {
   const { height: windowHeight } = useWindowDimensions();
   const sheetHeight = Math.max(300, Math.round(windowHeight * 0.34));
 
-  useEffect(() => {
-    if (!session?.access_token) return;
-    let cancelled = false;
-    void listGyms()
+  const [addingGym, setAddingGym] = useState(false);
+  const [addGymSheet, setAddGymSheet] = useState<"form" | "mine" | null>(null);
+  const [newGymPin, setNewGymPin] = useState<LatLng | null>(null);
+  const gymsLoadedAt = useRef(0);
+
+  const loadGyms = useCallback(() => {
+    gymsLoadedAt.current = Date.now();
+    return listGyms()
       .then((rows) => {
-        if (cancelled) return;
         const next = rows.map(toMapGym);
         setGyms(next);
         setSelectedGym((current) =>
@@ -249,10 +266,21 @@ export default function MapScreen() {
       .catch(() => {
         /* keep fallback pins */
       });
-    return () => {
-      cancelled = true;
-    };
-  }, [session?.access_token]);
+  }, []);
+
+  useEffect(() => {
+    if (!session?.access_token) return;
+    void loadGyms();
+  }, [session?.access_token, loadGyms]);
+
+  // Newly approved gyms appear without restarting the app.
+  useFocusEffect(
+    useCallback(() => {
+      if (!session?.access_token) return;
+      if (Date.now() - gymsLoadedAt.current < GYMS_REFRESH_MS) return;
+      void loadGyms();
+    }, [session?.access_token, loadGyms]),
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -331,8 +359,8 @@ export default function MapScreen() {
    * set, starting from the camera the user was looking at.
    */
   const mapKey = useMemo(
-    () => JSON.stringify([filters, filterOrigin]),
-    [filters, filterOrigin],
+    () => JSON.stringify([filters, filterOrigin, gyms.length]),
+    [filters, filterOrigin, gyms.length],
   );
   const lastRegionRef = useRef(INITIAL_REGION);
   const gymKinds = useMemo(() => availableGymKinds(gyms), [gyms]);
@@ -395,6 +423,7 @@ export default function MapScreen() {
 
   const handleSelectGym = useCallback(
     (gym: MapGym) => {
+      if (addingGym) return;
       dismissGymFilterKeyboard();
       setGymQuery("");
       skipNextMapDismiss.current = true;
@@ -404,7 +433,7 @@ export default function MapScreen() {
         skipNextMapDismiss.current = false;
       }, 400);
     },
-    [dismissGymFilterKeyboard, focusGym],
+    [addingGym, dismissGymFilterKeyboard, focusGym],
   );
 
   const handleSubmitGymQuery = useCallback(() => {
@@ -468,16 +497,64 @@ export default function MapScreen() {
 
   const handleMapPress = useCallback(() => {
     dismissGymFilterKeyboard();
+    if (addingGym) return;
     if (skipNextMapDismiss.current) {
       skipNextMapDismiss.current = false;
       return;
     }
     setSelectedGym(null);
-  }, [dismissGymFilterKeyboard]);
+  }, [addingGym, dismissGymFilterKeyboard]);
 
   const handleMapPanDrag = useCallback(() => {
     dismissGymFilterKeyboard();
   }, [dismissGymFilterKeyboard]);
+
+  /** Enter placement: the pin sits mid-map and the map moves under it. */
+  const handleStartAddGym = useCallback(() => {
+    dismissGymFilterKeyboard();
+    setGymQuery("");
+    setSelectedGym(null);
+    setAddingGym(true);
+    const region = lastRegionRef.current;
+    if (region.latitudeDelta > ADD_GYM_MAX_LATITUDE_DELTA) {
+      const latitudeDelta = ADD_GYM_MAX_LATITUDE_DELTA / 2;
+      mapRef.current?.animateToRegion(
+        {
+          latitude: region.latitude,
+          longitude: region.longitude,
+          latitudeDelta,
+          longitudeDelta:
+            region.longitudeDelta * (latitudeDelta / region.latitudeDelta),
+        },
+        FOCUS_ANIMATION_MS,
+      );
+    }
+  }, [dismissGymFilterKeyboard]);
+
+  /** Long-press drops the pin there (the map slides that spot under it). */
+  const handleMapLongPress = useCallback(
+    (coordinate: LatLng) => {
+      if (!addingGym) return;
+      const { latitudeDelta, longitudeDelta } = lastRegionRef.current;
+      mapRef.current?.animateToRegion(
+        { ...coordinate, latitudeDelta, longitudeDelta },
+        FOCUS_ANIMATION_MS,
+      );
+    },
+    [addingGym],
+  );
+
+  const handleUseThisSpot = useCallback(() => {
+    const { latitude, longitude } = lastRegionRef.current;
+    setNewGymPin({ latitude, longitude });
+    setAddGymSheet("form");
+  }, []);
+
+  const handleCancelAddGym = useCallback(() => {
+    setAddingGym(false);
+    setAddGymSheet(null);
+    setNewGymPin(null);
+  }, []);
 
   const handleLocateMePress = useCallback(async () => {
     const { status } = await Location.getForegroundPermissionsAsync();
@@ -537,6 +614,16 @@ export default function MapScreen() {
         hasLocation={userCoords != null}
         onEnableLocation={() => void handleLocateMePress()}
       />
+      <AddGymSheet
+        visible={addGymSheet != null}
+        mode={addGymSheet ?? "form"}
+        coordinate={newGymPin}
+        onMovePin={() => setAddGymSheet(null)}
+        onSubmitted={() => setAddingGym(false)}
+        onClose={() =>
+          addGymSheet === "form" ? handleCancelAddGym() : setAddGymSheet(null)
+        }
+      />
       <View style={styles.mapChrome}>
         <View
           style={styles.mapStack}
@@ -564,6 +651,7 @@ export default function MapScreen() {
             showsUserLocation={userLocationVisible}
             showsMyLocationButton={false}
             onPress={handleMapPress}
+            onLongPress={(e) => handleMapLongPress(e.nativeEvent.coordinate)}
             onPanDrag={handleMapPanDrag}
           >
             {visibleGyms.map((gym) => (
@@ -640,9 +728,120 @@ export default function MapScreen() {
                 />
               </View>
             </Pressable>
+            {!addingGym ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Add a gym"
+                accessibilityHint="Drop a pin on a gym that's missing from the map"
+                onPress={handleStartAddGym}
+                style={({ pressed }) => [
+                  styles.addGymFab,
+                  pressed && styles.locateFabPressed,
+                ]}
+              >
+                <Image
+                  source={ADD_GYM_ICON}
+                  style={styles.addGymFabIcon}
+                  contentFit="contain"
+                  accessibilityIgnoresInvertColors
+                />
+              </Pressable>
+            ) : null}
           </View>
 
-          {showGymSearchResults ? (
+          {addingGym ? (
+            <>
+              <View style={styles.addPinOverlay} pointerEvents="none">
+                <View style={styles.addPinTarget} />
+                <Image
+                  source={GYM_MARKER_IMAGE}
+                  style={styles.addPinImage}
+                  contentFit="contain"
+                  accessibilityIgnoresInvertColors
+                />
+              </View>
+              <View style={styles.addHintCard} pointerEvents="none">
+                <ThemedText
+                  lightColor={APP_SHELL_MAIN_TEXT_COLOR}
+                  darkColor={APP_SHELL_MAIN_TEXT_COLOR}
+                  style={styles.addHintTitle}
+                >
+                  Add a gym
+                </ThemedText>
+                <ThemedText
+                  lightColor={APP_SHELL_LABEL_COLOR}
+                  darkColor={APP_SHELL_LABEL_COLOR}
+                  style={styles.addHintBody}
+                >
+                  Drag the map until the pin sits on the gym, or long-press to
+                  drop it there.
+                </ThemedText>
+              </View>
+              <View style={styles.addBarOverlay} pointerEvents="box-none">
+                <View style={styles.addBar}>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="See the gyms you've added"
+                    hitSlop={8}
+                    onPress={() => setAddGymSheet("mine")}
+                    style={({ pressed }) => pressed && styles.locateFabPressed}
+                  >
+                    <ThemedText
+                      lightColor={APP_SHELL_LABEL_COLOR}
+                      darkColor={APP_SHELL_LABEL_COLOR}
+                      style={styles.addBarLink}
+                    >
+                      Your gyms
+                    </ThemedText>
+                  </Pressable>
+                  <View style={styles.addBarButtons}>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="Cancel adding a gym"
+                      onPress={handleCancelAddGym}
+                      style={({ pressed }) => [
+                        styles.addBarSecondary,
+                        pressed && styles.locateFabPressed,
+                      ]}
+                    >
+                      <ThemedText
+                        lightColor={APP_SHELL_MAIN_TEXT_COLOR}
+                        darkColor={APP_SHELL_MAIN_TEXT_COLOR}
+                        style={styles.addBarButtonText}
+                      >
+                        Cancel
+                      </ThemedText>
+                    </Pressable>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="Use this spot for the new gym"
+                      onPress={handleUseThisSpot}
+                      style={({ pressed }) => [
+                        styles.addBarPrimary,
+                        pressed && styles.locateFabPressed,
+                      ]}
+                    >
+                      <Image
+                        source={PRIMARY_BUTTON_BACKGROUND}
+                        style={StyleSheet.absoluteFillObject}
+                        contentFit="fill"
+                        accessibilityIgnoresInvertColors
+                      />
+                      <ThemedText
+                        lightColor={APP_SHELL_MAIN_TEXT_COLOR}
+                        darkColor={APP_SHELL_MAIN_TEXT_COLOR}
+                        style={styles.addBarButtonText}
+                      >
+                        Use this spot
+                      </ThemedText>
+                    </Pressable>
+                  </View>
+                </View>
+              </View>
+            </>
+          ) : null}
+
+          {showGymSearchResults && !addingGym ? (
             <View style={styles.searchResultsCard}>
               {gymSearchResults.length === 0 ? (
                 <ThemedText
@@ -708,7 +907,7 @@ export default function MapScreen() {
             </View>
           ) : null}
 
-          {selectedGym && !showGymSearchResults ? (
+          {selectedGym && !showGymSearchResults && !addingGym ? (
             <View style={styles.sheetOverlay} pointerEvents="box-none">
               <Pressable
                 accessibilityRole="button"
@@ -910,6 +1109,116 @@ const styles = StyleSheet.create({
   locateFabIcon: {
     width: LOCATE_ICON_SIZE,
     height: LOCATE_ICON_SIZE,
+  },
+  addGymFab: {
+    marginTop: FAB_GAP,
+    width: LOCATE_FAB_SIZE,
+    height: LOCATE_FAB_SIZE,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.35,
+    shadowRadius: 4,
+  },
+  addGymFabIcon: {
+    width: LOCATE_FAB_SIZE,
+    height: LOCATE_FAB_SIZE,
+  },
+  /** Pin tip sits on the map's centre, which is the spot that gets submitted. */
+  addPinOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 15,
+    elevation: 15,
+  },
+  addPinImage: {
+    position: "absolute",
+    width: ADD_PIN_WIDTH,
+    height: ADD_PIN_HEIGHT,
+    transform: [{ translateY: -ADD_PIN_HEIGHT / 2 }],
+  },
+  addPinTarget: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    borderWidth: 2,
+    borderColor: "#ffffff",
+    backgroundColor: "#2f86e8",
+  },
+  addHintCard: {
+    position: "absolute",
+    top: 10,
+    left: 12,
+    right: 12 + LOCATE_FAB_SIZE + LOCATE_FAB_RIGHT_OFFSET - 12,
+    zIndex: 25,
+    elevation: 25,
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: "#2f86e8",
+    backgroundColor: "#01224e",
+  },
+  addHintTitle: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 11,
+    lineHeight: 15,
+  },
+  addHintBody: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 8,
+    lineHeight: 13,
+  },
+  addBarOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "flex-end",
+    paddingHorizontal: 12,
+    paddingBottom: SHEET_BOTTOM_GAP,
+    zIndex: 25,
+    elevation: 25,
+  },
+  addBar: {
+    gap: 12,
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: "#0b4f96",
+    backgroundColor: APP_SHELL_SECONDARY_BACKGROUND,
+  },
+  addBarLink: {
+    alignSelf: "flex-start",
+    fontFamily: FONT_FAMILY,
+    fontSize: 9,
+    lineHeight: 13,
+    textDecorationLine: "underline",
+  },
+  addBarButtons: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  addBarSecondary: {
+    flex: 1,
+    height: 48,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: "#0b4f96",
+    backgroundColor: "#011a3a",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  addBarPrimary: {
+    flex: 1.6,
+    height: 48,
+    borderRadius: 8,
+    overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  addBarButtonText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 10,
+    lineHeight: 14,
   },
   searchResultsCard: {
     position: "absolute",
