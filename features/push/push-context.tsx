@@ -10,7 +10,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { Alert, AppState, Linking } from "react-native";
+import { Alert, AppState, Linking, Platform } from "react-native";
 
 import { WEIGH_IN_REMINDER_KIND } from "@/features/actions/weight/weigh-in-reminder";
 import { useAuth } from "@/features/auth/auth-context";
@@ -248,7 +248,7 @@ export function PushProvider({ children }: { children: ReactNode }) {
       }
       Alert.alert(
         "Notifications are off",
-        "Turn on notifications for Fit Pixel in iOS Settings to get friend requests and messages.",
+        `Turn on notifications for Fit Pixel in ${Platform.OS === "android" ? "Android" : "iOS"} Settings to get friend requests and messages.`,
         [
           { text: "Not now", style: "cancel" },
           { text: "Open Settings", onPress: () => void Linking.openSettings() },
