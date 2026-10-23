@@ -14,16 +14,24 @@ export const PIXEL_FIGURE_WIDTH = 330;
 export const PIXEL_FIGURE_HEIGHT = 700;
 export const PIXEL_FIGURE_ASPECT_RATIO = PIXEL_FIGURE_WIDTH / PIXEL_FIGURE_HEIGHT;
 
+/** Character size on the scene, relative to the original Pixel's height. */
+const FIGURE_SCALE = 1.075;
+/** Original placement (scene pixels): 287x609 at (589, 301). */
+const FIGURE_CENTER_X = 589 + 287 / 2;
+const FIGURE_FEET_Y = 301 + 609;
+const FIGURE_SCENE_WIDTH = 287 * FIGURE_SCALE;
+const FIGURE_SCENE_HEIGHT = 609 * FIGURE_SCALE;
+
 /**
  * Where the character canvas sits on the scene canvas: standing between the
  * left item (bottle) and the right item (bag), feet on the floor where the
- * original Pixel stood. Fractions of the scene.
+ * original Pixel stood (scaled up around the feet). Fractions of the scene.
  */
 export const PIXEL_FIGURE_IN_SCENE = {
-  left: 589 / PIXEL_SCENE_WIDTH,
-  top: 301 / PIXEL_SCENE_HEIGHT,
-  width: 287 / PIXEL_SCENE_WIDTH,
-  height: 609 / PIXEL_SCENE_HEIGHT,
+  left: (FIGURE_CENTER_X - FIGURE_SCENE_WIDTH / 2) / PIXEL_SCENE_WIDTH,
+  top: (FIGURE_FEET_Y - FIGURE_SCENE_HEIGHT) / PIXEL_SCENE_HEIGHT,
+  width: FIGURE_SCENE_WIDTH / PIXEL_SCENE_WIDTH,
+  height: FIGURE_SCENE_HEIGHT / PIXEL_SCENE_HEIGHT,
 } as const;
 
 /** A square on the character canvas, in figure pixels. */
