@@ -17,7 +17,7 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=
 EXPO_PUBLIC_GOOGLE_MAPS_API_KEY=
 ```
 
-The Google Maps key is required for **Android** (`PROVIDER_GOOGLE`). iOS uses Apple Maps and can run without it. After changing the Maps key, rebuild the Android native app (`npm run android`) so it is written into `AndroidManifest.xml`.
+The Google Maps key is required for **Android** (`PROVIDER_GOOGLE`). iOS uses Apple Maps and can run without it. After changing the Maps key, rebuild the Android native app (`npm run android`) so it is written into `AndroidManifest.xml`. See [docs/android.md](docs/android.md) for the Android toolchain, keys and Play Console checklist.
 
 EAS preview/production builds must embed the `EXPO_PUBLIC_*` values (local Metro `.env` is not shipped in TestFlight or Play). `eas.json` sets the API URL and pins each profile to an EAS environment (`development` / `preview` / `production`). Push secrets with:
 
