@@ -99,6 +99,8 @@ function androidGoogleMapsApiKey(): string {
   return fromEnv.trim() || fromConfig.trim();
 }
 
+const mapsKeyMissing = Platform.OS === "android" && !androidGoogleMapsApiKey();
+
 const GYM_MARKER_IMAGE = require("@/assets/icons/marker.png");
 const USER_ICON_MAP_CARD = require("@/assets/icons/user.png");
 const USER_CAR_ICON = require("@/assets/icons/car.png");
@@ -632,45 +634,49 @@ export default function MapScreen() {
             setMapSize({ width, height });
           }}
         >
-          <MapView
-            key={mapKey}
-            ref={mapRef}
-            provider={
-              Platform.OS === "android" ? PROVIDER_GOOGLE : PROVIDER_DEFAULT
-            }
-            customMapStyle={
-              Platform.OS === "android"
-                ? [...FIT_PIXEL_GOOGLE_MAP_STYLE]
-                : undefined
-            }
-            style={styles.map}
-            initialRegion={lastRegionRef.current}
-            onRegionChangeComplete={(region) => {
-              lastRegionRef.current = region;
-            }}
-            showsUserLocation={userLocationVisible}
-            showsMyLocationButton={false}
-            onPress={handleMapPress}
-            onLongPress={(e) => handleMapLongPress(e.nativeEvent.coordinate)}
-            onPanDrag={handleMapPanDrag}
-          >
-            {visibleGyms.map((gym) => (
-              <GymMapMarker
-                key={gym.id}
-                gym={gym}
-                onPress={handleSelectGym}
-              />
-            ))}
-          </MapView>
-          {Platform.OS === "android" && !androidGoogleMapsApiKey() ? (
+          {/* Google Maps throws natively (crashing the app) when Android has no API key. */}
+          {mapsKeyMissing ? null : (
+            <MapView
+              key={mapKey}
+              ref={mapRef}
+              provider={
+                Platform.OS === "android" ? PROVIDER_GOOGLE : PROVIDER_DEFAULT
+              }
+              customMapStyle={
+                Platform.OS === "android"
+                  ? [...FIT_PIXEL_GOOGLE_MAP_STYLE]
+                  : undefined
+              }
+              style={styles.map}
+              initialRegion={lastRegionRef.current}
+              onRegionChangeComplete={(region) => {
+                lastRegionRef.current = region;
+              }}
+              showsUserLocation={userLocationVisible}
+              showsMyLocationButton={false}
+              onPress={handleMapPress}
+              onLongPress={(e) => handleMapLongPress(e.nativeEvent.coordinate)}
+              onPanDrag={handleMapPanDrag}
+            >
+              {visibleGyms.map((gym) => (
+                <GymMapMarker
+                  key={gym.id}
+                  gym={gym}
+                  onPress={handleSelectGym}
+                />
+              ))}
+            </MapView>
+          )}
+          {mapsKeyMissing ? (
             <View style={styles.mapsKeyOverlay} pointerEvents="none">
               <ThemedText
                 lightColor={APP_SHELL_MAIN_TEXT_COLOR}
                 darkColor={APP_SHELL_MAIN_TEXT_COLOR}
                 style={styles.mapsKeyOverlayText}
               >
-                Google Maps needs EXPO_PUBLIC_GOOGLE_MAPS_API_KEY in .env,
-                then a native rebuild (`npm run android`).
+                {__DEV__
+                  ? "Google Maps needs EXPO_PUBLIC_GOOGLE_MAPS_API_KEY in .env, then a native rebuild (`npm run android`)."
+                  : "The map isn't available right now."}
               </ThemedText>
             </View>
           ) : null}

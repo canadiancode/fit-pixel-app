@@ -99,7 +99,8 @@ function SessionGate() {
           </Stack.Protected>
         </Stack>
       </View>
-      <StatusBar style="auto" />
+      {/* The shell is always dark navy, so keep status bar icons light in light mode too. */}
+      <StatusBar style="light" />
     </View>
   );
 }

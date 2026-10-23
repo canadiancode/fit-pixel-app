@@ -1,3 +1,5 @@
+import { Platform } from "react-native";
+
 /** Groups on the Settings list, in display order. */
 export const SETTINGS_GROUPS = [
   { id: "you", label: "you" },
@@ -25,7 +27,7 @@ export const SETTINGS_ROWS = [
     id: "health",
     group: "app",
     label: "Health & wearables",
-    caption: "Apple Health access and data sources",
+    caption: `${Platform.OS === "android" ? "Health Connect" : "Apple Health"} access and data sources`,
   },
   {
     id: "notifications",
