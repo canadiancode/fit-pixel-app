@@ -19,33 +19,59 @@ import Animated, {
   type SharedValue,
 } from "react-native-reanimated";
 
-import { DEFAULT_PIXEL_LOADOUT } from "../default-loadout";
+import { completeLoadout, DEFAULT_PIXEL_LOADOUT } from "../default-loadout";
+import { coverSceneRect, PIXEL_FIGURE_IN_SCENE } from "../figure-geometry";
 import { getPixelItemSource } from "../layer-assets";
 import {
   PIXEL_LAYER_Z_INDEX,
   type PixelLayerId,
   type PixelLoadout,
 } from "../types";
-import { resolveLayers } from "./pixel-character";
+import {
+  FIGURE_RECT,
+  FigureLayers,
+  isFigureLayer,
+  resolveLayers,
+} from "./pixel-character";
 
 /**
- * Where on the hero each layer sits, as fractions of the frame, so the
- * sparkle burst comes from the part of the Pixel that changed.
+ * Where each layer sits, so the sparkle burst comes from the part of the
+ * Pixel that changed: character parts as fractions of the character canvas,
+ * held items as fractions of the scene.
  */
 const LAYER_SPARKLE_ORIGIN: Record<
   Exclude<PixelLayerId, "background">,
   { x: number; y: number }
 > = {
-  hair: { x: 0.5, y: 0.3 },
-  eyes: { x: 0.5, y: 0.4 },
-  mouth: { x: 0.5, y: 0.44 },
-  skin: { x: 0.5, y: 0.5 },
-  top: { x: 0.5, y: 0.57 },
-  bottom: { x: 0.5, y: 0.7 },
-  shoes: { x: 0.5, y: 0.84 },
-  item_left: { x: 0.31, y: 0.8 },
-  item_right: { x: 0.72, y: 0.8 },
+  hair: { x: 0.5, y: 0.1 },
+  eyes: { x: 0.5, y: 0.16 },
+  nose: { x: 0.5, y: 0.18 },
+  mouth: { x: 0.5, y: 0.2 },
+  skin: { x: 0.5, y: 0.45 },
+  top: { x: 0.5, y: 0.36 },
+  bottom: { x: 0.5, y: 0.62 },
+  shoes: { x: 0.5, y: 0.92 },
+  item_left: { x: 0.306, y: 0.785 },
+  item_right: { x: 0.722, y: 0.756 },
 };
+
+/** A sparkle origin in frame pixels, given the scene's cover rect. */
+function sparklePoint(
+  layerId: Exclude<PixelLayerId, "background">,
+  scene: { left: number; top: number; width: number; height: number },
+) {
+  const origin = LAYER_SPARKLE_ORIGIN[layerId];
+  const inScene = isFigureLayer(layerId)
+    ? {
+        x: PIXEL_FIGURE_IN_SCENE.left + origin.x * PIXEL_FIGURE_IN_SCENE.width,
+        y: PIXEL_FIGURE_IN_SCENE.top + origin.y * PIXEL_FIGURE_IN_SCENE.height,
+      }
+    : origin;
+  return {
+    x: scene.left + inScene.x * scene.width,
+    y: scene.top + inScene.y * scene.height,
+  };
+}
 
 const SPARKLE_COUNT = 8;
 const SPARKLE_SIZE = 6;
@@ -60,7 +86,7 @@ type Change = {
   id: number;
   /** New item art for each changed non-background layer (white flash). */
   silhouettes: { layerId: PixelLayerId; source: ImageSource }[];
-  sparkleAt: { x: number; y: number } | null;
+  sparkleFrom: Exclude<PixelLayerId, "background"> | null;
   /** Previous background, wiped away to reveal the new one. */
   oldBackground: ImageSource | null;
 };
@@ -75,8 +101,9 @@ function diffLoadout(
   );
   if (changed.length === 0) return null;
 
+  const look = completeLoadout(next);
   const silhouettes: Change["silhouettes"] = [];
-  let sparkleAt: Change["sparkleAt"] = null;
+  let sparkleFrom: Change["sparkleFrom"] = null;
   let oldBackground: ImageSource | null = null;
   for (const layerId of changed) {
     if (layerId === "background") {
@@ -84,12 +111,12 @@ function diffLoadout(
       oldBackground = prevId != null ? getPixelItemSource(prevId) ?? null : null;
       continue;
     }
-    const itemId = next[layerId];
-    const source = itemId != null ? getPixelItemSource(itemId) : undefined;
+    const itemId = look[layerId];
+    const source = itemId != null ? getPixelItemSource(itemId, look) : undefined;
     if (source != null) silhouettes.push({ layerId, source });
-    sparkleAt ??= LAYER_SPARKLE_ORIGIN[layerId];
+    sparkleFrom ??= layerId;
   }
-  return { id, silhouettes, sparkleAt, oldBackground };
+  return { id, silhouettes, sparkleFrom, oldBackground };
 }
 
 type Props = {
@@ -210,10 +237,30 @@ export function AnimatedPixelCharacter({
     setSize({ width, height });
   };
 
-  const sparkleAt = change?.sparkleAt ?? null;
+  const scene = coverSceneRect(size.width, size.height);
+  const sparkleAt =
+    change?.sparkleFrom != null ? sparklePoint(change.sparkleFrom, scene) : null;
   const layers = resolveLayers(loadout);
   const background = layers.find((layer) => layer.id === "background");
-  const body = layers.filter((layer) => layer.id !== "background");
+  const heldItems = layers.filter(
+    (layer) => layer.id !== "background" && !isFigureLayer(layer.id),
+  );
+  const silhouettes = change?.silhouettes ?? [];
+  const renderSilhouette = (silhouette: Change["silhouettes"][number]) => (
+    <Animated.View
+      key={`${change!.id}-${silhouette.layerId}`}
+      style={[styles.silhouette, silhouetteStyle]}
+    >
+      {/* RN Image tints natively on the first frame; expo-image's tint lags. */}
+      <NativeImage
+        accessibilityIgnoresInvertColors
+        source={silhouette.source as ImageSourcePropType}
+        style={[styles.layer, styles.silhouetteImage]}
+        resizeMode={isFigureLayer(silhouette.layerId) ? "contain" : "cover"}
+        onLoad={() => startBodyEffects(change!.id)}
+      />
+    </Animated.View>
+  );
 
   return (
     <View
@@ -245,32 +292,28 @@ export function AnimatedPixelCharacter({
         </Animated.View>
       ) : null}
 
-      <Animated.View pointerEvents="none" style={[styles.body, hopStyle]}>
-        {body.map((layer) => (
-          <Image
-            key={layer.id}
-            accessibilityIgnoresInvertColors
-            source={layer.source}
-            style={[styles.layer, { zIndex: layer.zIndex }]}
-            contentFit="cover"
-          />
-        ))}
-        {change?.silhouettes.map((silhouette) => (
-          <Animated.View
-            key={`${change.id}-${silhouette.layerId}`}
-            style={[styles.silhouette, silhouetteStyle]}
-          >
-            {/* RN Image tints natively on the first frame; expo-image's tint lags. */}
-            <NativeImage
+      {size.width > 0 ? (
+        <View pointerEvents="none" style={[styles.scene, scene]}>
+          {heldItems.map((layer) => (
+            <Image
+              key={layer.id}
               accessibilityIgnoresInvertColors
-              source={silhouette.source as ImageSourcePropType}
-              style={[styles.layer, styles.silhouetteImage]}
-              resizeMode="cover"
-              onLoad={() => startBodyEffects(change.id)}
+              source={layer.source}
+              style={[styles.layer, { zIndex: layer.zIndex }]}
+              contentFit="cover"
             />
+          ))}
+          {silhouettes
+            .filter((silhouette) => !isFigureLayer(silhouette.layerId))
+            .map(renderSilhouette)}
+          <Animated.View style={[styles.body, FIGURE_RECT, hopStyle]}>
+            <FigureLayers layers={layers} />
+            {silhouettes
+              .filter((silhouette) => isFigureLayer(silhouette.layerId))
+              .map(renderSilhouette)}
           </Animated.View>
-        ))}
-      </Animated.View>
+        </View>
+      ) : null}
 
       {change != null && sparkleAt != null && !reduceMotion ? (
         <View pointerEvents="none" style={styles.sparkles}>
@@ -279,8 +322,8 @@ export function AnimatedPixelCharacter({
               key={`${change.id}-${i}`}
               index={i}
               progress={sparkleProgress}
-              originX={sparkleAt.x * size.width}
-              originY={sparkleAt.y * size.height}
+              originX={sparkleAt.x}
+              originY={sparkleAt.y}
             />
           ))}
         </View>
@@ -330,9 +373,14 @@ const styles = StyleSheet.create({
   layer: {
     ...StyleSheet.absoluteFillObject,
   },
-  body: {
-    ...StyleSheet.absoluteFillObject,
+  scene: {
+    position: "absolute",
     zIndex: 2,
+  },
+  /** The character, between the held items' z (10–11) and the background. */
+  body: {
+    position: "absolute",
+    zIndex: 5,
     transformOrigin: "bottom",
   },
   silhouette: {

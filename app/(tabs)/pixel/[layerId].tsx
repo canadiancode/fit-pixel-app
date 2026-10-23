@@ -10,7 +10,7 @@ import { usePixelLoadout } from "@/features/pixel/pixel-loadout-context";
 export default function PixelLayerScreen() {
   const router = useRouter();
   const { layerId: layerIdParam } = useLocalSearchParams<{ layerId: string }>();
-  const { loadout, inventory, selectItem } = usePixelLoadout();
+  const { loadout, inventory, selectItem, gender, bodySize } = usePixelLoadout();
 
   const layerId = typeof layerIdParam === "string" ? layerIdParam : "";
   if (!isPixelLayerId(layerId)) {
@@ -29,6 +29,9 @@ export default function PixelLayerScreen() {
           inventory={inventory}
           selectedItemId={loadout[layerId]}
           onSelectItem={(itemId) => selectItem(layerId, itemId)}
+          gender={gender}
+          bodySize={bodySize}
+          wearer={loadout}
         />
       </View>
     </View>

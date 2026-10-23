@@ -9,9 +9,17 @@ import {
 } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
 
+import { parseBodyId } from "../character-catalog";
 import { getOwnedItemsForLayer } from "../layer-assets";
 import { PixelItemThumb } from "./pixel-item-thumb";
-import type { PixelItem, PixelItemId, PixelLayerId } from "../types";
+import type {
+  PixelBodySize,
+  PixelGender,
+  PixelItem,
+  PixelItemId,
+  PixelLayerId,
+  PixelLoadout,
+} from "../types";
 
 const THUMB_SIZE = 72;
 const LABEL_FONT_SIZE = 12;
@@ -22,6 +30,11 @@ type Props = {
   inventory: readonly PixelItemId[];
   selectedItemId: PixelItemId | undefined;
   onSelectItem: (itemId: PixelItemId) => void;
+  /** Only items this body can wear; skin tones for the current body size. */
+  gender: PixelGender | null;
+  bodySize: PixelBodySize;
+  /** Your look: thumbnails show each option worn. */
+  wearer: PixelLoadout;
 };
 
 /**
@@ -33,8 +46,13 @@ export function PixelLayerAssetPicker({
   inventory,
   selectedItemId,
   onSelectItem,
+  gender,
+  bodySize,
+  wearer,
 }: Props) {
-  const options = getOwnedItemsForLayer(layerId, inventory);
+  const options = getOwnedItemsForLayer(layerId, inventory, gender).filter(
+    (item) => layerId !== "skin" || parseBodyId(item.id)?.size === bodySize,
+  );
 
   return (
     <ScrollView
@@ -52,6 +70,7 @@ export function PixelLayerAssetPicker({
               key={option.id}
               option={option}
               isSelected={isSelected}
+              wearer={wearer}
               showBottomBorder={showBottomBorder}
               onSelect={() => onSelectItem(option.id)}
             />
@@ -65,11 +84,13 @@ export function PixelLayerAssetPicker({
 function PixelLayerAssetRow({
   option,
   isSelected,
+  wearer,
   showBottomBorder,
   onSelect,
 }: {
   option: PixelItem;
   isSelected: boolean;
+  wearer: PixelLoadout;
   showBottomBorder: boolean;
   onSelect: () => void;
 }) {
@@ -96,7 +117,11 @@ function PixelLayerAssetRow({
             flashRadius={10}
             style={[styles.thumbShell, isSelected && styles.thumbSelected]}
           >
-            <PixelItemThumb item={option} size={THUMB_SIZE - 4} />
+            <PixelItemThumb
+              item={option}
+              size={THUMB_SIZE - 4}
+              wearer={wearer}
+            />
           </PopFlashView>
           <View style={styles.textColumn}>
             <ThemedText
