@@ -46,6 +46,10 @@ memory: `./gradlew assembleRelease "-Dorg.gradle.jvmargs=-Xmx4g -XX:MaxMetaspace
 4. After that, run the workflow with `submit` on; `eas.json` sends it to the
    internal track as a draft.
 
+For friends without Play access, `eas build -p android --profile preview` makes
+an `.apk` they can install straight from the EAS link (Android's TestFlight
+equivalent; they need to allow installs from their browser).
+
 ## Play Console checklist
 
 - **Health apps declaration** (App content → Health apps): list the six read
