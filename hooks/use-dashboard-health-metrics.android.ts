@@ -1,5 +1,5 @@
 import { useFocusEffect } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   SdkAvailabilityStatus,
   aggregateRecord,
@@ -342,6 +342,13 @@ async function loadHealthConnectContributors(): Promise<
     }));
 }
 
+/**
+ * Ask once per app run, shared by every instance of this hook (dashboard,
+ * Actions, Settings…). Each one refreshes on mount and on focus, so per-instance
+ * flags let several prompts race for Health Connect's single permission sheet.
+ */
+let permissionPrompt: Promise<unknown> | null = null;
+
 export function useDashboardHealthMetrics(): DashboardHealthMetricsHookValue {
   const [metrics, setMetrics] = useState<DashboardHealthMetrics>(
     EMPTY_DASHBOARD_METRICS,
@@ -356,8 +363,6 @@ export function useDashboardHealthMetrics(): DashboardHealthMetricsHookValue {
   const [healthContributors, setHealthContributors] = useState<
     readonly HealthDataContributor[]
   >([]);
-
-  const hasPromptedAuthRef = useRef(false);
 
   const openHealthSettings = useCallback(() => {
     openHealthConnectSettings();
@@ -388,10 +393,10 @@ export function useDashboardHealthMetrics(): DashboardHealthMetricsHookValue {
 
       let granted: { accessType?: string; recordType?: string }[] =
         await getGrantedPermissions().catch(() => []);
-      if (!allReadGranted(granted) && !hasPromptedAuthRef.current) {
-        hasPromptedAuthRef.current = true;
-        setAuthorizationRequestStatus("shouldRequest");
-        granted = await requestPermission(READ_PERMISSIONS).catch(() => []);
+      if (!allReadGranted(granted)) {
+        permissionPrompt ??= requestPermission(READ_PERMISSIONS).catch(() => []);
+        await permissionPrompt;
+        granted = await getGrantedPermissions().catch(() => []);
       }
 
       if (!allReadGranted(granted) && granted.length === 0) {
