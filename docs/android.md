@@ -26,6 +26,18 @@ Connect, which the dashboard needs.
 If Gradle dies with `OutOfMemoryError: Metaspace`, run the build with more
 memory: `./gradlew assembleRelease "-Dorg.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1536m"`.
 
+### Testing against a local backend
+
+To sign up test accounts without touching production, run Supabase locally
+(`npx supabase start` in a folder holding `fit-pixel-server/supabase/migrations`)
+and a copy of `fit-pixel-server` with `SUPABASE_URL=http://127.0.0.1:54321`.
+Then point the app at them **in `.env` itself**. Exporting `EXPO_PUBLIC_*` in
+the shell is not enough: Expo's dev bundle still reads `.env`. Restart Metro
+with `--clear`, and check the served bundle no longer contains the production
+Supabase ref before signing up. `adb reverse tcp:54321 tcp:54321` (and the API
+and Metro ports) lets the emulator reach `127.0.0.1`. Only debug builds allow
+plain `http://`; release builds need HTTPS.
+
 ## Keys and files
 
 | What | Where | Without it |
