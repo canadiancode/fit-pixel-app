@@ -39,7 +39,7 @@ module.exports = ({ config }) => {
   const googleMapsApiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
   const fitPixelApiUrl =
     process.env.EXPO_PUBLIC_FIT_PIXEL_API_URL ?? "https://api.aurashields.com";
-  const localGoogleServices = path.join(__dirname, "google-services.json");
+  const localGoogleServices = path.join(process.cwd(), "google-services.json");
   const googleServicesFile =
     process.env.GOOGLE_SERVICES_JSON ??
     (fs.existsSync(localGoogleServices) ? "./google-services.json" : undefined);
