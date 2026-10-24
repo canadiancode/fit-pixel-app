@@ -35,6 +35,7 @@ import {
 } from "./settings-ui";
 
 const AVATAR_SIZE = 76;
+const AVATAR_BORDER = 2;
 const LEVEL_COLOR = "#6fc3ff";
 
 /**
@@ -119,7 +120,7 @@ export function SettingsHeader() {
             loadout={portraitLoadout(loadout)}
             style={[
               styles.avatarFigure,
-              figureFrameForCrop(PIXEL_HEAD_CROP, AVATAR_SIZE),
+              figureFrameForCrop(PIXEL_HEAD_CROP, AVATAR_SIZE - 2 * AVATAR_BORDER),
             ]}
           />
         </View>
@@ -203,7 +204,7 @@ const styles = StyleSheet.create({
     width: AVATAR_SIZE,
     height: AVATAR_SIZE,
     borderRadius: 8,
-    borderWidth: 2,
+    borderWidth: AVATAR_BORDER,
     borderColor: SETTINGS_CARD_RIM_ACTIVE,
     backgroundColor: APP_SHELL_PRIMARY_BACKGROUND,
     overflow: "hidden",

@@ -19,6 +19,9 @@ type Props = {
   style?: StyleProp<ViewStyle>;
 };
 
+/** The figure is laid out inside the border, so the crop fills the inner circle. */
+const BORDER = 1;
+
 /** Circular head-and-shoulders crop of a Pixel (chat sender bubbles). */
 export function PixelHeadAvatar({ equipped, loadout, size, style }: Props) {
   const source: PixelLoadout | null =
@@ -42,7 +45,7 @@ export function PixelHeadAvatar({ equipped, loadout, size, style }: Props) {
       {source ? (
         <PixelFigure
           loadout={source}
-          style={[styles.figure, figureFrameForCrop(PIXEL_HEAD_CROP, size)]}
+          style={[styles.figure, figureFrameForCrop(PIXEL_HEAD_CROP, size - 2 * BORDER)]}
         />
       ) : null}
     </View>
@@ -53,7 +56,7 @@ const styles = StyleSheet.create({
   circle: {
     overflow: "hidden",
     backgroundColor: APP_SHELL_PRIMARY_BACKGROUND,
-    borderWidth: 1,
+    borderWidth: BORDER,
     borderColor: "rgba(255,255,255,0.25)",
   },
   figure: {

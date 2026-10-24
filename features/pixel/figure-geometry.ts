@@ -37,8 +37,11 @@ export const PIXEL_FIGURE_IN_SCENE = {
 /** A square on the character canvas, in figure pixels. */
 export type FigureCrop = { x: number; y: number; size: number };
 
-/** Hair, face and shoulders (chat heads, small avatars). */
-export const PIXEL_HEAD_CROP: FigureCrop = { x: 81, y: 10, size: 173 };
+/**
+ * Hair, face and a little shoulder (chat heads, small avatars): the whole head
+ * fits, eyes just above centre, so it reads centred in a circle.
+ */
+export const PIXEL_HEAD_CROP: FigureCrop = { x: 66, y: 10, size: 200 };
 
 /** Head to toe, centred (the whole figure in a square). */
 export const PIXEL_FULL_FIGURE_CROP: FigureCrop = {
