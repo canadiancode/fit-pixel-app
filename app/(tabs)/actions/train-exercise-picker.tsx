@@ -7,7 +7,7 @@ import { BodyText, PixelText, T, tapHaptic } from "@/features/training/component
 import { EQUIPMENT_LABELS, EXERCISES, MUSCLE_LABELS } from "@/features/training/exercises";
 import { defaultPlannedExercise } from "@/features/training/programs";
 import { useTraining } from "@/features/training/training-context";
-import type { Equipment, Muscle } from "@/features/training/types";
+import type { Equipment, Muscle, PlannedExercise } from "@/features/training/types";
 
 const MUSCLE_FILTERS: { label: string; muscles: Muscle[] | null }[] = [
   { label: "All", muscles: null },
@@ -47,7 +47,7 @@ function Chip({ label, on, onPress }: { label: string; on: boolean; onPress: () 
 export default function TrainExercisePickerScreen() {
   const router = useRouter();
   const { workoutId, replaceKey } = useLocalSearchParams<{ workoutId: string; replaceKey?: string }>();
-  const { plan, savePlan } = useTraining();
+  const { plan, updatePlan } = useTraining();
   const [query, setQuery] = useState("");
   const [muscle, setMuscle] = useState(0);
   const [gear, setGear] = useState(0);
@@ -77,10 +77,11 @@ export default function TrainExercisePickerScreen() {
 
   const pick = async (exerciseId: string) => {
     tapHaptic();
-    const exercises = replaceKey
-      ? workout.exercises.map((e) => (e.key === replaceKey ? { ...defaultPlannedExercise(exerciseId), key: e.key, sets: e.sets, restSec: e.restSec } : e))
-      : [...workout.exercises, defaultPlannedExercise(exerciseId)];
-    await savePlan({ ...plan, workouts: plan.workouts.map((w) => (w.id === workout.id ? { ...w, exercises } : w)) });
+    const edit = (list: PlannedExercise[]) =>
+      replaceKey
+        ? list.map((e) => (e.key === replaceKey ? { ...defaultPlannedExercise(exerciseId), key: e.key, sets: e.sets, restSec: e.restSec } : e))
+        : [...list, defaultPlannedExercise(exerciseId)];
+    await updatePlan((p) => ({ ...p, workouts: p.workouts.map((w) => (w.id === workout.id ? { ...w, exercises: edit(w.exercises) } : w)) }));
     router.back();
   };
 

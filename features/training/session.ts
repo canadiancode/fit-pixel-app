@@ -60,8 +60,11 @@ export function startSession(
     xpEarned: 0,
     exercises: workout.exercises.map((p) => {
       const last = lastSetsFor(history, p.exerciseId);
-      const { weight } = suggestWeight(last, p.repsMax, unit);
-      const bodyweight = getExercise(p.exerciseId)?.load !== "weight";
+      const info = getExercise(p.exerciseId);
+      const suggested = suggestWeight(last, p.repsMax, unit).weight;
+      // First barbell session: start at the empty bar instead of 0.
+      const weight = suggested === 0 && !last && info?.equipment === "barbell" ? (unit === "kg" ? 20 : 45) : suggested;
+      const bodyweight = info?.load !== "weight";
       return {
         key: p.key,
         exerciseId: p.exerciseId,

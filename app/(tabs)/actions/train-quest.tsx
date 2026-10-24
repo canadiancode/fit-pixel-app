@@ -120,9 +120,10 @@ export default function TrainQuestScreen() {
       `${a.daysPerWeek} days`,
       `${a.sessionMin === 75 ? "75+" : a.sessionMin} min`,
       STEPS[4].options.find((o) => o.value === a.equipment)?.title,
+      a.focus !== "none" ? `${STEPS[5].options.find((o) => o.value === a.focus)?.title} focus` : null,
     ].filter(Boolean) as string[];
     return (
-      <ActionsSubScreenLayout>
+      <ActionsSubScreenLayout scrollResetKey="result">
         <View style={styles.wrap}>
           <View style={styles.hero}>
             <PixelCharacter loadout={loadout} style={StyleSheet.absoluteFill} accessibilityLabel="Your Pixel" />
@@ -200,7 +201,7 @@ export default function TrainQuestScreen() {
   const current = STEPS[step];
   const selected = answers[current.key];
   return (
-    <ActionsSubScreenLayout>
+    <ActionsSubScreenLayout scrollResetKey={step}>
       <View style={styles.wrap}>
         <View style={styles.stepHeader}>
           <PixelText size={8} color={T.muted}>STEP {step + 1} OF {STEPS.length}</PixelText>

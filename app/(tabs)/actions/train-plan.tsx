@@ -11,7 +11,7 @@ import type { PlanWorkout, TrainingPlan, Weekday } from "@/features/training/typ
 
 export default function TrainPlanScreen() {
   const router = useRouter();
-  const { plan, savePlan } = useTraining();
+  const { plan, savePlan, updatePlan } = useTraining();
 
   if (!plan) {
     return (
@@ -26,7 +26,7 @@ export default function TrainPlanScreen() {
     );
   }
 
-  const update = (fn: (p: TrainingPlan) => TrainingPlan) => void savePlan(fn(plan));
+  const update = (fn: (p: TrainingPlan) => TrainingPlan) => void updatePlan(fn);
 
   const toggleDay = (workoutId: string, day: Weekday) => {
     tapHaptic();

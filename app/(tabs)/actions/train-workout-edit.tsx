@@ -12,7 +12,7 @@ const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n
 export default function TrainWorkoutEditScreen() {
   const router = useRouter();
   const { workoutId } = useLocalSearchParams<{ workoutId: string }>();
-  const { plan, savePlan } = useTraining();
+  const { plan, updatePlan } = useTraining();
   const workout = plan?.workouts.find((w) => w.id === workoutId);
 
   if (!plan || !workout) {
@@ -24,7 +24,7 @@ export default function TrainWorkoutEditScreen() {
   }
 
   const updateWorkout = (fn: (w: PlanWorkout) => PlanWorkout) =>
-    void savePlan({ ...plan, workouts: plan.workouts.map((w) => (w.id === workout.id ? fn(w) : w)) });
+    void updatePlan((p) => ({ ...p, workouts: p.workouts.map((w) => (w.id === workout.id ? fn(w) : w)) }));
 
   const updateExercise = (key: string, fn: (e: PlannedExercise) => PlannedExercise) =>
     updateWorkout((w) => ({ ...w, exercises: w.exercises.map((e) => (e.key === key ? fn(e) : e)) }));

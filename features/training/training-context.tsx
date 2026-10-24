@@ -45,9 +45,11 @@ type TrainingContextValue = {
   lastSummary: WorkoutSummary | null;
   unit: Unit;
   savePlan: (plan: TrainingPlan) => Promise<void>;
+  /** Edit the latest plan. Safe for rapid taps and hold-to-repeat, unlike savePlan({...plan}). */
+  updatePlan: (fn: (plan: TrainingPlan) => TrainingPlan) => Promise<void>;
   startWorkout: (workoutId: string) => Promise<WorkoutSession | null>;
-  /** Persist edits to the active workout (weights, reps, current exercise). */
-  updateActive: (session: WorkoutSession) => void;
+  /** Edit the active workout (weights, reps, current exercise), building on the latest edit. */
+  updateActive: (fn: (session: WorkoutSession) => WorkoutSession) => void;
   /** Mark a set done; returns the XP it earned (0 once over the daily cap). */
   completeSet: (exerciseIndex: number, setIndex: number) => Promise<number>;
   finishWorkout: () => Promise<WorkoutSummary | null>;
@@ -70,6 +72,9 @@ export function TrainingProvider({ children }: { children: ReactNode }) {
   const [lastSummary, setLastSummary] = useState<WorkoutSummary | null>(null);
   const activeRef = useRef<WorkoutSession | null>(null);
   activeRef.current = active;
+  // The newest plan, ahead of React state, so back-to-back edits build on each other.
+  const planRef = useRef<TrainingPlan | null>(null);
+  const planWrites = useRef<Promise<void>>(Promise.resolve());
 
   const loadHistory = useCallback(async () => {
     const since = new Date(Date.now() - 90 * 86_400_000).toISOString().slice(0, 10);
@@ -82,6 +87,7 @@ export function TrainingProvider({ children }: { children: ReactNode }) {
       try {
         const [p, a] = await Promise.all([getTrainingPlan(db), getActiveWorkout(db)]);
         if (cancelled) return;
+        planRef.current = p;
         setPlan(p);
         setActive(a);
         await loadHistory();
@@ -95,10 +101,24 @@ export function TrainingProvider({ children }: { children: ReactNode }) {
   }, [db, loadHistory]);
 
   const savePlan = useCallback(
-    async (next: TrainingPlan) => {
-      setPlan(await saveTrainingPlan(db, next));
+    (next: TrainingPlan) => {
+      planRef.current = next;
+      setPlan(next);
+      // Queue writes so an older plan never lands after a newer one.
+      const write = planWrites.current.then(async () => {
+        await saveTrainingPlan(db, next);
+      });
+      planWrites.current = write.catch(() => undefined);
+      return write;
     },
     [db],
+  );
+
+  const updatePlan = useCallback(
+    async (fn: (plan: TrainingPlan) => TrainingPlan) => {
+      if (planRef.current) await savePlan(fn(planRef.current));
+    },
+    [savePlan],
   );
 
   const startWorkout = useCallback(
@@ -116,9 +136,13 @@ export function TrainingProvider({ children }: { children: ReactNode }) {
   );
 
   const updateActive = useCallback(
-    (session: WorkoutSession) => {
-      setActive(session);
-      void saveActiveWorkout(db, session);
+    (fn: (session: WorkoutSession) => WorkoutSession) => {
+      const current = activeRef.current;
+      if (!current) return;
+      const next = fn(current);
+      activeRef.current = next;
+      setActive(next);
+      void saveActiveWorkout(db, next);
     },
     [db],
   );
@@ -190,13 +214,14 @@ export function TrainingProvider({ children }: { children: ReactNode }) {
       lastSummary,
       unit,
       savePlan,
+      updatePlan,
       startWorkout,
       updateActive,
       completeSet,
       finishWorkout,
       discardWorkout,
     }),
-    [isLoaded, plan, active, history, lastSummary, unit, savePlan, startWorkout, updateActive, completeSet, finishWorkout, discardWorkout],
+    [isLoaded, plan, active, history, lastSummary, unit, savePlan, updatePlan, startWorkout, updateActive, completeSet, finishWorkout, discardWorkout],
   );
 
   return <TrainingContext.Provider value={value}>{children}</TrainingContext.Provider>;

@@ -23,7 +23,6 @@ import {
   weightStep,
 } from "@/features/training/session";
 import { useTraining } from "@/features/training/training-context";
-import type { WorkoutSession } from "@/features/training/types";
 
 type Rest = { endsAt: number; total: number; notificationId: string | null };
 
@@ -89,12 +88,7 @@ export default function WorkoutScreen() {
   const allSetsDone = !!ex && firstOpen === -1;
   const workoutDone = !!session && session.exercises.every((e) => e.sets.every((s) => s.done));
 
-  const mutate = useCallback(
-    (fn: (s: WorkoutSession) => WorkoutSession) => {
-      if (session) updateActive(fn(session));
-    },
-    [session, updateActive],
-  );
+  const mutate = updateActive;
 
   const editSet = useCallback(
     (field: "weight" | "reps", delta: number) => {
