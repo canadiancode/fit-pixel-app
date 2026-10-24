@@ -15,6 +15,7 @@ import type {
   ActionRouteId,
 } from "@/features/actions/data";
 import { emitProgress } from "@/features/actions/progress-celebration";
+import { notifyHabitLogged } from "@/features/streak/streak-events";
 import { useXpState } from "@/features/xp/xp-state-context";
 import { useDashboardHealthMetrics } from "@/hooks/use-dashboard-health-metrics";
 import {
@@ -174,6 +175,7 @@ export function HabitProgressProvider({ children }: { children: ReactNode }) {
       if (progressRoute != null) emitProgress(progressRoute);
       await refreshTotals();
       await refreshXp();
+      notifyHabitLogged();
     },
     [db, goals.waterUnit, goals.weightUnit, refreshTotals, refreshXp],
   );

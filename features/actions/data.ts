@@ -1,6 +1,12 @@
 import { clampActionBarPercent } from "@/lib/action-bar-progress";
 import { clampXpBarPercent } from "@/lib/xp-progress";
-import type { DailyGoals } from "@/lib/db";
+import {
+  getFoodGoalMode,
+  getFoodGoalScore,
+  isFoodOverLimit,
+  type DailyGoals,
+  type FoodGoalMode,
+} from "@/lib/db";
 
 import { ACTION_BAR_CONTAINER, ACTION_ROW_ACCENT_COLORS } from "./constants";
 
@@ -84,8 +90,30 @@ export type ActionProgressDisplay = {
   current: string;
   rest: string;
   accentColor: string;
-  /** Raw 0–100 progress toward the goal. */
+  /** Raw 0–100 progress toward the goal: how full the bar is. */
   percent: number;
+  /**
+   * 0–100 toward meeting the goal (Today's progress, the gold pulse). The
+   * same as `percent` except for food, whose goal is a range (food-goal.ts).
+   */
+  goalPercent: number;
+  /** Food only: past the top of today's range (the bar label shows > 100%). */
+  overLimit?: boolean;
+};
+
+/** Which way today's food target points, from the latest weigh-in. */
+export function getFoodGoalModeForTotals(
+  goals: DailyGoals,
+  totals: ActionProgressTotals,
+): FoodGoalMode {
+  return getFoodGoalMode(totals.weight, goals.weightGoal, goals.weightUnit);
+}
+
+/** Suffix after the food target, e.g. "KCAL MAX" while losing weight. */
+const FOOD_TARGET_SUFFIX: Record<FoodGoalMode, string> = {
+  under: "KCAL MAX",
+  over: "KCAL",
+  near: "KCAL",
 };
 
 function formatInt(n: number): string {
@@ -142,11 +170,15 @@ export function getActionRowProgressDisplay(
     case "food": {
       const current = totals.foodKcal ?? 0;
       const goal = goals.foodKcal;
+      const mode = getFoodGoalModeForTotals(goals, totals);
       return {
         current: formatInt(current),
-        rest: ` / ${formatInt(goal)} KCAL`,
+        rest: ` / ${formatInt(goal)} ${FOOD_TARGET_SUFFIX[mode]}`,
         accentColor,
-        percent: percentToward(current, goal),
+        // Not capped: past the target the label reads e.g. "112%".
+        percent: goal > 0 && current > 0 ? (current / goal) * 100 : 0,
+        goalPercent: getFoodGoalScore(mode, current, goal),
+        overLimit: isFoodOverLimit(mode, current, goal),
       };
     }
     case "water": {
@@ -158,6 +190,7 @@ export function getActionRowProgressDisplay(
         rest: ` / ${formatInt(goal)}${unit}`,
         accentColor,
         percent: percentToward(current, goal),
+        goalPercent: percentToward(current, goal),
       };
     }
     case "train": {
@@ -168,6 +201,7 @@ export function getActionRowProgressDisplay(
         rest: ` / ${formatInt(goal)}M`,
         accentColor,
         percent: percentToward(current, goal),
+        goalPercent: percentToward(current, goal),
       };
     }
     case "sleep": {
@@ -178,6 +212,7 @@ export function getActionRowProgressDisplay(
         rest: ` / ${formatSleepDurationLabel(goal)}`,
         accentColor,
         percent: percentToward(current, goal),
+        goalPercent: percentToward(current, goal),
       };
     }
     case "steps": {
@@ -188,6 +223,7 @@ export function getActionRowProgressDisplay(
         rest: ` / ${formatInt(goal)} STEPS`,
         accentColor,
         percent: percentToward(current, goal),
+        goalPercent: percentToward(current, goal),
       };
     }
     case "calories": {
@@ -198,6 +234,7 @@ export function getActionRowProgressDisplay(
         rest: ` / ${formatInt(goal)} KCAL`,
         accentColor,
         percent: percentToward(current, goal),
+        goalPercent: percentToward(current, goal),
       };
     }
     case "weight": {
@@ -210,6 +247,7 @@ export function getActionRowProgressDisplay(
         rest: ` / ${formatInt(goal)} ${unit}`,
         accentColor,
         percent: percentToward(current, goal),
+        goalPercent: percentToward(current, goal),
       };
     }
     default: {
@@ -230,12 +268,13 @@ export function getActionRowProgressLabel(
   return `${current}${rest}`;
 }
 
+/** 0–100 toward meeting the row's goal (see `goalPercent`). */
 export function getActionRowProgressPercent(
   id: ActionRouteId,
   goals: DailyGoals,
   totals?: ActionProgressTotals,
 ): number {
-  return getActionRowProgressDisplay(id, goals, totals).percent;
+  return getActionRowProgressDisplay(id, goals, totals).goalPercent;
 }
 
 /** Clamped fill percent for the action bar artwork. */
@@ -245,7 +284,7 @@ export function getActionRowFillPercent(
   totals?: ActionProgressTotals,
 ): number {
   return clampActionBarPercent(
-    getActionRowProgressPercent(id, goals, totals),
+    getActionRowProgressDisplay(id, goals, totals).percent,
   );
 }
 

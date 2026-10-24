@@ -6,6 +6,7 @@ import { getTodayDayKey } from "../day-boundary/store";
 import { listHabitLogsForDay } from "../habit-log/store";
 import {
   aggregateHabitLogs,
+  getLatestWeightValue,
   type HabitDayTotals,
 } from "../habit-log/totals";
 import type { WeightHabitPayload } from "../habit-log/types";
@@ -34,6 +35,7 @@ function totalsToSummary(
   totals: HabitDayTotals,
   options: DailySummaryTotalsOptions,
   goals: DailyGoals,
+  latestWeight: number | undefined,
   updatedAt: string,
 ): DailySummary {
   return {
@@ -47,7 +49,7 @@ function totalsToSummary(
     weight: totals.weight ?? null,
     waterUnit: options.waterUnit,
     weightUnit: options.weightUnit,
-    goalsMet: computeGoalsMet(totals, goals),
+    goalsMet: computeGoalsMet(totals, goals, latestWeight),
     updatedAt,
   };
 }
@@ -85,7 +87,8 @@ export async function getDailySummary(
       activeKcal: cached.activeKcal,
       ...(cached.weight != null ? { weight: cached.weight } : {}),
     };
-    const goalsMet = computeGoalsMet(totals, resolvedGoals);
+    const latestWeight = await getLatestWeightValue(db, options.weightUnit);
+    const goalsMet = computeGoalsMet(totals, resolvedGoals, latestWeight);
     if (
       goalsMet.length === cached.goalsMet.length &&
       goalsMet.every((key, i) => key === cached.goalsMet[i])
@@ -114,11 +117,13 @@ export async function recomputeDailySummary(
   const resolvedGoals = goals ?? (await getDailyGoals(db));
   const logs = await listHabitLogsForDay(db, dayKey);
   const totals = aggregateHabitLogs(logs, options);
+  const latestWeight = await getLatestWeightValue(db, options.weightUnit);
   const summary = totalsToSummary(
     dayKey,
     totals,
     options,
     resolvedGoals,
+    latestWeight,
     nowIso(),
   );
   await upsertCachedDailySummary(db, summary);

@@ -10,7 +10,7 @@ import {
 import type { TextInput } from "react-native";
 
 /** Top-level sections of the Chat tab index. */
-export type ChatSection = "gyms" | "messages" | "friends";
+export type ChatSection = "gyms" | "messages" | "friends" | "ranks";
 
 type ChatSearchContextValue = {
   query: string;

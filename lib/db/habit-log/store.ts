@@ -8,7 +8,10 @@ import { getDayBoundary } from "../day-boundary/store";
 import { newLocalRecord, nowIso } from "../ids";
 import { enqueueOp } from "../pending-ops";
 import { awardXp } from "../xp/store";
-import { XP_PER_HABIT_LOG } from "../xp/amounts";
+import {
+  XP_HABIT_LOGS_PER_TYPE_PER_DAY,
+  XP_PER_HABIT_LOG,
+} from "../xp/amounts";
 import {
   HABIT_LOG_LIMITS,
   waterHabitAmountLimits,
@@ -429,7 +432,11 @@ export async function insertHabitLog<T extends HabitLogType>(
   await invalidateDailySummary(db, dayKey);
 
   // Local XP prototype — not enqueued; server will recompute from habit facts.
-  if (input.skipXp !== true) {
+  if (
+    input.skipXp !== true &&
+    (await countHabitLogsForDay(db, dayKey, log.type)) <=
+      XP_HABIT_LOGS_PER_TYPE_PER_DAY
+  ) {
     await awardXp(db, {
       amount: XP_PER_HABIT_LOG,
       reason: "habit_log",
@@ -577,6 +584,20 @@ export async function logActiveKcal(
     source: input.source,
     notes: input.notes,
   });
+}
+
+/** How many `type` logs `dayKey` holds (the daily XP cap counts these). */
+async function countHabitLogsForDay(
+  db: SQLiteDatabase,
+  dayKey: string,
+  type: HabitLogType,
+): Promise<number> {
+  const row = await db.getFirstAsync<{ n: number }>(
+    `SELECT COUNT(*) AS n FROM habit_logs WHERE dayKey = ? AND type = ?`,
+    dayKey,
+    type,
+  );
+  return row?.n ?? 0;
 }
 
 export async function listHabitLogsForDay(

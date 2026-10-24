@@ -14,6 +14,7 @@ import {
 } from "@/features/pixel/components/pixel-customize-hint";
 import { isPixelLayerId } from "@/features/pixel/data";
 import { usePixelLoadout } from "@/features/pixel/pixel-loadout-context";
+import { usePixelVitals } from "@/features/pixel/use-pixel-vitals";
 
 export const unstable_settings = {
   initialRouteName: "index",
@@ -25,6 +26,7 @@ function PixelTabChrome() {
   const { loadout, isHydrated, gender } = usePixelLoadout();
   const [heroPressed, setHeroPressed] = useState(false);
   const insets = useSafeAreaInsets();
+  const vitals = usePixelVitals();
 
   // Typed segments omit "index", but the runtime value can include it.
   const pixelSegments: string[] = segments.filter(
@@ -69,6 +71,8 @@ function PixelTabChrome() {
             focusInsetTop={insets.top}
             invite={isDashboard}
             pressed={heroPressed}
+            alive={isDashboard}
+            vitals={vitals}
             style={styles.heroCharacter}
           />
         </Pressable>

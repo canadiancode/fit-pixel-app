@@ -8,6 +8,7 @@ import { useChatSearch } from "@/features/chat/chat-search-context";
 import { ChatFriendsSection } from "@/features/chat/components/chat-friends-section";
 import { ChatGymsSection } from "@/features/chat/components/chat-gyms-section";
 import { ChatMessagesSection } from "@/features/chat/components/chat-messages-section";
+import { ChatRanksSection } from "@/features/chat/components/chat-ranks-section";
 import { ChatSectionTabs } from "@/features/chat/components/chat-section-tabs";
 import { useNotifications } from "@/features/social/notifications-context";
 import {
@@ -38,7 +39,7 @@ function openDm(conversationId: string) {
   });
 }
 
-/** Chat tab home: Gyms / Messages / Friends sections under one switcher. */
+/** Chat tab home: Gyms / Messages / Friends / Ranks sections under one switcher. */
 export function ChatIndexBody() {
   const { query, section, setSection, focusSearch } = useChatSearch();
   const { session } = useAuth();
@@ -156,6 +157,8 @@ export function ChatIndexBody() {
           openingDmFor={openingDmFor}
           onFindFriends={findPixels}
         />
+      ) : section === "ranks" ? (
+        <ChatRanksSection query={query} onFindFriends={findPixels} />
       ) : (
         <ChatFriendsSection
           friends={friends}

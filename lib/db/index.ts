@@ -31,6 +31,12 @@ export {
 export {
   computeGoalsMet,
   DAILY_SUMMARY_GOAL_KEYS,
+  getFoodGoalMode,
+  getFoodGoalRange,
+  getFoodGoalScore,
+  isFoodGoalMet,
+  isFoodOverLimit,
+  type FoodGoalMode,
   getDailySummary,
   getEarliestActiveKcalDayKey,
   getEarliestFoodDayKey,
@@ -235,3 +241,9 @@ export {
   type WeightJourney,
   type WeightJourneyUpdate,
 } from "./weight-journey";
+export {
+  EMPTY_STREAK,
+  getDailyStreak,
+  streakFromDayKeys,
+  type DailyStreak,
+} from "./streak";

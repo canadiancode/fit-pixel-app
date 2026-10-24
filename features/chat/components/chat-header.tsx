@@ -53,6 +53,7 @@ const SECTION_SEARCH_COPY: Record<
   gyms: { placeholder: "Search gyms", a11yLabel: "Search gym chats" },
   messages: { placeholder: "Search DMs", a11yLabel: "Search messages" },
   friends: { placeholder: "Find Pixels", a11yLabel: "Find Pixels by name" },
+  ranks: { placeholder: "Search ranks", a11yLabel: "Filter the leaderboard by name" },
 };
 
 /** Gym chat and DM threads show Back + title in the band instead of search. */

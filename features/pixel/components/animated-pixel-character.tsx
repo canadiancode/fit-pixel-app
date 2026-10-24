@@ -38,12 +38,14 @@ import {
   type PixelLayerId,
   type PixelLoadout,
 } from "../types";
+import { CALM_VITALS, type PixelVitals } from "../use-pixel-vitals";
 import {
   FIGURE_RECT,
   FigureLayers,
   isFigureLayer,
   resolveLayers,
 } from "./pixel-character";
+import { PixelVitalsLayer } from "./pixel-vitals-layer";
 
 /**
  * Where each layer sits, so the sparkle burst comes from the part of the
@@ -132,6 +134,19 @@ const IDLE_SPARKLE_SPOTS: readonly Exclude<PixelLayerId, "background">[] = [
   "item_right",
 ];
 
+/** Alive: a slow breath (one half-cycle), slower and deeper when sleepy. */
+const BREATH_MS = 1800;
+const SLEEPY_BREATH_MS = 2600;
+/** Alive: a small human fidget every 5–10s (10–16s when sleepy). */
+const FIDGET_MIN_MS = 5000;
+const FIDGET_JITTER_MS = 5000;
+const SLEEPY_FIDGET_MIN_MS = 10_000;
+const SLEEPY_FIDGET_JITTER_MS = 6000;
+
+type Fidget = "shift" | "look" | "bounce" | "stretch" | "nod";
+const AWAKE_FIDGETS: readonly Fidget[] = ["shift", "look", "bounce", "stretch", "shift", "look"];
+const SLEEPY_FIDGETS: readonly Fidget[] = ["nod", "nod", "shift"];
+
 /** Held down: the Pixel squashes flat and wide. */
 const PRESS_SQUASH = { scaleX: 1.24, scaleY: 0.66 };
 const PRESS_SQUASH_MS = 120;
@@ -189,6 +204,13 @@ type Props = {
   invite?: boolean;
   /** Held down: the Pixel squashes, then springs up when let go. */
   pressed?: boolean;
+  /**
+   * The Pixel is alive: it breathes, fidgets now and then, and shows today's
+   * vitals (Zzz, sweat, hearts, glowing bottle). Paused while a part is in
+   * focus; all of it is off under Reduce Motion.
+   */
+  alive?: boolean;
+  vitals?: PixelVitals;
   style?: StyleProp<ViewStyle>;
   accessibilityLabel?: string;
 };
@@ -221,6 +243,8 @@ export function AnimatedPixelCharacter({
   focusInsetTop = 0,
   invite = false,
   pressed = false,
+  alive = false,
+  vitals = CALM_VITALS,
   style,
   accessibilityLabel = "Pixel character",
 }: Props) {
@@ -242,6 +266,11 @@ export function AnimatedPixelCharacter({
   const silhouetteOpacity = useSharedValue(0);
   const sparkleProgress = useSharedValue(0);
   const wipeProgress = useSharedValue(1);
+  const breath = useSharedValue(0);
+  const idleX = useSharedValue(0);
+  const idleY = useSharedValue(0);
+  const idleRot = useSharedValue(0);
+  const idleStretch = useSharedValue(0);
 
   const cameraScale = useSharedValue(PIXEL_CAMERA_REST.scale);
   const cameraX = useSharedValue(PIXEL_CAMERA_REST.x);
@@ -473,6 +502,117 @@ export function AnimatedPixelCharacter({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pressed]);
 
+  // Alive: breathing plus a small fidget now and then, like someone waiting.
+  const living = alive && focus == null && !reduceMotion && hasSize;
+  const sleepy = vitals.sleepy;
+  useEffect(() => {
+    if (!living) {
+      cancelAnimation(breath);
+      breath.value = withTiming(0, { duration: 300 });
+      return;
+    }
+    breath.value = withRepeat(
+      withTiming(1, {
+        duration: sleepy ? SLEEPY_BREATH_MS : BREATH_MS,
+        easing: Easing.inOut(Easing.sin),
+      }),
+      -1,
+      true,
+    );
+    // Shared values are stable; react only to life / mood changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [living, sleepy]);
+
+  useEffect(() => {
+    if (!living) return;
+    let timer: ReturnType<typeof setTimeout>;
+    const scene = coverSceneRect(sizeRef.current.width, sizeRef.current.height);
+    const figW = scene.width * PIXEL_FIGURE_IN_SCENE.width;
+    const figH = scene.height * PIXEL_FIGURE_IN_SCENE.height;
+    const smooth = (duration: number) => ({
+      duration,
+      easing: Easing.inOut(Easing.quad),
+    });
+    const play = (fidget: Fidget) => {
+      switch (fidget) {
+        case "shift": {
+          // Shift weight onto one foot, then back.
+          const dir = Math.random() < 0.5 ? -1 : 1;
+          idleX.value = withSequence(
+            withTiming(dir * figW * 0.035, smooth(520)),
+            withTiming(dir * figW * 0.035, { duration: 900 }),
+            withTiming(0, smooth(620)),
+          );
+          idleRot.value = withSequence(
+            withTiming(dir * 1.6, smooth(520)),
+            withTiming(dir * 1.6, { duration: 900 }),
+            withTiming(0, smooth(620)),
+          );
+          break;
+        }
+        case "look":
+          // Glance one way, then the other.
+          idleRot.value = withSequence(
+            withTiming(-2.2, smooth(320)),
+            withTiming(-2.2, { duration: 650 }),
+            withTiming(2.2, smooth(420)),
+            withTiming(2.2, { duration: 550 }),
+            withTiming(0, smooth(360)),
+          );
+          break;
+        case "bounce":
+          // Two light bounces on the toes.
+          idleY.value = withSequence(
+            withTiming(-figH * 0.022, { duration: 130, easing: Easing.out(Easing.quad) }),
+            withTiming(0, { duration: 130, easing: Easing.in(Easing.quad) }),
+            withTiming(-figH * 0.016, { duration: 120, easing: Easing.out(Easing.quad) }),
+            withTiming(0, { duration: 120, easing: Easing.in(Easing.quad) }),
+          );
+          break;
+        case "stretch":
+          idleStretch.value = withSequence(
+            withTiming(1, smooth(520)),
+            withTiming(1, { duration: 420 }),
+            withTiming(0, smooth(520)),
+          );
+          break;
+        case "nod":
+          // Sleepy: a slow nod off, then catch it.
+          idleY.value = withSequence(
+            withTiming(figH * 0.012, smooth(900)),
+            withTiming(figH * 0.012, { duration: 500 }),
+            withTiming(0, { duration: 180, easing: Easing.out(Easing.quad) }),
+          );
+          idleRot.value = withSequence(
+            withTiming(2.6, smooth(900)),
+            withTiming(2.6, { duration: 500 }),
+            withTiming(0, { duration: 180, easing: Easing.out(Easing.quad) }),
+          );
+          break;
+      }
+    };
+    const schedule = () => {
+      const delay = sleepy
+        ? SLEEPY_FIDGET_MIN_MS + Math.random() * SLEEPY_FIDGET_JITTER_MS
+        : FIDGET_MIN_MS + Math.random() * FIDGET_JITTER_MS;
+      timer = setTimeout(() => {
+        const options = sleepy ? SLEEPY_FIDGETS : AWAKE_FIDGETS;
+        play(options[Math.floor(Math.random() * options.length)]);
+        schedule();
+      }, delay);
+    };
+    schedule();
+    return () => {
+      clearTimeout(timer);
+      idleX.value = withTiming(0, { duration: 200 });
+      idleY.value = withTiming(0, { duration: 200 });
+      idleRot.value = withTiming(0, { duration: 200 });
+      idleStretch.value = withTiming(0, { duration: 200 });
+    };
+    // Shared values are stable; react only to life / mood changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [living, sleepy]);
+
   const cameraStyle = useAnimatedStyle(() => ({
     transform: [
       { translateX: cameraX.value },
@@ -505,6 +645,24 @@ export function AnimatedPixelCharacter({
       { scaleY: hopScaleY.value },
     ],
   }));
+  const idleStyle = useAnimatedStyle(() => {
+    const depth = sleepy ? 0.026 : 0.016;
+    return {
+      transform: [
+        { translateX: idleX.value },
+        { translateY: idleY.value },
+        { rotate: `${idleRot.value}deg` },
+        { scaleX: (1 - breath.value * 0.006) * (1 - idleStretch.value * 0.03) },
+        // Sleepy slumps a touch shorter.
+        {
+          scaleY:
+            (sleepy ? 0.985 : 1) *
+            (1 + breath.value * depth) *
+            (1 + idleStretch.value * 0.05),
+        },
+      ],
+    };
+  });
   const silhouetteStyle = useAnimatedStyle(() => ({
     opacity: silhouetteOpacity.value,
   }));
@@ -627,11 +785,20 @@ export function AnimatedPixelCharacter({
               .filter((silhouette) => !isFigureLayer(silhouette.layerId))
               .map(renderSilhouette)}
             <Animated.View style={[styles.body, FIGURE_RECT, hopStyle]}>
-              <FigureLayers layers={layers} allowDownscaling={false} />
-              {silhouettes
-                .filter((silhouette) => isFigureLayer(silhouette.layerId))
-                .map(renderSilhouette)}
+              <Animated.View style={[styles.idle, idleStyle]}>
+                <FigureLayers layers={layers} allowDownscaling={false} />
+                {silhouettes
+                  .filter((silhouette) => isFigureLayer(silhouette.layerId))
+                  .map(renderSilhouette)}
+              </Animated.View>
             </Animated.View>
+            {alive && focus == null && !reduceMotion ? (
+              <PixelVitalsLayer
+                vitals={vitals}
+                width={scene.width}
+                height={scene.height}
+              />
+            ) : null}
           </View>
         </Animated.View>
       ) : null}
@@ -895,6 +1062,11 @@ function Sparkle({
 }
 
 const styles = StyleSheet.create({
+  /** Breathing / fidget wrapper: pivots at the feet. */
+  idle: {
+    ...StyleSheet.absoluteFillObject,
+    transformOrigin: "50% 100%",
+  },
   frame: {
     position: "relative",
     overflow: "hidden",

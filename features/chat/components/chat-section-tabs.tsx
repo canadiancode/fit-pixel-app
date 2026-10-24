@@ -20,6 +20,7 @@ const SECTIONS: readonly { id: ChatSection; label: string }[] = [
   { id: "gyms", label: "Gyms" },
   { id: "messages", label: "Messages" },
   { id: "friends", label: "Friends" },
+  { id: "ranks", label: "Ranks" },
 ];
 
 type Props = {
@@ -29,7 +30,7 @@ type Props = {
   badges?: Partial<Record<ChatSection, number>>;
 };
 
-/** Gyms / Messages / Friends switcher at the top of the Chat tab. */
+/** Gyms / Messages / Friends / Ranks switcher at the top of the Chat tab. */
 export function ChatSectionTabs({ active, onChange, badges }: Props) {
   return (
     <View style={styles.track} accessibilityRole="tablist">
@@ -73,6 +74,8 @@ export function ChatSectionTabs({ active, onChange, badges }: Props) {
                     }
                     style={styles.label}
                     numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.7}
                   >
                     {section.label}
                   </ThemedText>
@@ -112,7 +115,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
+    paddingHorizontal: 4,
     borderRadius: 8,
     borderWidth: 2,
     borderColor: "transparent",
@@ -129,7 +132,11 @@ const styles = StyleSheet.create({
     fontSize: 10,
     lineHeight: 14,
   },
+  /** Pinned to the tab's corner so four labels keep their full width. */
   badge: {
+    position: "absolute",
+    top: -6,
+    right: -4,
     minWidth: 16,
     height: 16,
     paddingHorizontal: 4,
