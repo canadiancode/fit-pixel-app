@@ -14,12 +14,18 @@ import { PixelItemThumb } from "@/features/pixel/components/pixel-item-thumb";
 import { DEFAULT_PIXEL_LOADOUT } from "@/features/pixel/default-loadout";
 import {
   getItemOrigin,
+  getPublicItemBadge,
   RARITY_COLORS,
   RARITY_LABELS,
 } from "@/features/pixel/item-origin";
 import { getPixelItem } from "@/features/pixel/layer-assets";
-import type { PixelLayerId, PixelLoadout } from "@/features/pixel/types";
+import type {
+  PixelItemId,
+  PixelLayerId,
+  PixelLoadout,
+} from "@/features/pixel/types";
 import type { EquippedLook } from "@/lib/api/chat";
+import type { InventoryUnlockRecord } from "@/lib/db";
 
 const SHOWCASE_RIM = "rgba(255,255,255,0.18)";
 const THUMB_SIZE = 56;
@@ -62,18 +68,44 @@ export function PixelShowcase({
   );
 }
 
+const UNLOCK_DATE_FORMAT: Intl.DateTimeFormatOptions = {
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+};
+
+function formatUnlockDate(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime())
+    ? null
+    : date.toLocaleDateString(undefined, UNLOCK_DATE_FORMAT);
+}
+
 /**
- * What the Pixel has on display, one card per collectible: the item, its
- * rarity, and how it's earned (starter, level unlock, weight reward).
+ * What the Pixel has on display, one card per collectible.
+ *
+ * `owner`: the player's own view — rarity, how the item was earned, and when.
+ * `public`: what everyone else sees — one badge, the level the item unlocks
+ * at, or its price tier ($ / $$ / $$$) for paid items.
  */
 export function PixelCollection({
   equipped,
   subtitle,
+  variant,
+  unlocks,
+  joinedAt,
 }: {
   equipped: EquippedLook | null | undefined;
   subtitle: string;
+  variant: "owner" | "public";
+  /** Owner only: when each item was unlocked, by item id. */
+  unlocks?: ReadonlyMap<PixelItemId, InventoryUnlockRecord>;
+  /** Owner only: account start, shown as the date for starter items. */
+  joinedAt?: string | null;
 }) {
   if (equipped === undefined) return null;
+  const isOwner = variant === "owner";
   const loadout = toLoadout(equipped);
   const slots = COLLECTION_SLOTS.map((slot) => {
     const itemId = loadout[slot.layer];
@@ -97,7 +129,9 @@ export function PixelCollection({
           Collection
         </ThemedText>
         <Text style={styles.collectionCount}>
-          {earned} earned · {items.length} on display
+          {isOwner
+            ? `${earned} earned · ${items.length} on display`
+            : `${items.length} on display`}
         </Text>
       </View>
       <Text style={styles.collectionSubtitle}>
@@ -119,18 +153,66 @@ export function PixelCollection({
               </View>
             );
           }
+          const thumb = (
+            <View style={styles.thumbShell}>
+              <PixelItemThumb item={item} size={THUMB_SIZE} wearer={loadout} />
+            </View>
+          );
+
+          if (!isOwner) {
+            const badge = getPublicItemBadge(origin);
+            return (
+              <View
+                key={slot.layer}
+                accessible
+                accessibilityLabel={`${slot.label}: ${item.label}. ${publicBadgeA11y(badge, origin.priceTier)}.`}
+                style={[styles.card, styles.itemCard]}
+              >
+                <View style={styles.cardTop}>
+                  {thumb}
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeLabel}>{badge}</Text>
+                  </View>
+                </View>
+                <Text style={styles.slotLabel}>{slot.label}</Text>
+                <Text numberOfLines={2} style={styles.itemName}>
+                  {item.label}
+                </Text>
+              </View>
+            );
+          }
+
           const color = RARITY_COLORS[origin.rarity];
+          const unlock = unlocks?.get(item.id);
+          const isStarter = origin.unlockLevel === 0 && unlock == null;
+          const date = formatUnlockDate(
+            unlock?.unlockedAt ?? (isStarter ? joinedAt : null),
+          );
+          const dateLine =
+            date == null ? null : `${isStarter ? "Since" : "On"} ${date}`;
+          // Level-gated items say their level already; rewards and paid items
+          // show the level you were when you got them.
+          const gotAt =
+            origin.unlockLevel == null && unlock?.clientLevel != null
+              ? `Earned at Level ${unlock.clientLevel}`
+              : null;
           return (
             <View
               key={slot.layer}
               accessible
-              accessibilityLabel={`${slot.label}: ${item.label}. ${RARITY_LABELS[origin.rarity]}. ${origin.description}.`}
+              accessibilityLabel={[
+                `${slot.label}: ${item.label}`,
+                RARITY_LABELS[origin.rarity],
+                origin.description,
+                gotAt,
+                dateLine,
+              ]
+                .filter(Boolean)
+                .join(". ")}
               style={[styles.card, { borderColor: color }]}
             >
               <View style={styles.cardTop}>
-                <View style={styles.thumbShell}>
-                  <PixelItemThumb item={item} size={THUMB_SIZE} wearer={loadout} />
-                </View>
+                {thumb}
                 <View style={[styles.badge, { backgroundColor: color }]}>
                   <Text style={styles.badgeLabel}>{origin.badge}</Text>
                 </View>
@@ -145,12 +227,33 @@ export function PixelCollection({
               <Text numberOfLines={2} style={styles.origin}>
                 {origin.description}
               </Text>
+              {gotAt ? (
+                <Text numberOfLines={1} style={styles.origin}>
+                  {gotAt}
+                </Text>
+              ) : null}
+              {dateLine ? (
+                <Text numberOfLines={1} style={styles.origin}>
+                  {dateLine}
+                </Text>
+              ) : null}
             </View>
           );
         })}
       </View>
     </View>
   );
+}
+
+function publicBadgeA11y(badge: string, priceTier: number | null): string {
+  if (priceTier != null) {
+    return priceTier >= 3
+      ? "Premium item"
+      : priceTier === 2
+        ? "Mid-price item"
+        : "Low-price item";
+  }
+  return badge.startsWith("LV ") ? `Level ${badge.slice(3)} item` : badge;
 }
 
 const styles = StyleSheet.create({
@@ -212,6 +315,9 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 4,
   },
+  itemCard: {
+    borderColor: "rgba(255,255,255,0.22)",
+  },
   emptyCard: {
     borderStyle: "dashed",
     borderColor: "rgba(255,255,255,0.22)",
@@ -228,6 +334,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.06)",
   },
   badge: {
+    backgroundColor: "#FFD23F",
     borderRadius: 4,
     paddingHorizontal: 5,
     paddingVertical: 3,

@@ -233,3 +233,44 @@ export async function getPendingOp(
   );
   return row == null ? null : mapRow(row);
 }
+
+export type InventoryUnlockRecord = {
+  itemId: string;
+  unlockedAt: string;
+  /** Player level when the item was unlocked, if the client recorded it. */
+  clientLevel: number | null;
+};
+
+/**
+ * Item unlocks this device has recorded, earliest per item. Synced ops stay in
+ * the table, so this doubles as the local unlock history (lost on wipe).
+ */
+export async function listInventoryUnlocks(
+  db: SQLiteDatabase,
+): Promise<InventoryUnlockRecord[]> {
+  const rows = await db.getAllAsync<{ payload_json: string; createdAt: string }>(
+    `SELECT payload_json, createdAt
+     FROM pending_server_ops
+     WHERE type = 'inventory_unlock' AND status != 'rejected'
+     ORDER BY createdAt ASC`,
+  );
+  const byItem = new Map<string, InventoryUnlockRecord>();
+  for (const row of rows) {
+    let payload: Record<string, unknown>;
+    try {
+      payload = JSON.parse(row.payload_json) as Record<string, unknown>;
+    } catch {
+      continue;
+    }
+    const itemId = payload.itemId;
+    if (typeof itemId !== "string" || byItem.has(itemId)) continue;
+    byItem.set(itemId, {
+      itemId,
+      unlockedAt:
+        typeof payload.unlockedAt === "string" ? payload.unlockedAt : row.createdAt,
+      clientLevel:
+        typeof payload.clientLevel === "number" ? payload.clientLevel : null,
+    });
+  }
+  return [...byItem.values()];
+}
