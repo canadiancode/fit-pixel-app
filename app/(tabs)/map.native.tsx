@@ -104,7 +104,8 @@ const mapsKeyMissing = Platform.OS === "android" && !androidGoogleMapsApiKey();
 const GYM_MARKER_IMAGE = require("@/assets/icons/marker.png");
 const USER_ICON_MAP_CARD = require("@/assets/icons/user.png");
 const USER_CAR_ICON = require("@/assets/icons/car.png");
-const LOCATE_ME_ICON = require("@/assets/icons/locate-me.png");
+/** Pixel-art round button with the arrow baked in (same grid and palette as add.png). */
+const LOCATE_ME_BUTTON = require("@/assets/icons/locate-me-button.png");
 const ADD_GYM_ICON = require("@/assets/icons/add.png");
 const PRIMARY_BUTTON_BACKGROUND = require("@/assets/backgrounds/add-action.png");
 /** Popup card behind gym name, hero image, distance, etc. */
@@ -126,7 +127,6 @@ const SEARCH_RESULT_PIN_HEIGHT = 20;
 const GYM_SEARCH_RESULT_LIMIT = 8;
 
 const LOCATE_FAB_SIZE = 48;
-const LOCATE_ICON_SIZE = 24;
 /** Extra space below the status bar / notch; increase to move the locate FAB down. */
 const LOCATE_FAB_TOP_OFFSET = 25;
 /** Inset from the trailing screen edge (right in LTR); increase to move the locate FAB inward. */
@@ -721,18 +721,17 @@ export default function MapScreen() {
               accessibilityRole="button"
               accessibilityLabel="Center map on my location"
               onPress={handleLocateMePress}
-              style={({ pressed }) =>
-                pressed ? styles.locateFabPressed : undefined
-              }
+              style={({ pressed }) => [
+                styles.locateFab,
+                pressed && styles.locateFabPressed,
+              ]}
             >
-              <View style={styles.locateFabDisk} collapsable={false}>
-                <Image
-                  source={LOCATE_ME_ICON}
-                  style={styles.locateFabIcon}
-                  contentFit="contain"
-                  accessibilityIgnoresInvertColors
-                />
-              </View>
+              <Image
+                source={LOCATE_ME_BUTTON}
+                style={styles.locateFabImage}
+                contentFit="contain"
+                accessibilityIgnoresInvertColors
+              />
             </Pressable>
             {!addingGym ? (
               <Pressable
@@ -1088,22 +1087,13 @@ const styles = StyleSheet.create({
     elevation: 20,
   },
   /**
-   * Opaque disk on a plain `View` (not `Pressable` bg): Google / Apple map
-   * surfaces often composite above sibling `Pressable` fills while leaving
-   * nested `Image` visible — this structure keeps the button plate on top.
+   * The plate is part of the image (a nested `Image`), not a `Pressable` fill:
+   * Google / Apple map surfaces can composite above sibling `Pressable` fills
+   * while leaving nested `Image` visible.
    */
-  locateFabDisk: {
+  locateFab: {
     width: LOCATE_FAB_SIZE,
     height: LOCATE_FAB_SIZE,
-    borderRadius: LOCATE_FAB_SIZE / 2,
-    backgroundColor: APP_SHELL_SECONDARY_BACKGROUND,
-    borderWidth: 3,
-    borderColor: APP_SHELL_PRIMARY_BACKGROUND,
-    overflow: "hidden",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 21,
-    elevation: 24,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.35,
@@ -1112,9 +1102,9 @@ const styles = StyleSheet.create({
   locateFabPressed: {
     opacity: 0.85,
   },
-  locateFabIcon: {
-    width: LOCATE_ICON_SIZE,
-    height: LOCATE_ICON_SIZE,
+  locateFabImage: {
+    width: LOCATE_FAB_SIZE,
+    height: LOCATE_FAB_SIZE,
   },
   addGymFab: {
     marginTop: FAB_GAP,
