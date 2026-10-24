@@ -17,6 +17,9 @@
     "preview": {
       "distribution": "internal",
       "environment": "preview",
+      "android": {
+        "buildType": "apk"
+      },
       "env": {
         "EXPO_PUBLIC_FIT_PIXEL_API_URL": "https://api.aurashields.com",
         "SENTRY_DISABLE_AUTO_UPLOAD": "true"

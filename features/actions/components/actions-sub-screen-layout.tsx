@@ -1,6 +1,6 @@
 import { CommonActions, StackActions } from "@react-navigation/native";
 import { useNavigation, usePathname, useRouter } from "expo-router";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Platform, Pressable, ScrollView, StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import {
@@ -8,6 +8,7 @@ import {
   APP_SHELL_MAIN_TEXT_COLOR,
   APP_SHELL_SECONDARY_BACKGROUND,
 } from "@/constants/app-colors";
+import { KeyboardAwareView } from "@/features/chat/components/keyboard-aware-view";
 
 type Props = {
   children: React.ReactNode;
@@ -22,6 +23,16 @@ export function ActionsSubScreenLayout({ children }: Props) {
   const pathname = usePathname();
   // The Actions tab's own stack (also reachable from the nested food stack).
   const actionsStack = useNavigation("/(tabs)/actions");
+
+  const body = (
+    <ScrollView
+      style={styles.bodyScroll}
+      contentContainerStyle={styles.bodyContent}
+      showsVerticalScrollIndicator={false}
+    >
+      {children}
+    </ScrollView>
+  );
 
   return (
     <View style={styles.root}>
@@ -62,13 +73,13 @@ export function ActionsSubScreenLayout({ children }: Props) {
           </ThemedText>
         </Pressable>
       </View>
-      <ScrollView
-        style={styles.bodyScroll}
-        contentContainerStyle={styles.bodyContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {children}
-      </ScrollView>
+      {Platform.OS === "android" ? (
+        // Edge-to-edge Android no longer resizes for the keyboard, so shrink the
+        // scroll view ourselves or the lower form fields (custom meal) stay hidden.
+        <KeyboardAwareView>{body}</KeyboardAwareView>
+      ) : (
+        body
+      )}
     </View>
   );
 }

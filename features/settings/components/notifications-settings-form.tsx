@@ -1,4 +1,4 @@
-import { StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
 
 import {
   SettingsSection,
@@ -15,7 +15,7 @@ export function NotificationsSettingsForm() {
         title="on this phone"
         footer={
           push.loaded && !push.enabled
-            ? "If iOS has notifications off for Fit Pixel, turning this on takes you to Settings."
+            ? `If ${Platform.OS === "android" ? "Android" : "iOS"} has notifications off for Fit Pixel, turning this on takes you to Settings.`
             : null
         }
       >

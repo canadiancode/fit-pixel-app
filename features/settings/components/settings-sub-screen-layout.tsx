@@ -1,11 +1,19 @@
 import { usePathname, useRouter } from "expo-router";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
 import {
   APP_SHELL_MAIN_TEXT_COLOR,
   APP_SHELL_SECONDARY_BACKGROUND,
 } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
+import { KeyboardAwareView } from "@/features/chat/components/keyboard-aware-view";
 
 import { SETTINGS_ROWS } from "../data";
 import {
@@ -31,6 +39,19 @@ export function SettingsSubScreenLayout({ children, title }: Props) {
   const pathname = usePathname();
   const heading = title ?? titleForPath(pathname);
 
+  const body = (
+    <ScrollView
+      style={styles.bodyScroll}
+      contentContainerStyle={styles.bodyContent}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag"
+      automaticallyAdjustKeyboardInsets
+    >
+      {children}
+    </ScrollView>
+  );
+
   return (
     <View style={styles.root}>
       <View style={styles.toolbar}>
@@ -47,16 +68,8 @@ export function SettingsSubScreenLayout({ children, title }: Props) {
           {heading}
         </Text>
       </View>
-      <ScrollView
-        style={styles.bodyScroll}
-        contentContainerStyle={styles.bodyContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag"
-        automaticallyAdjustKeyboardInsets
-      >
-        {children}
-      </ScrollView>
+      {/* automaticallyAdjustKeyboardInsets is iOS-only; Android has to shrink the scroll view itself. */}
+      {Platform.OS === "android" ? <KeyboardAwareView>{body}</KeyboardAwareView> : body}
     </View>
   );
 }

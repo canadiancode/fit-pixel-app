@@ -289,10 +289,8 @@ export function AddGymSheet({
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={dismiss}>
-      <KeyboardAvoidingView
-        style={styles.backdrop}
-        behavior={process.env.EXPO_OS === "ios" ? "padding" : undefined}
-      >
+      {/* Edge-to-edge Android doesn't resize for the keyboard either, so pad on both. */}
+      <KeyboardAvoidingView style={styles.backdrop} behavior="padding">
         <Pressable
           style={StyleSheet.absoluteFill}
           accessibilityRole="button"
