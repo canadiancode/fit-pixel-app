@@ -10,11 +10,13 @@ import {
   type ViewStyle,
 } from "react-native";
 import Animated, {
+  cancelAnimation,
   Easing,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
   withDelay,
+  withRepeat,
   withSequence,
   withTiming,
   type SharedValue,
@@ -108,6 +110,32 @@ const BRACKET_PAD = 6;
 const BRACKET_ARM = 12;
 const BRACKET_THICKNESS = 3;
 
+/** Invite brackets around the whole Pixel: longer arms, a slow breathe. */
+const INVITE_BRACKET_ARM = 16;
+const INVITE_BRACKET_BREATHE = 7;
+const INVITE_PULSE_STEP_MS = 520;
+const INVITE_FADE_MS = 200;
+/** Brackets clamp in this far while the Pixel is held down. */
+const PRESS_BRACKET_GRIP = 5;
+
+/** Idle glimmer: first one soon after landing, then every 10–15s. */
+const IDLE_SPARKLE_FIRST_MS = 3500;
+const IDLE_SPARKLE_MIN_MS = 10_000;
+const IDLE_SPARKLE_JITTER_MS = 5_000;
+const IDLE_SPARKLE_SECOND_DELAY_MS = 240;
+const IDLE_SPARKLE_SPOTS: readonly Exclude<PixelLayerId, "background">[] = [
+  "hair",
+  "top",
+  "bottom",
+  "shoes",
+  "item_left",
+  "item_right",
+];
+
+/** Held down: the Pixel squashes flat and wide. */
+const PRESS_SQUASH = { scaleX: 1.24, scaleY: 0.66 };
+const PRESS_SQUASH_MS = 120;
+
 type Change = {
   id: number;
   /** New item art for each changed non-background layer (white flash). */
@@ -154,8 +182,23 @@ type Props = {
   focus?: PixelLayerId | null;
   /** Top band hidden behind the status bar; the focus centres below it. */
   focusInsetTop?: number;
+  /**
+   * The Pixel is tappable: brackets breathe around it and it glimmers every
+   * 10–15s (only while no part is in focus).
+   */
+  invite?: boolean;
+  /** Held down: the Pixel squashes, then springs up when let go. */
+  pressed?: boolean;
   style?: StyleProp<ViewStyle>;
   accessibilityLabel?: string;
+};
+
+type SparkleBurstSpec = {
+  key: string;
+  from: Exclude<PixelLayerId, "background">;
+  /** Multiplier on how far the pixels fly. */
+  reach: number;
+  delay: number;
 };
 
 /**
@@ -167,22 +210,35 @@ type Props = {
  * With a `focus`, a camera zooms and pans onto that part (the background
  * trailing slightly for depth) and pixel brackets lock on around it; under
  * Reduce Motion the camera cuts instead.
+ *
+ * With `invite`, brackets breathe around the whole Pixel and it glimmers now
+ * and then; `pressed` squashes it, and letting go springs it up in a burst.
+ * Under Reduce Motion the invite brackets hold still and nothing else plays.
  */
 export function AnimatedPixelCharacter({
   loadout = DEFAULT_PIXEL_LOADOUT,
   focus = null,
   focusInsetTop = 0,
+  invite = false,
+  pressed = false,
   style,
   accessibilityLabel = "Pixel character",
 }: Props) {
   const reduceMotion = useReducedMotion();
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [change, setChange] = useState<Change | null>(null);
+  const [bursts, setBursts] = useState<SparkleBurstSpec[]>([]);
   const prevLoadoutRef = useRef(loadout);
   const nextChangeIdRef = useRef(1);
+  const nextBurstIdRef = useRef(1);
+  const wasPressedRef = useRef(false);
 
   const hopY = useSharedValue(0);
+  const hopScaleX = useSharedValue(1);
   const hopScaleY = useSharedValue(1);
+  const inviteVisible = useSharedValue(0);
+  const invitePulse = useSharedValue(0);
+  const pressGrip = useSharedValue(0);
   const silhouetteOpacity = useSharedValue(0);
   const sparkleProgress = useSharedValue(0);
   const wipeProgress = useSharedValue(1);
@@ -307,6 +363,116 @@ export function AnimatedPixelCharacter({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focus, focusInsetTop, size.width, size.height, reduceMotion]);
 
+  const inviting = invite && focus == null;
+
+  /** Fire sparkle bursts, replacing any still on screen. */
+  const playBursts = (specs: Omit<SparkleBurstSpec, "key">[]) => {
+    const id = nextBurstIdRef.current++;
+    setBursts(specs.map((spec, i) => ({ ...spec, key: `${id}-${i}` })));
+  };
+
+  useEffect(() => {
+    inviteVisible.value = withTiming(inviting ? 1 : 0, {
+      duration: INVITE_FADE_MS,
+    });
+    cancelAnimation(invitePulse);
+    if (!inviting) {
+      invitePulse.value = withTiming(0, { duration: INVITE_FADE_MS });
+      return;
+    }
+    if (reduceMotion) {
+      invitePulse.value = 1;
+      return;
+    }
+    // Breathe out, breathe in, then rest a beat.
+    const step = { duration: INVITE_PULSE_STEP_MS, easing: Easing.steps(3) };
+    invitePulse.value = 0;
+    invitePulse.value = withRepeat(
+      withSequence(
+        withTiming(1, step),
+        withTiming(0, step),
+        withTiming(0, { duration: INVITE_PULSE_STEP_MS }),
+      ),
+      -1,
+    );
+    // Shared values are stable; react only to the invite / setting changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inviting, reduceMotion]);
+
+  // Idle glimmer: two quick bursts from random spots on the Pixel.
+  const hasSize = size.width > 0;
+  useEffect(() => {
+    if (!inviting || reduceMotion || !hasSize) return;
+    let timer: ReturnType<typeof setTimeout>;
+    const schedule = (delay: number) => {
+      timer = setTimeout(() => {
+        const first = Math.floor(Math.random() * IDLE_SPARKLE_SPOTS.length);
+        const offset = 1 + Math.floor(Math.random() * (IDLE_SPARKLE_SPOTS.length - 1));
+        const second = (first + offset) % IDLE_SPARKLE_SPOTS.length;
+        playBursts([
+          { from: IDLE_SPARKLE_SPOTS[first], reach: 1, delay: 0 },
+          {
+            from: IDLE_SPARKLE_SPOTS[second],
+            reach: 0.8,
+            delay: IDLE_SPARKLE_SECOND_DELAY_MS,
+          },
+        ]);
+        schedule(IDLE_SPARKLE_MIN_MS + Math.random() * IDLE_SPARKLE_JITTER_MS);
+      }, delay);
+    };
+    schedule(IDLE_SPARKLE_FIRST_MS);
+    return () => clearTimeout(timer);
+  }, [inviting, reduceMotion, hasSize]);
+
+  useEffect(() => {
+    const wasPressed = wasPressedRef.current;
+    wasPressedRef.current = pressed;
+    if (reduceMotion || pressed === wasPressed) return;
+    if (pressed) {
+      const squash = { duration: PRESS_SQUASH_MS, easing: Easing.steps(3) };
+      hopScaleX.value = withTiming(PRESS_SQUASH.scaleX, squash);
+      hopScaleY.value = withTiming(PRESS_SQUASH.scaleY, squash);
+      hopY.value = withTiming(0, squash);
+      pressGrip.value = withTiming(1, squash);
+      return;
+    }
+    // Let go: spring up tall and thin, land with a wobble, kick up sparkles.
+    const lift = (-sizeRef.current.height * 0.12) / zoomRef.current;
+    const beat = (duration: number) => ({ duration, easing: Easing.steps(2) });
+    // A quick tap lets go mid-squash; finish the squash first so it still lands.
+    hopScaleY.value = withSequence(
+      withTiming(PRESS_SQUASH.scaleY, beat(50)),
+      withTiming(1.24, beat(90)),
+      withTiming(1, beat(110)),
+      withTiming(0.86, beat(80)),
+      withTiming(1.06, beat(100)),
+      withTiming(1, beat(90)),
+    );
+    hopScaleX.value = withSequence(
+      withTiming(PRESS_SQUASH.scaleX, beat(50)),
+      withTiming(0.84, beat(90)),
+      withTiming(1, beat(110)),
+      withTiming(1.14, beat(80)),
+      withTiming(0.97, beat(100)),
+      withTiming(1, beat(90)),
+    );
+    hopY.value = withSequence(
+      withTiming(0, { duration: 50 }),
+      withTiming(lift, beat(140)),
+      withTiming(0, beat(140)),
+    );
+    pressGrip.value = withSequence(
+      withTiming(1, { duration: 50 }),
+      withTiming(0, beat(200)),
+    );
+    playBursts([
+      { from: "top", reach: 1.6, delay: 0 },
+      { from: "shoes", reach: 1.2, delay: 280 },
+    ]);
+    // Shared values are stable; react only to press changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pressed]);
+
   const cameraStyle = useAnimatedStyle(() => ({
     transform: [
       { translateX: cameraX.value },
@@ -333,7 +499,11 @@ export function AnimatedPixelCharacter({
   });
 
   const hopStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: hopY.value }, { scaleY: hopScaleY.value }],
+    transform: [
+      { translateY: hopY.value },
+      { scaleX: hopScaleX.value },
+      { scaleY: hopScaleY.value },
+    ],
   }));
   const silhouetteStyle = useAnimatedStyle(() => ({
     opacity: silhouetteOpacity.value,
@@ -366,6 +536,20 @@ export function AnimatedPixelCharacter({
     );
   }
   const brackets = bracketRectRef.current;
+  const inviteBrackets =
+    invite && size.width > 0
+      ? bracketRect(
+          {
+            left: scene.left + PIXEL_FIGURE_IN_SCENE.left * scene.width,
+            top: scene.top + PIXEL_FIGURE_IN_SCENE.top * scene.height,
+            width: PIXEL_FIGURE_IN_SCENE.width * scene.width,
+            height: PIXEL_FIGURE_IN_SCENE.height * scene.height,
+          },
+          size,
+          focusInsetTop,
+        )
+      : null;
+  const camera = { scale: cameraScale, x: cameraX, y: cameraY };
   const sparkleAt =
     change?.sparkleFrom != null ? sparklePoint(change.sparkleFrom, scene) : null;
   const layers = resolveLayers(loadout);
@@ -456,6 +640,15 @@ export function AnimatedPixelCharacter({
         <FocusBrackets rect={brackets} progress={bracketProgress} />
       ) : null}
 
+      {inviteBrackets != null ? (
+        <InviteBrackets
+          rect={inviteBrackets}
+          visible={inviteVisible}
+          pulse={invitePulse}
+          grip={pressGrip}
+        />
+      ) : null}
+
       {change != null && sparkleAt != null && !reduceMotion ? (
         <View pointerEvents="none" style={styles.sparkles}>
           {Array.from({ length: SPARKLE_COUNT }, (_, i) => (
@@ -465,11 +658,31 @@ export function AnimatedPixelCharacter({
               progress={sparkleProgress}
               originX={sparkleAt.x}
               originY={sparkleAt.y}
-              camera={{ scale: cameraScale, x: cameraX, y: cameraY }}
+              camera={camera}
               frameWidth={size.width}
               frameHeight={size.height}
             />
           ))}
+        </View>
+      ) : null}
+
+      {bursts.length > 0 && size.width > 0 && !reduceMotion ? (
+        <View pointerEvents="none" style={styles.sparkles}>
+          {bursts.map((burst) => {
+            const at = sparklePoint(burst.from, scene);
+            return (
+              <SparkleBurst
+                key={burst.key}
+                originX={at.x}
+                originY={at.y}
+                reach={burst.reach}
+                delay={burst.delay}
+                camera={camera}
+                frameWidth={size.width}
+                frameHeight={size.height}
+              />
+            );
+          })}
         </View>
       ) : null}
     </View>
@@ -526,22 +739,112 @@ function FocusBrackets({
 
   return (
     <Animated.View pointerEvents="none" style={[styles.brackets, style]}>
-      {BRACKET_CORNERS.map(({ corner, across, down }, i) => (
-        <View
-          key={i}
-          style={[styles.bracketCorner, corner, { width: arm, height: arm }]}
-        >
-          {/* A hard 1pt drop shadow under the white arms. */}
-          {[styles.bracketShadow, styles.bracketArm].map((tone, j) => (
-            <View key={j} style={[styles.layer, j === 0 && styles.bracketShadowOffset]}>
-              <View style={[styles.bracketAcross, across, tone]} />
-              <View style={[styles.bracketDown, down, tone]} />
-            </View>
-          ))}
-        </View>
-      ))}
+      <BracketCorners arm={arm} />
     </Animated.View>
   );
+}
+
+/**
+ * Corner brackets around the whole Pixel that breathe in and out, saying
+ * "tap me"; holding the Pixel down clamps them in tight.
+ */
+function InviteBrackets({
+  rect,
+  visible,
+  pulse,
+  grip,
+}: {
+  rect: FrameRect;
+  visible: SharedValue<number>;
+  pulse: SharedValue<number>;
+  grip: SharedValue<number>;
+}) {
+  const arm = Math.min(INVITE_BRACKET_ARM, rect.width / 3, rect.height / 3);
+  const style = useAnimatedStyle(() => {
+    const g = grip.value;
+    const spread =
+      pulse.value * INVITE_BRACKET_BREATHE * (1 - g) - g * PRESS_BRACKET_GRIP;
+    const glow = 0.55 + 0.45 * Math.max(pulse.value, g);
+    return {
+      opacity: visible.value * glow,
+      left: rect.left - spread,
+      top: rect.top - spread,
+      width: rect.width + spread * 2,
+      height: rect.height + spread * 2,
+    };
+  });
+
+  return (
+    <Animated.View pointerEvents="none" style={[styles.brackets, style]}>
+      <BracketCorners arm={arm} />
+    </Animated.View>
+  );
+}
+
+function BracketCorners({ arm }: { arm: number }) {
+  return BRACKET_CORNERS.map(({ corner, across, down }, i) => (
+    <View
+      key={i}
+      style={[styles.bracketCorner, corner, { width: arm, height: arm }]}
+    >
+      {/* A hard 1pt drop shadow under the white arms. */}
+      {[styles.bracketShadow, styles.bracketArm].map((tone, j) => (
+        <View key={j} style={[styles.layer, j === 0 && styles.bracketShadowOffset]}>
+          <View style={[styles.bracketAcross, across, tone]} />
+          <View style={[styles.bracketDown, down, tone]} />
+        </View>
+      ))}
+    </View>
+  ));
+}
+
+type CameraValues = {
+  scale: SharedValue<number>;
+  x: SharedValue<number>;
+  y: SharedValue<number>;
+};
+
+/** One sparkle burst that plays itself once on mount (after `delay`). */
+function SparkleBurst({
+  originX,
+  originY,
+  reach,
+  delay,
+  camera,
+  frameWidth,
+  frameHeight,
+}: {
+  originX: number;
+  originY: number;
+  reach: number;
+  delay: number;
+  camera: CameraValues;
+  frameWidth: number;
+  frameHeight: number;
+}) {
+  const progress = useSharedValue(0);
+  useEffect(() => {
+    progress.value = withDelay(
+      delay,
+      withTiming(1, { duration: SPARKLE_MS * reach, easing: Easing.steps(6) }),
+    );
+    // Plays once; a new burst is a new mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return Array.from({ length: SPARKLE_COUNT }, (_, i) => (
+    <Sparkle
+      key={i}
+      index={i}
+      progress={progress}
+      originX={originX}
+      originY={originY}
+      reach={reach}
+      camera={camera}
+      frameWidth={frameWidth}
+      frameHeight={frameHeight}
+    />
+  ));
 }
 
 function Sparkle({
@@ -549,6 +852,7 @@ function Sparkle({
   progress,
   originX,
   originY,
+  reach = 1,
   camera,
   frameWidth,
   frameHeight,
@@ -557,18 +861,16 @@ function Sparkle({
   progress: SharedValue<number>;
   originX: number;
   originY: number;
+  /** Multiplier on how far the pixels fly. */
+  reach?: number;
   /** Sparkles stay pixel-sized but follow the spot through the camera. */
-  camera: {
-    scale: SharedValue<number>;
-    x: SharedValue<number>;
-    y: SharedValue<number>;
-  };
+  camera: CameraValues;
   frameWidth: number;
   frameHeight: number;
 }) {
   const angle = (index / SPARKLE_COUNT) * Math.PI * 2 + 0.3;
   // Alternate near / far so the burst reads as scattered pixels, not a ring.
-  const distance = index % 2 === 0 ? 46 : 30;
+  const distance = (index % 2 === 0 ? 46 : 30) * reach;
   const color = SPARKLE_COLORS[index % SPARKLE_COLORS.length];
 
   const style = useAnimatedStyle(() => {

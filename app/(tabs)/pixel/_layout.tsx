@@ -1,4 +1,6 @@
+import * as Haptics from "expo-haptics";
 import { Stack, usePathname, useRouter, useSegments } from "expo-router";
+import { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -6,6 +8,10 @@ import { ThemedView } from "@/components/themed-view";
 import { APP_SHELL_SECONDARY_BACKGROUND } from "@/constants/app-colors";
 import { TAB_SCREEN_ROOT_ABOVE_TAB_BAR } from "@/constants/app-shell";
 import { AnimatedPixelCharacter } from "@/features/pixel/components/animated-pixel-character";
+import {
+  PixelCustomizeHint,
+  usePixelCustomizeHint,
+} from "@/features/pixel/components/pixel-customize-hint";
 import { isPixelLayerId } from "@/features/pixel/data";
 import { usePixelLoadout } from "@/features/pixel/pixel-loadout-context";
 
@@ -16,7 +22,8 @@ export const unstable_settings = {
 function PixelTabChrome() {
   const router = useRouter();
   const segments = useSegments();
-  const { loadout } = usePixelLoadout();
+  const { loadout, isHydrated, gender } = usePixelLoadout();
+  const [heroPressed, setHeroPressed] = useState(false);
   const insets = useSafeAreaInsets();
 
   // Typed segments omit "index", but the runtime value can include it.
@@ -29,6 +36,8 @@ function PixelTabChrome() {
   // While a layer's picker is open the hero zooms in on that part.
   const pathLeaf = usePathname().split("/").pop() ?? "";
   const focus = isPixelLayerId(pathLeaf) ? pathLeaf : null;
+  // Wait for Pick-your-Pixel so the tip lands on the Pixel they chose.
+  const hint = usePixelCustomizeHint(isDashboard && isHydrated && gender != null);
 
   return (
     <ThemedView
@@ -39,15 +48,27 @@ function PixelTabChrome() {
       <View style={[styles.row, styles.rowFull, styles.rowDouble]}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Open pixel details"
+          accessibilityLabel="Customize your Pixel"
+          accessibilityHint="Change hair, clothes, shoes and more"
           disabled={!isDashboard}
-          onPress={() => router.push("/(tabs)/pixel/customize")}
+          onPressIn={() => {
+            setHeroPressed(true);
+            void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          }}
+          onPressOut={() => setHeroPressed(false)}
+          onPress={() => {
+            void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            hint.dismiss();
+            router.push("/(tabs)/pixel/customize");
+          }}
           style={styles.heroShell}
         >
           <AnimatedPixelCharacter
             loadout={loadout}
             focus={focus}
             focusInsetTop={insets.top}
+            invite={isDashboard}
+            pressed={heroPressed}
             style={styles.heroCharacter}
           />
         </Pressable>
@@ -63,6 +84,7 @@ function PixelTabChrome() {
             },
           }}
         />
+        {hint.visible ? <PixelCustomizeHint onDismiss={hint.dismiss} /> : null}
       </View>
     </ThemedView>
   );
