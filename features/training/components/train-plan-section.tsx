@@ -17,7 +17,7 @@ import { useTraining } from "../training-context";
 import type { PlanWorkout, TrainingPlan, Weekday, WorkoutSession } from "../types";
 import { XP_PER_WORKOUT_SET, XP_WORKOUT_COMPLETE } from "@/lib/db/xp";
 
-import { Badge, BodyText, PixelButton, PixelCard, PixelText, T, tapHaptic } from "./pixel-ui";
+import { Badge, BG, BodyText, PixelBackdrop, PixelButton, PixelCard, PixelNavRow, PixelText, T, tapHaptic } from "./pixel-ui";
 
 const DUMBBELL = require("@/assets/icons/dumbbell.png");
 const MOON = require("@/assets/icons/purple-moon.png");
@@ -69,7 +69,7 @@ export function TrainPlanSection() {
     const done = setsDone(active);
     const total = setsTotal(active);
     return (
-      <PixelCard active>
+      <PixelCard>
         <View style={styles.rowBetween}>
           <Badge label="IN PROGRESS" color={T.lime} />
           <PixelText size={8} color={T.lime}>+{active.xpEarned} XP</PixelText>
@@ -154,11 +154,13 @@ export function TrainPlanSection() {
                 tapHaptic();
                 setSelected(wd);
               }}
-              style={[styles.day, wd === todayWd && styles.dayToday, on && styles.daySelected]}
+              style={styles.day}
             >
+              <PixelBackdrop source={on ? BG.tileOn : BG.tile} />
               <PixelText size={7} color={wd === todayWd ? T.cyan : T.muted}>{WEEKDAY_LETTER[wd]}</PixelText>
               {done ? (
                 <View style={styles.doneBox}>
+                  <PixelBackdrop source={BG.tileDone} />
                   <PixelText size={8} color={T.black}>✓</PixelText>
                 </View>
               ) : w ? (
@@ -172,7 +174,7 @@ export function TrainPlanSection() {
       </View>
 
       {workout ? (
-        <PixelCard active={isToday && !doneSession}>
+        <PixelCard>
           <View style={styles.rowBetween}>
             <Badge label={`${isToday ? "TODAY · " : ""}${WEEKDAY_SHORT[selected]}`} color={T.cyan} />
             <PixelText size={8} color={T.lime}>
@@ -238,7 +240,11 @@ export function TrainPlanSection() {
         </PixelCard>
       )}
 
-      <PixelButton label="My plan" variant="blue" size="md" onPress={() => router.push("/(tabs)/actions/train-plan")} />
+      <PixelNavRow
+        label="MY PLAN"
+        detail={`${plan.workouts.length} workout${plan.workouts.length === 1 ? "" : "s"} · days and exercises`}
+        onPress={() => router.push("/(tabs)/actions/train-plan")}
+      />
     </View>
   );
 }
@@ -250,30 +256,23 @@ const styles = StyleSheet.create({
   week: { flexDirection: "row", gap: 5 },
   day: {
     flex: 1,
-    height: 60,
+    height: 62,
     borderRadius: 8,
-    backgroundColor: T.deep,
-    borderWidth: 2,
-    borderColor: T.borderSoft,
+    overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
   },
-  dayToday: { borderColor: T.cyan, borderWidth: 3 },
-  daySelected: { backgroundColor: T.cardActive, shadowColor: T.cyan, shadowOpacity: 0.5, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } },
   dayIcon: { width: 20, height: 20 },
   dim: { opacity: 0.6 },
-  doneBox: { width: 20, height: 20, backgroundColor: T.lime, borderWidth: 2, borderColor: T.black, alignItems: "center", justifyContent: "center" },
+  doneBox: { width: 22, height: 22, overflow: "hidden", alignItems: "center", justifyContent: "center" },
   exRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: T.deep,
-    borderWidth: 2,
-    borderColor: T.borderSoft,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: "#0d3a75",
   },
   doneNote: { alignItems: "center", paddingVertical: 2 },
   promoRow: { flexDirection: "row", gap: 12, alignItems: "center" },

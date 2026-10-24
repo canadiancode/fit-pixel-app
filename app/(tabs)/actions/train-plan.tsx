@@ -1,9 +1,21 @@
 import { useRouter } from "expo-router";
-import { Alert, Pressable, StyleSheet, TextInput, View } from "react-native";
+import { Alert, Pressable, StyleSheet, View } from "react-native";
 
 import { ActionsSubScreenLayout } from "@/features/actions/components/actions-sub-screen-layout";
 import { estimateMinutes } from "@/features/training/components/train-plan-section";
-import { Badge, BodyText, PixelButton, PixelCard, PixelText, T, tapHaptic } from "@/features/training/components/pixel-ui";
+import {
+  Badge,
+  BG,
+  BodyText,
+  PixelBackdrop,
+  PixelButton,
+  PixelCard,
+  PixelNavRow,
+  PixelText,
+  PixelTextInput,
+  T,
+  tapHaptic,
+} from "@/features/training/components/pixel-ui";
 import { exerciseName } from "@/features/training/exercises";
 import { blankPlan, formatScheme, newKey, WEEKDAY_LETTER, WEEKDAY_SHORT } from "@/features/training/programs";
 import { useTraining } from "@/features/training/training-context";
@@ -66,14 +78,11 @@ export default function TrainPlanScreen() {
       <View style={styles.wrap}>
         <View style={styles.header}>
           <PixelText size={8} color={T.cyan}>MY PLAN</PixelText>
-          <TextInput
+          <PixelTextInput
             accessibilityLabel="Plan name"
             value={plan.name}
             onChangeText={(name) => update((p) => ({ ...p, name: name.slice(0, 40) }))}
-            style={styles.nameInput}
             placeholder="Plan name"
-            placeholderTextColor="#ffffff66"
-            keyboardAppearance="dark"
             returnKeyType="done"
           />
           <View style={styles.badges}>
@@ -102,8 +111,9 @@ export default function TrainPlanScreen() {
                     accessibilityState={{ checked: on }}
                     accessibilityLabel={`${w.name} on ${WEEKDAY_SHORT[d]}`}
                     onPress={() => toggleDay(w.id, d)}
-                    style={[styles.day, on && styles.dayOn]}
+                    style={styles.day}
                   >
+                    <PixelBackdrop source={on ? BG.tileCyan : BG.tile} />
                     <PixelText size={8} color={on ? T.black : T.muted}>{WEEKDAY_LETTER[d]}</PixelText>
                   </Pressable>
                 );
@@ -134,7 +144,11 @@ export default function TrainPlanScreen() {
         <PixelButton label="+ ADD WORKOUT" variant="cyan" size="md" onPress={addWorkout} />
 
         <View style={styles.divider} />
-        <PixelButton label="Retake the quiz" variant="blue" size="md" onPress={() => router.push("/(tabs)/actions/train-quest")} />
+        <PixelNavRow
+          label="RETAKE THE QUIZ"
+          detail="Get a new plan for your goal"
+          onPress={() => router.push("/(tabs)/actions/train-quest")}
+        />
         <PixelButton
           label="Start from scratch"
           variant="blue"
@@ -156,22 +170,10 @@ const styles = StyleSheet.create({
   header: { gap: 8 },
   flex: { flex: 1, minWidth: 0 },
   flexBtn: { flex: 1 },
-  nameInput: {
-    fontFamily: "PressStart2P",
-    fontSize: 15,
-    color: T.text,
-    backgroundColor: T.deep,
-    borderWidth: 3,
-    borderColor: T.border,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-  },
   badges: { flexDirection: "row", alignItems: "center", gap: 10, flexWrap: "wrap" },
   rowBetween: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
   days: { flexDirection: "row", gap: 5 },
-  day: { flex: 1, height: 36, borderRadius: 6, borderWidth: 2, borderColor: T.borderSoft, backgroundColor: T.deep, alignItems: "center", justifyContent: "center" },
-  dayOn: { backgroundColor: T.cyan, borderColor: T.black },
+  day: { flex: 1, height: 40, borderRadius: 6, overflow: "hidden", alignItems: "center", justifyContent: "center" },
   exRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 4, borderBottomWidth: 1, borderBottomColor: "#0d3a75" },
   actions: { flexDirection: "row", gap: 10, marginTop: 4 },
   divider: { height: 2, backgroundColor: "#0d3a75", marginVertical: 4 },
