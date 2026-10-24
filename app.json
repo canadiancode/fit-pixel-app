@@ -17,7 +17,7 @@
       "fallbackToCacheTimeout": 0
     },
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.fitpixel.app",
       "associatedDomains": [
         "applinks:api.aurashields.com"
