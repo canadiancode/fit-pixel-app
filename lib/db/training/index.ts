@@ -1,10 +1,17 @@
 export {
+  applyRestoredTrainingPlan,
   clearActiveWorkout,
-  countWorkoutSetXpToday,
+  countWorkoutXpEvents,
+  enqueueTrainingPlan,
   getActiveWorkout,
   getTrainingPlan,
+  insertRestoredWorkoutSessions,
   insertWorkoutSession,
   listWorkoutSessions,
   saveActiveWorkout,
+  saveFinishedWorkout,
   saveTrainingPlan,
+  TRAINING_SYNC_LIMITS,
+  workoutSessionToSyncPayload,
+  type RestoredWorkoutSession,
 } from "./store";

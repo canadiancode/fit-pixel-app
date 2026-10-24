@@ -23,6 +23,7 @@ import {
   weightStep,
 } from "@/features/training/session";
 import { useTraining } from "@/features/training/training-context";
+import { TRAINING_SYNC_LIMITS } from "@/lib/db/training";
 
 type Rest = { endsAt: number; total: number; notificationId: string | null };
 
@@ -102,7 +103,10 @@ export default function WorkoutScreen() {
                 ...e,
                 sets: e.sets.map((set, si) => {
                   if (si !== target) return set;
-                  if (field === "weight") return { ...set, weight: Math.max(0, Math.round((set.weight + delta) * 10) / 10) };
+                  if (field === "weight") {
+                    const weight = Math.round((set.weight + delta) * 10) / 10;
+                    return { ...set, weight: Math.max(0, Math.min(TRAINING_SYNC_LIMITS.weightMax, weight)) };
+                  }
                   return { ...set, reps: Math.max(1, Math.min(load === "time" ? 600 : 100, set.reps + delta)) };
                 }),
               },
@@ -123,7 +127,7 @@ export default function WorkoutScreen() {
   );
 
   const addSet = useCallback(() => {
-    if (!ex) return;
+    if (!ex || ex.sets.length >= TRAINING_SYNC_LIMITS.setsMax) return;
     const lastSet = ex.sets[ex.sets.length - 1];
     mutate((s) => ({
       ...s,
@@ -196,7 +200,7 @@ export default function WorkoutScreen() {
   }, [finishWorkout, router, skipRest]);
 
   const endWorkout = useCallback(() => {
-    Alert.alert("End workout?", "Save the sets you've finished, or throw this workout away.", [
+    Alert.alert("End workout?", "Save the sets you've finished, or throw this workout away along with its set XP.", [
       { text: "Keep going", style: "cancel" },
       { text: "Save and finish", onPress: () => void finish() },
       {
@@ -328,9 +332,11 @@ export default function WorkoutScreen() {
             );
           })}
           <View style={styles.setActions}>
-            <Pressable accessibilityRole="button" onPress={addSet} hitSlop={8}>
-              <PixelText size={7} color={T.cyan}>+ ADD SET</PixelText>
-            </Pressable>
+            {ex.sets.length < TRAINING_SYNC_LIMITS.setsMax ? (
+              <Pressable accessibilityRole="button" onPress={addSet} hitSlop={8}>
+                <PixelText size={7} color={T.cyan}>+ ADD SET</PixelText>
+              </Pressable>
+            ) : null}
             {ex.sets.length > 1 && !ex.sets[ex.sets.length - 1].done ? (
               <Pressable accessibilityRole="button" onPress={removeSet} hitSlop={8}>
                 <PixelText size={7} color={T.muted}>− REMOVE SET</PixelText>

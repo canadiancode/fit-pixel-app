@@ -1,5 +1,6 @@
+import { uuid } from "@/lib/db/ids";
+
 import { getExercise } from "./exercises";
-import { newKey } from "./programs";
 import type {
   PersonalRecord,
   PlanWorkout,
@@ -49,7 +50,8 @@ export function startSession(
   now = new Date().toISOString(),
 ): WorkoutSession {
   return {
-    id: newKey("ws"),
+    // Syncs as the server's workout_sessions id.
+    id: uuid(),
     workoutId: workout.id,
     workoutName: workout.name,
     dayKey,

@@ -9,6 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { AppState } from "react-native";
 
 import { useDailyGoals } from "@/features/actions/daily-goals-context";
 import { useHabitProgress } from "@/features/actions/habit-progress-context";
@@ -16,23 +17,29 @@ import { useXpState } from "@/features/xp/xp-state-context";
 import { getTodayDayKey } from "@/lib/db/day-boundary/store";
 import {
   clearActiveWorkout,
-  countWorkoutSetXpToday,
+  countWorkoutXpEvents,
+  enqueueTrainingPlan,
   getActiveWorkout,
   getTrainingPlan,
-  insertWorkoutSession,
   listWorkoutSessions,
   saveActiveWorkout,
+  saveFinishedWorkout,
   saveTrainingPlan,
 } from "@/lib/db/training";
 import {
   awardXp,
+  revokeXpForEntity,
   XP_PER_WORKOUT_SET,
   XP_WORKOUT_COMPLETE,
+  XP_WORKOUT_COMPLETES_PER_DAY,
   XP_WORKOUT_SETS_PER_DAY,
 } from "@/lib/db/xp";
 
 import { startSession, summarize, type Unit } from "./session";
 import type { TrainingPlan, WorkoutSession, WorkoutSummary } from "./types";
+
+/** Plan edits come in bursts (steppers, hold-to-repeat); sync the plan once they settle. */
+const PLAN_SYNC_DELAY_MS = 2_000;
 
 type TrainingContextValue = {
   isLoaded: boolean;
@@ -53,6 +60,7 @@ type TrainingContextValue = {
   /** Mark a set done; returns the XP it earned (0 once over the daily cap). */
   completeSet: (exerciseIndex: number, setIndex: number) => Promise<number>;
   finishWorkout: () => Promise<WorkoutSummary | null>;
+  /** Throw the workout away, taking back its set XP (it never reaches the server). */
   discardWorkout: () => Promise<void>;
 };
 
@@ -75,6 +83,9 @@ export function TrainingProvider({ children }: { children: ReactNode }) {
   // The newest plan, ahead of React state, so back-to-back edits build on each other.
   const planRef = useRef<TrainingPlan | null>(null);
   const planWrites = useRef<Promise<void>>(Promise.resolve());
+  // The saved plan still waiting to be queued for sync, and its timer.
+  const planToSync = useRef<TrainingPlan | null>(null);
+  const planSyncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadHistory = useCallback(async () => {
     const since = new Date(Date.now() - 90 * 86_400_000).toISOString().slice(0, 10);
@@ -100,18 +111,43 @@ export function TrainingProvider({ children }: { children: ReactNode }) {
     };
   }, [db, loadHistory]);
 
+  const flushPlanSync = useCallback(() => {
+    if (planSyncTimer.current) clearTimeout(planSyncTimer.current);
+    planSyncTimer.current = null;
+    const pending = planToSync.current;
+    planToSync.current = null;
+    if (!pending) return;
+    // Behind any queued write, so the op carries the newest saved plan.
+    planWrites.current = planWrites.current
+      .then(() => enqueueTrainingPlan(db, pending))
+      .catch(() => undefined);
+  }, [db]);
+
+  // Queue the last edit before the app is suspended, and when the provider goes away.
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state !== "active") flushPlanSync();
+    });
+    return () => {
+      sub.remove();
+      flushPlanSync();
+    };
+  }, [flushPlanSync]);
+
   const savePlan = useCallback(
     (next: TrainingPlan) => {
       planRef.current = next;
       setPlan(next);
       // Queue writes so an older plan never lands after a newer one.
       const write = planWrites.current.then(async () => {
-        await saveTrainingPlan(db, next);
+        planToSync.current = await saveTrainingPlan(db, next);
+        if (planSyncTimer.current) clearTimeout(planSyncTimer.current);
+        planSyncTimer.current = setTimeout(flushPlanSync, PLAN_SYNC_DELAY_MS);
       });
       planWrites.current = write.catch(() => undefined);
       return write;
     },
-    [db],
+    [db, flushPlanSync],
   );
 
   const updatePlan = useCallback(
@@ -153,8 +189,9 @@ export function TrainingProvider({ children }: { children: ReactNode }) {
       const set = current?.exercises[exerciseIndex]?.sets[setIndex];
       if (!current || !set || set.done) return 0;
 
-      const dayKey = await getTodayDayKey(db);
-      const underCap = (await countWorkoutSetXpToday(db, dayKey)) < XP_WORKOUT_SETS_PER_DAY;
+      // The server buckets a workout by the day it started; cap on that day too.
+      const dayKey = current.dayKey;
+      const underCap = (await countWorkoutXpEvents(db, "workout_set", dayKey)) < XP_WORKOUT_SETS_PER_DAY;
       const xp = underCap ? XP_PER_WORKOUT_SET : 0;
 
       const next: WorkoutSession = {
@@ -182,11 +219,13 @@ export function TrainingProvider({ children }: { children: ReactNode }) {
     const current = activeRef.current;
     if (!current) return null;
     const summary = summarize(current, history);
-    if (summary.setsDone > 0) {
+    const finishesToday = await countWorkoutXpEvents(db, "workout_complete", current.dayKey);
+    if (summary.setsDone > 0 && finishesToday < XP_WORKOUT_COMPLETES_PER_DAY) {
       await awardXp(db, { amount: XP_WORKOUT_COMPLETE, reason: "workout_complete", relatedEntityId: current.id, dayKey: current.dayKey });
       summary.session.xpEarned += XP_WORKOUT_COMPLETE;
     }
-    await insertWorkoutSession(db, summary);
+    // Synced: the server scores the same set and finish XP from it.
+    await saveFinishedWorkout(db, summary);
     await clearActiveWorkout(db);
     setActive(null);
     setLastSummary(summary);
@@ -201,9 +240,15 @@ export function TrainingProvider({ children }: { children: ReactNode }) {
   }, [addTrain, db, history, loadHistory, refreshXp]);
 
   const discardWorkout = useCallback(async () => {
+    const current = activeRef.current;
     await clearActiveWorkout(db);
+    activeRef.current = null;
     setActive(null);
-  }, [db]);
+    if (current && current.xpEarned > 0) {
+      await revokeXpForEntity(db, "workout_set", current.id);
+      await refreshXp();
+    }
+  }, [db, refreshXp]);
 
   const value = useMemo<TrainingContextValue>(
     () => ({

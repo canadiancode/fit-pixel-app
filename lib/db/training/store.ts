@@ -8,11 +8,31 @@ import type {
 
 import { ensureTrainingSchema } from "../migrations";
 import { nowIso } from "../ids";
+import { enqueueOp } from "../pending-ops";
 
 /**
  * Local training storage: the plan (one JSON document), the in-progress
- * workout and finished sessions. Not synced yet; history lives on this device.
+ * workout and finished sessions. The plan and finished sessions sync as
+ * `training_plan` / `workout_session` ops; the server scores set XP from the
+ * sessions. The in-progress workout stays on this device.
  */
+
+/** Bounds the server enforces (TRAINING_LIMITS); payloads are clamped to them so an op is never rejected. */
+export const TRAINING_SYNC_LIMITS = {
+  idMax: 64,
+  nameMax: 80,
+  exercisesMax: 30,
+  setsMax: 20,
+  weightMax: 2_000,
+  repsMax: 3_600,
+  restSecMax: 900,
+  planWorkoutsMax: 14,
+} as const;
+
+const L = TRAINING_SYNC_LIMITS;
+const clampInt = (n: number, lo: number, hi: number) =>
+  Math.max(lo, Math.min(hi, Math.round(Number.isFinite(n) ? n : lo)));
+const clip = (text: string, max: number, fallback: string) => text.trim().slice(0, max) || fallback;
 
 function parse<T>(json: string | null | undefined): T | null {
   if (!json) return null;
@@ -85,6 +105,158 @@ export async function insertWorkoutSession(db: SQLiteDatabase, summary: WorkoutS
   );
 }
 
+/** Wire payload for a finished workout (server types/sync.ts workoutSessionPayloadSchema). */
+export function workoutSessionToSyncPayload(session: WorkoutSession, finishedAt: string): Record<string, unknown> {
+  const startedAt = session.startedAt;
+  // A workout left open for more than a day still syncs: the server allows 24 h.
+  const latest = Date.parse(startedAt) + 24 * 3_600_000;
+  const finished = Date.parse(finishedAt) > latest ? new Date(latest).toISOString() : finishedAt;
+  return {
+    id: session.id,
+    workoutId: clip(session.workoutId, L.idMax, "workout"),
+    workoutName: clip(session.workoutName, L.nameMax, "Workout"),
+    unit: session.unit,
+    startedAt,
+    finishedAt: finished,
+    exercises: session.exercises.slice(0, L.exercisesMax).map((e) => ({
+      key: clip(e.key, L.idMax, "k"),
+      exerciseId: clip(e.exerciseId, L.idMax, "unknown"),
+      repsMin: clampInt(e.repsMin, 0, L.repsMax),
+      repsMax: clampInt(e.repsMax, 0, L.repsMax),
+      restSec: clampInt(e.restSec, 0, L.restSecMax),
+      sets: e.sets.slice(0, L.setsMax).map((s) => ({
+        weight: Math.max(0, Math.min(L.weightMax, Number.isFinite(s.weight) ? s.weight : 0)),
+        reps: clampInt(s.reps, 0, L.repsMax),
+        done: s.done === true,
+        completedAt: s.completedAt,
+      })),
+    })),
+  };
+}
+
+/** Store a finished workout and queue it for sync (the server scores its set XP). */
+export async function saveFinishedWorkout(db: SQLiteDatabase, summary: WorkoutSummary): Promise<void> {
+  await insertWorkoutSession(db, summary);
+  const finishedAt = summary.session.finishedAt ?? nowIso();
+  await enqueueOp(db, "workout_session", workoutSessionToSyncPayload(summary.session, finishedAt), {
+    clientClockAt: finishedAt,
+  });
+}
+
+/**
+ * Queue the plan for sync. The server keeps whichever copy has the newest updatedAt.
+ * Skipped unless it is still the stored plan: a newer edit queues itself, and
+ * after sign-out wipes the table nothing of the old account is queued.
+ */
+export async function enqueueTrainingPlan(db: SQLiteDatabase, plan: TrainingPlan): Promise<void> {
+  await ensureTrainingSchema(db);
+  const stored = await db.getFirstAsync<{ updatedAt: string }>(`SELECT updatedAt FROM training_plan WHERE id = 1`);
+  if (stored?.updatedAt !== plan.updatedAt) return;
+  const workouts = plan.workouts.slice(0, L.planWorkoutsMax).map((w) => ({
+    ...w,
+    id: clip(w.id, L.idMax, "w"),
+    name: clip(w.name, L.nameMax, "Workout"),
+    focus: w.focus.trim().slice(0, L.nameMax),
+    exercises: w.exercises.slice(0, L.exercisesMax).map((e) => ({
+      ...e,
+      sets: clampInt(e.sets, 1, L.setsMax),
+      repsMin: clampInt(e.repsMin, 0, L.repsMax),
+      repsMax: clampInt(e.repsMax, 0, L.repsMax),
+      restSec: clampInt(e.restSec, 0, L.restSecMax),
+    })),
+  }));
+  await enqueueOp(
+    db,
+    "training_plan",
+    { plan: { ...plan, name: clip(plan.name, L.nameMax, "My plan"), workouts }, updatedAt: plan.updatedAt },
+    { clientClockAt: plan.updatedAt },
+  );
+}
+
+/** Restore: the server's plan, unless this device has a newer one (or one waiting to upload). */
+export async function applyRestoredTrainingPlan(
+  db: SQLiteDatabase,
+  restored: { plan: Record<string, unknown>; updatedAt: string },
+): Promise<boolean> {
+  await ensureTrainingSchema(db);
+  const plan = restored.plan as Partial<TrainingPlan>;
+  if (plan.v !== 1 || !Array.isArray(plan.workouts)) return false;
+  const pending = await db.getFirstAsync<{ ok: number }>(
+    `SELECT 1 AS ok FROM pending_server_ops
+     WHERE type = 'training_plan' AND status IN ('pending', 'failed') LIMIT 1`,
+  );
+  if (pending) return false;
+  const local = await db.getFirstAsync<{ updatedAt: string }>(`SELECT updatedAt FROM training_plan WHERE id = 1`);
+  if (local && Date.parse(local.updatedAt) >= Date.parse(restored.updatedAt)) return false;
+  const next = { ...(plan as TrainingPlan), updatedAt: restored.updatedAt };
+  await db.runAsync(
+    `INSERT INTO training_plan (id, json, updatedAt) VALUES (1, ?, ?)
+     ON CONFLICT(id) DO UPDATE SET json = excluded.json, updatedAt = excluded.updatedAt`,
+    JSON.stringify(next),
+    next.updatedAt,
+  );
+  return true;
+}
+
+export type RestoredWorkoutSession = {
+  id: string;
+  workoutId: string;
+  workoutName: string;
+  unit: "lb" | "kg";
+  startedAt: string;
+  finishedAt: string;
+  dayKey: string;
+  setsDone: number;
+  exercises: unknown[];
+};
+
+/** Restore: finished workouts from the server. Rows already on this device are kept. */
+export async function insertRestoredWorkoutSessions(
+  db: SQLiteDatabase,
+  sessions: RestoredWorkoutSession[],
+): Promise<number> {
+  await ensureTrainingSchema(db);
+  let inserted = 0;
+  for (const r of sessions) {
+    const session: WorkoutSession = {
+      id: r.id,
+      workoutId: r.workoutId,
+      workoutName: r.workoutName,
+      dayKey: r.dayKey,
+      unit: r.unit === "kg" ? "kg" : "lb",
+      startedAt: r.startedAt,
+      finishedAt: r.finishedAt,
+      exercises: r.exercises as WorkoutSession["exercises"],
+      current: 0,
+      // Display only; the server's capped total is already in the restored XP.
+      xpEarned: 0,
+    };
+    const volume = session.exercises.reduce(
+      (v, e) => v + (Array.isArray(e.sets) ? e.sets.filter((s) => s.done).reduce((a, s) => a + s.weight * s.reps, 0) : 0),
+      0,
+    );
+    const result = await db.runAsync(
+      `INSERT OR IGNORE INTO workout_sessions
+        (id, workoutId, workoutName, dayKey, unit, startedAt, finishedAt, durationSec, setsDone, volume, xpEarned, json)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      session.id,
+      session.workoutId,
+      session.workoutName,
+      session.dayKey,
+      session.unit,
+      session.startedAt,
+      r.finishedAt,
+      Math.max(0, Math.round((Date.parse(r.finishedAt) - Date.parse(r.startedAt)) / 1000)),
+      Math.max(0, r.setsDone),
+      Math.round(volume),
+      0,
+      JSON.stringify(session),
+    );
+    inserted += result.changes;
+  }
+  return inserted;
+}
+
 /** Finished sessions, newest first. */
 export async function listWorkoutSessions(
   db: SQLiteDatabase,
@@ -104,10 +276,15 @@ export async function listWorkoutSessions(
   return rows.map((r) => parse<WorkoutSession>(r.json)).filter((s): s is WorkoutSession => s != null);
 }
 
-/** Sets completed today (for the daily cap on set XP). */
-export async function countWorkoutSetXpToday(db: SQLiteDatabase, dayKey: string): Promise<number> {
+/** Workout XP awards on a day (for the daily caps on set and finish XP). */
+export async function countWorkoutXpEvents(
+  db: SQLiteDatabase,
+  reason: "workout_set" | "workout_complete",
+  dayKey: string,
+): Promise<number> {
   const row = await db.getFirstAsync<{ n: number }>(
-    `SELECT COUNT(*) AS n FROM xp_events WHERE reason = 'workout_set' AND dayKey = ?`,
+    `SELECT COUNT(*) AS n FROM xp_events WHERE reason = ? AND dayKey = ?`,
+    reason,
     dayKey,
   );
   return row?.n ?? 0;

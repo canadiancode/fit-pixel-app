@@ -1,4 +1,5 @@
 import type { FoodMealType, HabitLogSource, HabitLogType } from "@/lib/db";
+import type { RestoredWorkoutSession } from "@/lib/db/training";
 
 import { fitPixelFetch } from "./client";
 
@@ -65,6 +66,9 @@ export type RestoreSnapshot = {
     updatedAt: string;
   }[];
   habitLogCount: number;
+  /** Missing on servers older than training sync. */
+  trainingPlan?: { plan: Record<string, unknown>; updatedAt: string } | null;
+  workoutSessionCount?: number;
 };
 
 export async function fetchRestoreSnapshot(
@@ -95,6 +99,25 @@ export async function fetchHabitLogsPage(
   }>(`/v1/habits${qs ? `?${qs}` : ""}`, { accessToken });
   return {
     logs: Array.isArray(data.logs) ? data.logs : [],
+    nextCursor: data.nextCursor ?? null,
+  };
+}
+
+export async function fetchWorkoutSessionsPage(
+  accessToken: string,
+  options: { after?: string | null; limit?: number } = {},
+): Promise<{ sessions: RestoredWorkoutSession[]; nextCursor: string | null }> {
+  const params = new URLSearchParams();
+  if (options.after) params.set("after", options.after);
+  if (options.limit) params.set("limit", String(options.limit));
+  const qs = params.toString();
+  const data = await fitPixelFetch<{
+    ok: true;
+    sessions: RestoredWorkoutSession[];
+    nextCursor: string | null;
+  }>(`/v1/workouts${qs ? `?${qs}` : ""}`, { accessToken });
+  return {
+    sessions: Array.isArray(data.sessions) ? data.sessions : [],
     nextCursor: data.nextCursor ?? null,
   };
 }

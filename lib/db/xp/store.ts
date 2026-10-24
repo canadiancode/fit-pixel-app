@@ -145,6 +145,42 @@ export async function awardXp(
   return event;
 }
 
+/**
+ * Take back every award of `reason` tied to one entity (e.g. the set XP of a
+ * discarded workout), so local XP matches what the server will score.
+ * Returns the XP removed.
+ */
+export async function revokeXpForEntity(
+  db: SQLiteDatabase,
+  reason: XpEventReason,
+  relatedEntityId: string,
+): Promise<number> {
+  let removed = 0;
+  await db.withTransactionAsync(async () => {
+    const row = await db.getFirstAsync<{ total: number | null }>(
+      `SELECT SUM(amount) AS total FROM xp_events WHERE reason = ? AND relatedEntityId = ?`,
+      reason,
+      relatedEntityId,
+    );
+    removed = row?.total ?? 0;
+    if (removed <= 0) return;
+    await db.runAsync(
+      `DELETE FROM xp_events WHERE reason = ? AND relatedEntityId = ?`,
+      reason,
+      relatedEntityId,
+    );
+    const current = await getXpState(db);
+    const lifetimeXp = Math.max(0, current.lifetimeXp - removed);
+    await db.runAsync(
+      `UPDATE xp_state SET lifetimeXp = ?, level = ?, updatedAt = ? WHERE id = 1`,
+      lifetimeXp,
+      getPixelLevel(lifetimeXp),
+      nowIso(),
+    );
+  });
+  return removed;
+}
+
 /** Whether a goal / day-complete bonus was already granted for this dayKey. */
 export async function hasGoalBonusBeenAwarded(
   db: SQLiteDatabase,

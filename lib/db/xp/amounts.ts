@@ -27,8 +27,9 @@ export const XP_WEIGHT_GOAL_REACHED = 250;
 /** Each completed set in workout mode, up to XP_WORKOUT_SETS_PER_DAY a day. */
 export const XP_PER_WORKOUT_SET = 5;
 export const XP_WORKOUT_SETS_PER_DAY = 40;
-/** Finishing a workout with at least one completed set. */
+/** Finishing a workout with at least one completed set, up to XP_WORKOUT_COMPLETES_PER_DAY a day. */
 export const XP_WORKOUT_COMPLETE = 25;
+export const XP_WORKOUT_COMPLETES_PER_DAY = 2;
 
 export const XP_EVENT_REASONS = [
   "habit_log",
