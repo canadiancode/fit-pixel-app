@@ -155,7 +155,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (password.length < AUTH_PASSWORD_MIN_LENGTH) {
         throw new Error(AUTH_COPY.weakPassword);
       }
-      const { data, error } = await client.auth.signUp({ email, password });
+      const { data, error } = await client.auth.signUp({
+        email,
+        password,
+        // The confirmation link lands on the API's callback page ("You're all
+        // set"), not on whatever Site URL the Supabase dashboard has.
+        options: { emailRedirectTo: AUTH_CALLBACK_URL },
+      });
       if (error) {
         throw new Error(mapAuthError(error, "signUp"));
       }

@@ -18,7 +18,7 @@ export const AUTH_COPY = {
   misconfigured:
     "Account sign-in is not configured in this build. Add EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY (never a service-role key).",
   checkEmail:
-    "Open the link, then return here and sign in.",
+    "We sent you a link to confirm your email. Open it, then come back here and sign in. Not there? Check your spam folder.",
 } as const;
 
 export type AuthFlow = "signIn" | "signUp" | "reset";
