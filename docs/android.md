@@ -4,6 +4,63 @@ Fit Pixel runs on Android from the same codebase. Health data comes from
 **Health Connect** (`hooks/*.android.ts`, `features/actions/weight/health-weight-samples.android.ts`),
 the map uses **Google Maps**, and push goes through **FCM** via Expo.
 
+## Status: paused (2026-10-23)
+
+Android is on hold while iOS launches first. The app builds and runs on Android
+in debug and release (merged in #4). Start here when picking it back up.
+
+**Done and verified on an Android 15 emulator:** every tab, sign-up/sign-in,
+chat, custom meals, add-a-gym, Settings, Health Connect permissions and data
+(dashboard, resting HR week, weight import), release build launch, larger font
+sizes, Back button behaviour.
+
+**Not verified yet:** a real Android phone, push notifications (needs Firebase),
+Google Maps with a real key, Samsung Health / Wear OS data in Health Connect,
+sign-in on a release build (release builds only talk HTTPS, so test against
+production or a deployed staging API).
+
+### To resume, in order
+
+1. Bring the branch up to date: `npm ci` (re-applies `patches/` via
+   `postinstall`), then `npx expo prebuild -p android --clean`.
+2. Start the emulator (`emulator -avd FitPixel_API35`, toolchain below) and
+   `npm run android`. Re-check the screens above; iOS work since the pause may
+   have added Android regressions (keyboard handling and bold fonts are the
+   usual suspects).
+3. Work through **Keys and files** and **Play Console checklist** below. The
+   Play account's 12-tester / 14-day closed test is the slowest step, so start
+   that first.
+4. Build: EAS credits are limited, so `npx eas build -p android --profile
+   production --local` builds on this Mac without using any (needs the
+   keystore from step 3).
+
+### Watch out for
+
+- **`patches/@react-navigation+bottom-tabs+7.15.9.patch`** fixes an
+  intermittent Android crash when switching tabs after a permission sheet
+  (`Unable to find viewState for tag`). It's made for that version. If
+  `@react-navigation/bottom-tabs` is upgraded and the patch no longer applies,
+  `npm install` only warns locally but **fails on CI, including EAS iOS
+  builds**. Re-apply `collapsable={false}` to the two icon wrappers in
+  `TabBarIcon` and run `npx patch-package @react-navigation/bottom-tabs`, or
+  delete the patch if upstream has fixed it.
+- **Keyboard:** edge-to-edge Android never resizes for the keyboard. Any new
+  screen with text inputs needs `KeyboardAwareView`
+  (`features/chat/components/keyboard-aware-view.tsx`) or a
+  `KeyboardAvoidingView` with `behavior="padding"` on Android too.
+- **Fonts:** bold text in the pixel fonts relies on the native font embedding in
+  `app.config.js` (`ANDROID_PIXEL_FONTS`). A new custom font needs adding there.
+- Health Connect weigh-ins are stored with log source `healthkit` (the server
+  enum has no `health_connect`), meaning "from the phone's health store".
+
+### Optional later
+
+- Release APK is ~85 MB: about 53 MB is unminified code. Turning on
+  `android.enableMinifyInReleaseBuilds` (R8) and leaving `expo-dev-client` out
+  of production builds would shrink it, but both need a careful release test.
+- `fit-pixel-server/src/routes/well-known.ts` serves a placeholder
+  `assetlinks.json` fingerprint (and the AASA a placeholder Team ID).
+
 ## Run it locally
 
 One-time toolchain on a Mac (no Android Studio needed):
@@ -31,6 +88,12 @@ memory: `./gradlew assembleRelease "-Dorg.gradle.jvmargs=-Xmx4g -XX:MaxMetaspace
 To sign up test accounts without touching production, run Supabase locally
 (`npx supabase start` in a folder holding `fit-pixel-server/supabase/migrations`)
 and a copy of `fit-pixel-server` with `SUPABASE_URL=http://127.0.0.1:54321`.
+Two gotchas: the server verifies JWTs through JWKS, so give the local stack an
+asymmetric key (`npx supabase gen signing-key --algorithm ES256` into
+`supabase/signing_keys.json` as a JSON array, and set `signing_keys_path` in
+`config.toml`). And two migrations share the timestamp `20261021000000`, which
+the Supabase CLI rejects, so rename `..._scale_aggregates.sql` to
+`20261021000001_...` in your copy.
 Then point the app at them **in `.env` itself**. Exporting `EXPO_PUBLIC_*` in
 the shell is not enough: Expo's dev bundle still reads `.env`. Restart Metro
 with `--clear`, and check the served bundle no longer contains the production
