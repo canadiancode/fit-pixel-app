@@ -5,8 +5,15 @@
  * recomputes from habit_log + goals facts. Do not enqueue xp_award as sync truth.
  */
 
-/** Awarded once per successful habit_log insert. */
+/** Awarded per habit_log insert, up to the daily cap below. */
 export const XP_PER_HABIT_LOG = 10;
+
+/**
+ * Logs per action type per day that earn XP (3 waters = 30 XP; the 4th
+ * earns none), so splitting one drink into many logs doesn't farm XP.
+ * Mirrored by recompute_my_xp() on the server.
+ */
+export const XP_HABIT_LOGS_PER_TYPE_PER_DAY = 3;
 
 /** Awarded once per (dayKey, goalKey) when a daily goal flips unmet → met. */
 export const XP_PER_GOAL_MET = 50;

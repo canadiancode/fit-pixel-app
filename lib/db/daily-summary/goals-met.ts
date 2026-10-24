@@ -1,5 +1,6 @@
 import type { DailyGoals } from "../daily-goals/types";
 import type { HabitDayTotals } from "../habit-log/totals";
+import { getFoodGoalMode, isFoodGoalMet } from "./food-goal";
 import {
   DAILY_SUMMARY_GOAL_KEYS,
   type DailySummaryGoalKey,
@@ -8,6 +9,8 @@ import {
 /**
  * Deterministic unmet → met from habit totals vs current goals.
  * Historical goal changes are not versioned — accepted local limitation until server.
+ * Food follows the weight journey (see food-goal.ts), judged from
+ * `latestWeight`: the newest weigh-in, like the goals, not that day's.
  */
 export function computeGoalsMet(
   totals: HabitDayTotals,
@@ -19,11 +22,14 @@ export function computeGoalsMet(
     | "sleepHours"
     | "steps"
     | "activeKcal"
+    | "weightGoal"
+    | "weightUnit"
   >,
+  latestWeight?: number | null,
 ): DailySummaryGoalKey[] {
   const met: DailySummaryGoalKey[] = [];
   for (const key of DAILY_SUMMARY_GOAL_KEYS) {
-    if (isGoalMet(key, totals, goals)) {
+    if (isGoalMet(key, totals, goals, latestWeight)) {
       met.push(key);
     }
   }
@@ -41,11 +47,18 @@ function isGoalMet(
     | "sleepHours"
     | "steps"
     | "activeKcal"
+    | "weightGoal"
+    | "weightUnit"
   >,
+  latestWeight: number | null | undefined,
 ): boolean {
   switch (key) {
     case "food":
-      return totals.foodKcal >= goals.foodKcal;
+      return isFoodGoalMet(
+        getFoodGoalMode(latestWeight, goals.weightGoal, goals.weightUnit),
+        totals.foodKcal,
+        goals.foodKcal,
+      );
     case "water":
       return totals.waterAmount >= goals.waterAmount;
     case "train":

@@ -6,25 +6,53 @@ import { ThemedText } from "@/components/themed-text";
 import { APP_SHELL_MAIN_TEXT_COLOR } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
 import { useDailyGoals } from "@/features/actions/daily-goals-context";
+import { useHabitProgress } from "@/features/actions/habit-progress-context";
 import { useHoldToRepeat } from "@/hooks/use-hold-to-repeat";
-import { DAILY_GOAL_LIMITS } from "@/lib/db";
+import {
+  DAILY_GOAL_LIMITS,
+  getFoodGoalRange,
+  type FoodGoalMode,
+} from "@/lib/db";
 
 import {
   FOOD_ACTION_CARD_BACKGROUND,
   WATER_ADD_ICON,
   WATER_SUBTRACT_ICON,
 } from "../constants";
-import { getActionRowAccentColor } from "../data";
+import { getActionRowAccentColor, getFoodGoalModeForTotals } from "../data";
 
 const SECTION_TITLE = "Daily target";
 const FOOD_DAILY_TARGET_STEP_KCAL = 50;
 const FOOD_DAILY_TARGET_MIN_KCAL = DAILY_GOAL_LIMITS.foodKcal.min;
 const FOOD_DAILY_TARGET_MAX_KCAL = DAILY_GOAL_LIMITS.foodKcal.max;
 
+/** Rounds range ends to the stepper's 50 kcal so the copy reads cleanly. */
+function roundKcal(kcal: number): string {
+  return (Math.round(kcal / 50) * 50).toLocaleString("en-US");
+}
+
+/** What counts as hitting the target, from the weight journey's direction. */
+function foodGoalHint(mode: FoodGoalMode, targetKcal: number): string {
+  const { min, max } = getFoodGoalRange(mode, targetKcal);
+  switch (mode) {
+    case "under":
+      return `Losing weight: land between ${roundKcal(min)} and ${roundKcal(max)} kcal. Staying under counts.`;
+    case "over":
+      return `Gaining weight: reach ${roundKcal(min)} kcal or more.`;
+    case "near":
+      return `Maintaining: land between ${roundKcal(min)} and ${roundKcal(max)} kcal.`;
+  }
+}
+
 export function FoodDailyTargetSection() {
   const accentColor = getActionRowAccentColor("food");
   const { goals, updateGoals } = useDailyGoals();
+  const { totals } = useHabitProgress();
   const dailyTargetKcal = goals.foodKcal;
+  const hint = foodGoalHint(
+    getFoodGoalModeForTotals(goals, totals),
+    dailyTargetKcal,
+  );
 
   const decrease = useCallback(() => {
     void updateGoals((prev) => ({
@@ -56,7 +84,7 @@ export function FoodDailyTargetSection() {
   return (
     <View
       accessible
-      accessibilityLabel={`${SECTION_TITLE}. ${valueA11y}`}
+      accessibilityLabel={`${SECTION_TITLE}. ${valueA11y}. ${hint}`}
       style={styles.card}
     >
       <View
@@ -147,6 +175,13 @@ export function FoodDailyTargetSection() {
               />
             </Pressable>
           </View>
+          <ThemedText
+            lightColor={APP_SHELL_MAIN_TEXT_COLOR}
+            darkColor={APP_SHELL_MAIN_TEXT_COLOR}
+            style={styles.hint}
+          >
+            {hint}
+          </ThemedText>
         </View>
       </View>
     </View>
@@ -175,6 +210,13 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     alignSelf: "stretch",
     textAlign: "center",
+  },
+  hint: {
+    fontSize: 12,
+    lineHeight: 16,
+    opacity: 0.75,
+    textAlign: "center",
+    alignSelf: "stretch",
   },
   stepperRow: {
     flexDirection: "row",

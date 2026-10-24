@@ -24,6 +24,17 @@ export {
   weekdayShortLabelForDayKey,
   yearFromDayKey,
 } from "./day-keys";
+export {
+  FOOD_NEAR_HIGH,
+  FOOD_NEAR_LOW,
+  FOOD_UNDER_FLOOR,
+  getFoodGoalMode,
+  getFoodGoalRange,
+  getFoodGoalScore,
+  isFoodGoalMet,
+  isFoodOverLimit,
+  type FoodGoalMode,
+} from "./food-goal";
 export { computeGoalsMet } from "./goals-met";
 export {
   getEarliestActiveKcalDayKey,

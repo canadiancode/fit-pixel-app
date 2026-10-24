@@ -19,6 +19,8 @@ import { PixelGenderOnboarding } from "@/features/pixel/components/pixel-gender-
 import { PixelLoadoutProvider } from "@/features/pixel/pixel-loadout-context";
 import { PushProvider } from "@/features/push/push-context";
 import { RestoreGate } from "@/features/restore/restore-gate";
+import { StreakCelebrationHost } from "@/features/streak/components/streak-celebration";
+import { StreakProvider } from "@/features/streak/streak-context";
 import {
   NotificationsProvider,
   useNotifications,
@@ -93,14 +95,17 @@ export default function TabLayout() {
           <DailyGoalsProvider>
             <HabitProgressProvider>
             <PixelLoadoutProvider>
+            <StreakProvider>
             <WeightJourneyProvider>
             <NotificationsProvider>
             <PushProvider>
               <AppTabs />
               <PixelGenderOnboarding />
+              <StreakCelebrationHost />
             </PushProvider>
             </NotificationsProvider>
             </WeightJourneyProvider>
+            </StreakProvider>
             </PixelLoadoutProvider>
             </HabitProgressProvider>
           </DailyGoalsProvider>

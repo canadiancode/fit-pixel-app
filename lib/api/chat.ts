@@ -528,3 +528,25 @@ export async function reportUser(input: {
     json: input,
   });
 }
+
+export type LeaderboardBoard = "friends" | "global";
+
+export type LeaderboardEntry = {
+  rank: number;
+  userId: string;
+  displayName: string;
+  level: number;
+  lifetimeXp: number;
+  equipped: EquippedLook;
+  isMe: boolean;
+};
+
+/** Ranked by lifetime XP; you are always included, even outside the top 50. */
+export async function listLeaderboard(
+  board: LeaderboardBoard,
+): Promise<LeaderboardEntry[]> {
+  const data = await chatFetch<{ ok: true; entries?: LeaderboardEntry[] }>(
+    `/v1/leaderboard?board=${board}`,
+  );
+  return Array.isArray(data.entries) ? data.entries : [];
+}
