@@ -21,6 +21,9 @@ export async function wipeLocalUserData(db: SQLiteDatabase): Promise<void> {
     DELETE FROM saved_meals;
     DELETE FROM restore_state;
     DELETE FROM weight_xp_awards;
+    DELETE FROM training_plan;
+    DELETE FROM workout_active;
+    DELETE FROM workout_sessions;
     UPDATE weight_journey SET startWeight = NULL, startUnit = NULL,
       startDayKey = NULL, reminderNotificationId = NULL, lastHealthSyncAt = NULL
       WHERE id = 1;

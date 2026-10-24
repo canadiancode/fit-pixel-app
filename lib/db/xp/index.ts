@@ -9,6 +9,9 @@ export {
   XP_WEIGH_IN_STREAK_STEP,
   XP_WEIGHT_GOAL_REACHED,
   XP_WEIGHT_MILESTONE,
+  XP_PER_WORKOUT_SET,
+  XP_WORKOUT_COMPLETE,
+  XP_WORKOUT_SETS_PER_DAY,
   type XpEventReason,
 } from "./amounts";
 export {

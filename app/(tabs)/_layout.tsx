@@ -18,6 +18,7 @@ import { useAuth } from "@/features/auth/auth-context";
 import { PixelGenderOnboarding } from "@/features/pixel/components/pixel-gender-onboarding";
 import { PixelLoadoutProvider } from "@/features/pixel/pixel-loadout-context";
 import { PushProvider } from "@/features/push/push-context";
+import { TrainingProvider } from "@/features/training/training-context";
 import { RestoreGate } from "@/features/restore/restore-gate";
 import {
   NotificationsProvider,
@@ -92,6 +93,7 @@ export default function TabLayout() {
         <SyncDrainProvider>
           <DailyGoalsProvider>
             <HabitProgressProvider>
+            <TrainingProvider>
             <PixelLoadoutProvider>
             <WeightJourneyProvider>
             <NotificationsProvider>
@@ -102,6 +104,7 @@ export default function TabLayout() {
             </NotificationsProvider>
             </WeightJourneyProvider>
             </PixelLoadoutProvider>
+            </TrainingProvider>
             </HabitProgressProvider>
           </DailyGoalsProvider>
         </SyncDrainProvider>
