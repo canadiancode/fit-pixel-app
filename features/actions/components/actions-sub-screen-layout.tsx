@@ -29,6 +29,9 @@ export function ActionsSubScreenLayout({ children }: Props) {
       style={styles.bodyScroll}
       contentContainerStyle={styles.bodyContent}
       showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag"
+      automaticallyAdjustKeyboardInsets
     >
       {children}
     </ScrollView>
@@ -74,8 +77,8 @@ export function ActionsSubScreenLayout({ children }: Props) {
         </Pressable>
       </View>
       {Platform.OS === "android" ? (
-        // Edge-to-edge Android no longer resizes for the keyboard, so shrink the
-        // scroll view ourselves or the lower form fields (custom meal) stay hidden.
+        // automaticallyAdjustKeyboardInsets is iOS-only and edge-to-edge Android
+        // no longer resizes, so shrink the scroll view ourselves there.
         <KeyboardAwareView>{body}</KeyboardAwareView>
       ) : (
         body
