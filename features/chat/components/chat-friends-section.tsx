@@ -12,6 +12,8 @@ import { ActionListSectionDivider } from "@/features/actions/components/action-l
 import { useAuth } from "@/features/auth/auth-context";
 import { ChatEmptyState } from "@/features/chat/components/chat-empty-state";
 import { ChatListRow } from "@/features/chat/components/chat-list-row";
+import { usePixelLoadout } from "@/features/pixel/pixel-loadout-context";
+import { usePrefsProfile } from "@/features/settings/prefs-profile-context";
 import {
   FriendshipButton,
   Pill,
@@ -60,7 +62,9 @@ export function ChatFriendsSection({
   openingDmFor,
   onFindPixels,
 }: Props) {
-  const { session } = useAuth();
+  const { session, user } = useAuth();
+  const { loadout } = usePixelLoadout();
+  const { profile } = usePrefsProfile();
   const friendActions = useFriendshipActions();
   const [results, setResults] = useState<PixelSearchItem[] | null>(null);
   const [resultStatus, setResultStatus] = useState<
@@ -119,6 +123,21 @@ export function ChatFriendsSection({
         />
       }
     >
+      {q.length === 0 && user ? (
+        <>
+          <ActionListSectionDivider label="you" />
+          <ChatListRow
+            leading={
+              <PixelHeadAvatar equipped={loadout} size={ROW_AVATAR_SIZE} />
+            }
+            title={profile.displayName.trim() || "Your Pixel"}
+            subtitle="Your profile and items"
+            showChevron
+            onPress={() => openPixel(user.id)}
+            accessibilityLabel="Open your Pixel profile"
+          />
+        </>
+      ) : null}
       {q.length > 0 ? (
         <>
           <ActionListSectionDivider label="find pixels" />

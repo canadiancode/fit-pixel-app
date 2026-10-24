@@ -5,9 +5,11 @@ export {
   enqueueOp,
   getPendingOp,
   listDrainableOps,
+  listInventoryUnlocks,
   markOpFailed,
   subscribePendingOpEnqueue,
   type DrainableOpCounts,
+  type InventoryUnlockRecord,
 } from "./enqueue";
 export { sanitizePendingOpPayload } from "./sanitize";
 export { FACT_PENDING_OP_TYPES, trustForOpType } from "./trust";

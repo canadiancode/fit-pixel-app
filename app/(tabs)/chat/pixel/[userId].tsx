@@ -11,6 +11,8 @@ import {
 import { FONT_FAMILY } from "@/constants/fonts";
 import { useAuth } from "@/features/auth/auth-context";
 import { useBlockedUsers } from "@/features/chat/blocked-users-store";
+import { usePixelLoadout } from "@/features/pixel/pixel-loadout-context";
+import { useItemUnlocks } from "@/features/pixel/use-item-unlocks";
 import { ChatSubScreenLayout } from "@/features/chat/components/chat-sub-screen-layout";
 import { useUserSafetyActions } from "@/features/chat/use-user-safety-actions";
 import { FriendshipButton } from "@/features/social/components/friendship-button";
@@ -44,6 +46,16 @@ export default function PixelProfileScreen() {
   const { changeKey } = useNotifications();
   const isSelf = user?.id === userId;
   const isBlocked = blockedIds.has(userId);
+  // Your own page wears what's on this device, which can be ahead of sync.
+  const { loadout: ownLoadout, isHydrated: ownLoadoutReady } = usePixelLoadout();
+  const unlocks = useItemUnlocks();
+  const equipped = isSelf
+    ? ownLoadoutReady
+      ? ownLoadout
+      : undefined
+    : pixel == null
+      ? undefined
+      : (pixel.equipped ?? null);
   const target = { userId, displayName: pixel?.displayName || "this Pixel" };
 
   useEffect(() => {
@@ -99,7 +111,7 @@ export default function PixelProfileScreen() {
   return (
     <ChatSubScreenLayout>
       <PixelShowcase
-        equipped={pixel == null ? undefined : (pixel.equipped ?? null)}
+        equipped={equipped}
         accessibilityLabel={`${target.displayName}'s pixel`}
       />
       <View style={styles.hero}>
@@ -188,14 +200,19 @@ export default function PixelProfileScreen() {
           </Pressable>
         ) : null}
       </View>
-      {pixel && !isBlocked ? (
+      {isSelf ? (
         <PixelCollection
-          equipped={pixel.equipped ?? null}
-          subtitle={
-            isSelf
-              ? "What you're showing off."
-              : `What ${target.displayName} is showing off.`
-          }
+          variant="owner"
+          equipped={equipped}
+          unlocks={unlocks}
+          joinedAt={user?.created_at}
+          subtitle="Only you see these details. Other Pixels see each item's level."
+        />
+      ) : pixel && !isBlocked ? (
+        <PixelCollection
+          variant="public"
+          equipped={equipped}
+          subtitle={`What ${target.displayName} is showing off.`}
         />
       ) : null}
       {userId && !isSelf ? (

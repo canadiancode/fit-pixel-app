@@ -5,11 +5,13 @@ import { PopFlashView, usePopFlash } from "@/components/pop-flash";
 import { ThemedText } from "@/components/themed-text";
 import {
   APP_SHELL_INPUT_BOARDER_COLOR,
+  APP_SHELL_LABEL_COLOR,
   APP_SHELL_MAIN_TEXT_COLOR,
 } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
 
 import { parseBodyId } from "../character-catalog";
+import { getItemOrigin } from "../item-origin";
 import { getOwnedItemsForLayer } from "../layer-assets";
 import { PixelItemThumb } from "./pixel-item-thumb";
 import type {
@@ -23,6 +25,7 @@ import type {
 
 const THUMB_SIZE = 72;
 const LABEL_FONT_SIZE = 12;
+const UNLOCK_FONT_SIZE = 10;
 
 type Props = {
   layerId: PixelLayerId;
@@ -95,12 +98,15 @@ function PixelLayerAssetRow({
   onSelect: () => void;
 }) {
   const popFlash = usePopFlash();
+  const origin = getItemOrigin(option.id);
+  const unlockLabel =
+    origin.unlockLevel != null ? `LV ${origin.unlockLevel}` : origin.badge;
 
   return (
     <View style={[styles.cell, showBottomBorder && styles.cellBorderBottom]}>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`${option.label}${isSelected ? ", selected" : ""}`}
+        accessibilityLabel={`${option.label}. ${origin.description}${isSelected ? ", selected" : ""}`}
         accessibilityState={{ selected: isSelected }}
         onPress={() => {
           if (!isSelected) {
@@ -130,6 +136,13 @@ function PixelLayerAssetRow({
               style={styles.label}
             >
               {option.label}
+            </ThemedText>
+            <ThemedText
+              lightColor={APP_SHELL_LABEL_COLOR}
+              darkColor={APP_SHELL_LABEL_COLOR}
+              style={styles.unlock}
+            >
+              {unlockLabel}
             </ThemedText>
           </View>
         </View>
@@ -195,5 +208,13 @@ const styles = StyleSheet.create({
     fontSize: LABEL_FONT_SIZE,
     lineHeight: 18,
     fontWeight: "600",
+  },
+  unlock: {
+    position: "absolute",
+    right: 0,
+    bottom: 0,
+    fontFamily: FONT_FAMILY,
+    fontSize: UNLOCK_FONT_SIZE,
+    lineHeight: 14,
   },
 });

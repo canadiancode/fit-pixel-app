@@ -98,6 +98,13 @@ export const REWARD_ITEM_IDS: ReadonlySet<PixelItemId> = new Set([
   PIXEL_WEIGHT_GOAL_REWARD.itemId,
 ]);
 
+/** Paid items: 1 = cheap ($), 2 = mid ($$), 3 = most expensive ($$$). */
+export type PixelPriceTier = 1 | 2 | 3;
+
+/** Items sold for real money, by price tier. None are on sale yet. */
+export const PIXEL_PAID_ITEM_TIERS: ReadonlyMap<PixelItemId, PixelPriceTier> =
+  new Map<PixelItemId, PixelPriceTier>([]);
+
 export const SHOP_ITEM_IDS: ReadonlySet<PixelItemId> = new Set(
   PIXEL_SHOP_OFFERS.map((offer) => offer.itemId),
 );
