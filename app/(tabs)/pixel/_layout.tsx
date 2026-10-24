@@ -1,10 +1,12 @@
-import { Stack, useRouter, useSegments } from "expo-router";
+import { Stack, usePathname, useRouter, useSegments } from "expo-router";
 import { Pressable, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ThemedView } from "@/components/themed-view";
 import { APP_SHELL_SECONDARY_BACKGROUND } from "@/constants/app-colors";
 import { TAB_SCREEN_ROOT_ABOVE_TAB_BAR } from "@/constants/app-shell";
 import { AnimatedPixelCharacter } from "@/features/pixel/components/animated-pixel-character";
+import { isPixelLayerId } from "@/features/pixel/data";
 import { usePixelLoadout } from "@/features/pixel/pixel-loadout-context";
 
 export const unstable_settings = {
@@ -15,6 +17,7 @@ function PixelTabChrome() {
   const router = useRouter();
   const segments = useSegments();
   const { loadout } = usePixelLoadout();
+  const insets = useSafeAreaInsets();
 
   // Typed segments omit "index", but the runtime value can include it.
   const pixelSegments: string[] = segments.filter(
@@ -23,6 +26,9 @@ function PixelTabChrome() {
   const isDashboard =
     (pixelSegments.length === 1 && pixelSegments[0] === "pixel") ||
     (pixelSegments.length === 2 && pixelSegments[1] === "index");
+  // While a layer's picker is open the hero zooms in on that part.
+  const pathLeaf = usePathname().split("/").pop() ?? "";
+  const focus = isPixelLayerId(pathLeaf) ? pathLeaf : null;
 
   return (
     <ThemedView
@@ -40,6 +46,8 @@ function PixelTabChrome() {
         >
           <AnimatedPixelCharacter
             loadout={loadout}
+            focus={focus}
+            focusInsetTop={insets.top}
             style={styles.heroCharacter}
           />
         </Pressable>

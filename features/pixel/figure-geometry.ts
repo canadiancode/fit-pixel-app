@@ -1,4 +1,4 @@
-import type { PixelLayerId } from "./types";
+import { PIXEL_FIGURE_LAYERS, type PixelLayerId } from "./types";
 
 /** Background + held-item canvas (every scene asset shares it). */
 export const PIXEL_SCENE_WIDTH = 1484;
@@ -83,4 +83,134 @@ export function coverSceneRect(width: number, height: number) {
     left: (width - sceneWidth) / 2,
     top: (height - sceneHeight) / 2,
   };
+}
+
+export type FrameRect = { left: number; top: number; width: number; height: number };
+
+/**
+ * What the hero camera frames while a layer is being picked: character parts
+ * in figure pixels, held items in scene pixels (each the union of that
+ * layer's art, padded). Layers without an entry keep the whole scene.
+ */
+const PIXEL_FOCUS_RECT: Partial<Record<PixelLayerId, FrameRect>> = {
+  hair: { left: 85, top: 0, width: 160, height: 235 },
+  eyes: { left: 128, top: 72, width: 116, height: 76 },
+  nose: { left: 138, top: 92, width: 100, height: 64 },
+  mouth: { left: 136, top: 112, width: 100, height: 64 },
+  top: { left: 9, top: 125, width: 312, height: 295 },
+  bottom: { left: 55, top: 315, width: 218, height: 320 },
+  shoes: { left: 45, top: 590, width: 280, height: 108 },
+  item_left: { left: 392, top: 684, width: 126, height: 228 },
+  item_right: { left: 898, top: 688, width: 352, height: 226 },
+};
+
+const FIGURE_LAYER_IDS: readonly PixelLayerId[] = PIXEL_FIGURE_LAYERS;
+
+/** Where `layerId`'s focus rect sits in a `width` x `height` hero frame. */
+export function pixelFocusInFrame(
+  layerId: PixelLayerId,
+  width: number,
+  height: number,
+): FrameRect | null {
+  const rect = PIXEL_FOCUS_RECT[layerId];
+  if (rect == null || width <= 0 || height <= 0) return null;
+  const scene = coverSceneRect(width, height);
+  // Fractions of the scene canvas.
+  const inScene = FIGURE_LAYER_IDS.includes(layerId)
+    ? {
+        left:
+          PIXEL_FIGURE_IN_SCENE.left +
+          (rect.left / PIXEL_FIGURE_WIDTH) * PIXEL_FIGURE_IN_SCENE.width,
+        top:
+          PIXEL_FIGURE_IN_SCENE.top +
+          (rect.top / PIXEL_FIGURE_HEIGHT) * PIXEL_FIGURE_IN_SCENE.height,
+        width: (rect.width / PIXEL_FIGURE_WIDTH) * PIXEL_FIGURE_IN_SCENE.width,
+        height:
+          (rect.height / PIXEL_FIGURE_HEIGHT) * PIXEL_FIGURE_IN_SCENE.height,
+      }
+    : {
+        left: rect.left / PIXEL_SCENE_WIDTH,
+        top: rect.top / PIXEL_SCENE_HEIGHT,
+        width: rect.width / PIXEL_SCENE_WIDTH,
+        height: rect.height / PIXEL_SCENE_HEIGHT,
+      };
+  return {
+    left: scene.left + inScene.left * scene.width,
+    top: scene.top + inScene.top * scene.height,
+    width: inScene.width * scene.width,
+    height: inScene.height * scene.height,
+  };
+}
+
+/**
+ * A zoom and pan of the hero frame, applied as
+ * `[{ translateX: x }, { translateY: y }, { scale }]` about the frame's centre.
+ */
+export type PixelCamera = { scale: number; x: number; y: number };
+
+export const PIXEL_CAMERA_REST: PixelCamera = { scale: 1, x: 0, y: 0 };
+
+/** Share of the frame the focus rect fills along its tighter side. */
+const FOCUS_FILL = 0.8;
+/** Face parts are tiny; past this the pixel art turns to mush. */
+const MAX_FOCUS_ZOOM = 5;
+
+/**
+ * The camera that centres `focus` in a `width` x `height` frame, below the
+ * top `insetTop` points (e.g. behind the status bar), panning only as far as
+ * the scene still covers the frame.
+ */
+export function cameraForFocus(
+  focus: FrameRect,
+  width: number,
+  height: number,
+  insetTop = 0,
+): PixelCamera {
+  const scene = coverSceneRect(width, height);
+  const visibleHeight = height - insetTop;
+  const scale = clamp(
+    Math.min(
+      (width * FOCUS_FILL) / focus.width,
+      (visibleHeight * FOCUS_FILL) / focus.height,
+    ),
+    1,
+    MAX_FOCUS_ZOOM,
+  );
+  const cx = width / 2;
+  const cy = height / 2;
+  const targetY = insetTop + visibleHeight / 2;
+  return {
+    scale,
+    x: clamp(
+      (cx - (focus.left + focus.width / 2)) * scale,
+      width - cx - (scene.left + scene.width - cx) * scale,
+      (cx - scene.left) * scale - cx,
+    ),
+    y: clamp(
+      targetY - cy - (focus.top + focus.height / 2 - cy) * scale,
+      height - cy - (scene.top + scene.height - cy) * scale,
+      (cy - scene.top) * scale - cy,
+    ),
+  };
+}
+
+/** Where `rect` lands on screen once `camera` is applied. */
+export function rectThroughCamera(
+  rect: FrameRect,
+  camera: PixelCamera,
+  width: number,
+  height: number,
+): FrameRect {
+  const cx = width / 2;
+  const cy = height / 2;
+  return {
+    left: cx + camera.x + (rect.left - cx) * camera.scale,
+    top: cy + camera.y + (rect.top - cy) * camera.scale,
+    width: rect.width * camera.scale,
+    height: rect.height * camera.scale,
+  };
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
 }

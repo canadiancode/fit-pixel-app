@@ -52,8 +52,18 @@ export function resolveLayers(loadout: PixelLoadout): PixelLayerSpec[] {
   return layers;
 }
 
-/** The character's layers, stacked on its own canvas (fills `style`'s box). */
-export function FigureLayers({ layers }: { layers: PixelLayerSpec[] }) {
+/**
+ * The character's layers, stacked on its own canvas (fills `style`'s box).
+ * Pass `allowDownscaling={false}` when the canvas is zoomed with a transform,
+ * so the art keeps its full resolution.
+ */
+export function FigureLayers({
+  layers,
+  allowDownscaling = true,
+}: {
+  layers: PixelLayerSpec[];
+  allowDownscaling?: boolean;
+}) {
   return layers
     .filter((layer) => isFigureLayer(layer.id))
     .map((layer) => (
@@ -63,6 +73,7 @@ export function FigureLayers({ layers }: { layers: PixelLayerSpec[] }) {
         source={layer.source}
         style={[styles.layer, { zIndex: layer.zIndex }]}
         contentFit="contain"
+        allowDownscaling={allowDownscaling}
         pointerEvents="none"
       />
     ));
