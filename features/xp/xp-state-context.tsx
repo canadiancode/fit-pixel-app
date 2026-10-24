@@ -5,11 +5,13 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
 
 import { getXpState, type XpState } from "@/lib/db";
+import { maybeAskForReview } from "@/lib/review-prompt";
 
 type XpStateContextValue = {
   xp: XpState;
@@ -34,10 +36,18 @@ export function XpStateProvider({ children }: { children: ReactNode }) {
   const db = useSQLiteContext();
   const [xp, setXp] = useState<XpState>(DEFAULT_XP);
   const [isHydrated, setIsHydrated] = useState(false);
+  /** Level last read from SQLite; null until the first read. */
+  const levelRef = useRef<number | null>(null);
 
   const refreshXp = useCallback(async () => {
     const next = await getXpState(db);
+    const prev = levelRef.current;
+    levelRef.current = next.level;
     setXp(next);
+    // A level gained in play, not a restore landing many levels at once.
+    if (prev != null && next.level > prev && next.level - prev <= 2) {
+      void maybeAskForReview(next.level);
+    }
   }, [db]);
 
   useEffect(() => {
@@ -47,6 +57,7 @@ export function XpStateProvider({ children }: { children: ReactNode }) {
       try {
         const next = await getXpState(db);
         if (!cancelled) {
+          levelRef.current = next.level;
           setXp(next);
         }
       } finally {
