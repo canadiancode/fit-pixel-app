@@ -40,3 +40,14 @@ export function initCrashReporting(): void {
     Sentry.setTag("update_id", Updates.updateId);
   }
 }
+
+/**
+ * Sends a handled test error so a release build can be checked end to end
+ * (Settings → Privacy & terms → tap the version 7 times). Returns false when
+ * crash reporting is off (development builds), so the UI can say so.
+ */
+export function sendTestError(): boolean {
+  if (!Sentry.getClient()) return false;
+  Sentry.captureException(new Error(`Sentry test from Settings (${new Date().toISOString()})`));
+  return true;
+}
