@@ -14,10 +14,7 @@ import { PIXEL_FIGURE_ASPECT_RATIO } from "@/features/pixel/figure-geometry";
 import { usePixelLoadout } from "@/features/pixel/pixel-loadout-context";
 import type { PixelBodySize, PixelGender } from "@/features/pixel/types";
 import { HomeGymPicker } from "@/features/settings/components/home-gym-picker";
-import {
-  SettingsBioTextField,
-  SettingsSingleLineTextField,
-} from "@/features/settings/components/settings-text-field";
+import { SettingsBioTextField } from "@/features/settings/components/settings-text-field";
 import {
   SettingsField,
   SettingsSection,
@@ -27,7 +24,6 @@ import {
 import { usePrefsProfile } from "@/features/settings/prefs-profile-context";
 
 const SAVE_DEBOUNCE_MS = 300;
-const NAME_MAX = 80;
 const BIO_MAX = 500;
 const PREVIEW_HEIGHT = 128;
 
@@ -51,21 +47,19 @@ function nextBuildHint(size: PixelBodySize): string {
 export function ProfileSettingsForm() {
   const { profile, isHydrated, updateProfile } = usePrefsProfile();
   const { loadout, gender, bodySize, changeGender } = usePixelLoadout();
-  const [displayName, setDisplayName] = useState(profile.displayName);
   const [bio, setBio] = useState(profile.bio);
 
   useEffect(() => {
-    setDisplayName(profile.displayName);
     setBio(profile.bio);
-  }, [profile.displayName, profile.bio]);
+  }, [profile.bio]);
 
   useEffect(() => {
     if (!isHydrated) return;
     const handle = setTimeout(() => {
-      void updateProfile({ displayName, bio });
+      void updateProfile({ bio });
     }, SAVE_DEBOUNCE_MS);
     return () => clearTimeout(handle);
-  }, [displayName, bio, isHydrated, updateProfile]);
+  }, [bio, isHydrated, updateProfile]);
 
   return (
     <View style={styles.root}>
@@ -112,27 +106,6 @@ export function ProfileSettingsForm() {
         bare
       >
         <View style={styles.fields}>
-          <SettingsField
-            label="Display name"
-            hint="Shown in chats, search and on your Pixel card."
-            counter={`${displayName.length}/${NAME_MAX}`}
-          >
-            <SettingsSingleLineTextField
-              accessibilityLabel="Display name"
-              value={displayName}
-              onChangeText={setDisplayName}
-              placeholder="Fit Pixel"
-              autoCapitalize="words"
-              autoCorrect
-              maxLength={NAME_MAX}
-              editable={isHydrated}
-              returnKeyType="done"
-              plain
-              shellStyle={styles.inputBox}
-              style={styles.inputText}
-            />
-          </SettingsField>
-
           <SettingsField
             label="Bio"
             hint="A line or two about your training."
@@ -221,7 +194,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     lineHeight: 16,
   },
-  /** Same box as the home gym picker so the three fields match. */
+  /** Same box as the home gym picker so the fields match. */
   inputBox: {
     borderWidth: 2,
     borderColor: APP_SHELL_INPUT_BOARDER_COLOR,
