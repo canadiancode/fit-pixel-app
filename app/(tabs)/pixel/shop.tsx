@@ -17,21 +17,14 @@ import {
   APP_SHELL_SECONDARY_BACKGROUND,
 } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
-import { fitsGender } from "@/features/pixel/character-catalog";
+import {
+  listCatalogByLayer,
+  type CatalogEntry,
+} from "@/features/pixel/collection-stats";
 import { PixelItemThumb } from "@/features/pixel/components/pixel-item-thumb";
 import { PixelSubScreenToolbar } from "@/features/pixel/components/pixel-sub-screen-toolbar";
-import { PIXEL_LAYER_CATEGORIES } from "@/features/pixel/data";
-import { getPixelItem } from "@/features/pixel/layer-assets";
 import { usePixelLoadout } from "@/features/pixel/pixel-loadout-context";
-import {
-  PIXEL_SHOP_OFFERS,
-  type PixelShopOffer,
-} from "@/features/pixel/shop-catalog";
-import type {
-  PixelItem,
-  PixelLayerId,
-  PixelLoadout,
-} from "@/features/pixel/types";
+import type { PixelLayerId, PixelLoadout } from "@/features/pixel/types";
 import { useXpState } from "@/features/xp/xp-state-context";
 import {
   getXpBarFillPercent,
@@ -51,58 +44,57 @@ const GRID_GAP = 10;
 const GRID_COLUMNS = 3;
 const SCREEN_PADDING = 16;
 
-type LockedOffer = { offer: PixelShopOffer; item: PixelItem };
 type CategoryFilter = PixelLayerId | "all";
 
+/** Locked first (level unlocks by level, then rewards), owned last. */
+function entryOrder(a: CatalogEntry, b: CatalogEntry): number {
+  if (a.owned !== b.owned) return a.owned ? 1 : -1;
+  const al = a.origin.unlockLevel ?? Number.MAX_SAFE_INTEGER;
+  const bl = b.origin.unlockLevel ?? Number.MAX_SAFE_INTEGER;
+  return al - bl || a.item.label.localeCompare(b.item.label);
+}
+
 /**
- * What you're working toward: only items you don't own yet, by Pixel category.
- * Items are free and land in your inventory on their own when you reach their
- * level (see PixelLoadoutProvider), so there's nothing to tap to unlock.
+ * Every item this Pixel can wear, by the same categories as Customize, with
+ * the ones still locked first and how each is earned. Level items land in
+ * your inventory on their own (see PixelLoadoutProvider); weight rewards come
+ * from the weight journey. There's nothing to tap to unlock.
  */
 export default function PixelShopScreen() {
   const router = useRouter();
   const { xp } = useXpState();
-  const { ownsItem, gender, loadout } = usePixelLoadout();
+  const { inventory, gender, loadout } = usePixelLoadout();
   const { width: windowWidth } = useWindowDimensions();
   const [panelWidth, setPanelWidth] = useState(windowWidth);
   const [filter, setFilter] = useState<CategoryFilter>("all");
 
-  const byCategory = useMemo(() => {
-    const groups = new Map<PixelLayerId, LockedOffer[]>();
-    for (const offer of PIXEL_SHOP_OFFERS) {
-      if (ownsItem(offer.itemId)) continue;
-      const item = getPixelItem(offer.itemId);
-      // Clothes cut for the other body aren't shown.
-      if (!item || !fitsGender(item, gender)) continue;
-      const list = groups.get(item.layer) ?? [];
-      list.push({ offer, item });
-      groups.set(item.layer, list);
-    }
-    for (const list of groups.values()) {
-      list.sort(
-        (a, b) =>
-          a.offer.requiredLevel - b.offer.requiredLevel ||
-          a.offer.label.localeCompare(b.offer.label),
-      );
-    }
-    // Same order as the Customize screen's categories.
-    return PIXEL_LAYER_CATEGORIES.filter((category) =>
-      groups.has(category.id),
-    ).map((category) => ({ category, offers: groups.get(category.id)! }));
-  }, [ownsItem, gender]);
+  const byCategory = useMemo(
+    () =>
+      listCatalogByLayer({ inventory, loadout, gender, level: xp.level })
+        .filter(({ entries }) => entries.length > 0)
+        .map((group) => ({
+          ...group,
+          entries: [...group.entries].sort(entryOrder),
+          locked: group.entries.filter((e) => !e.owned).length,
+        })),
+    [inventory, loadout, gender, xp.level],
+  );
 
   const visible =
     filter === "all"
       ? byCategory
-      : byCategory.filter(({ category }) => category.id === filter);
-  const totalLocked = byCategory.reduce((n, g) => n + g.offers.length, 0);
-  const nextLevel = Math.min(
-    ...byCategory.flatMap((g) => g.offers.map((o) => o.offer.requiredLevel)),
-  );
-  const nextCount = byCategory.reduce(
-    (n, g) => n + g.offers.filter((o) => o.offer.requiredLevel === nextLevel).length,
-    0,
-  );
+      : byCategory.filter(({ layerId }) => layerId === filter);
+  const locked = byCategory.flatMap((g) => g.entries.filter((e) => !e.owned));
+  const levelLocked = locked.filter((e) => e.origin.unlockLevel != null);
+  const rewardsLocked = locked.length - levelLocked.length;
+  const nextLevel = Math.min(...levelLocked.map((e) => e.origin.unlockLevel!));
+  const nextCount = levelLocked.filter((e) => e.origin.unlockLevel === nextLevel).length;
+  const levelHint =
+    levelLocked.length > 0
+      ? `Items unlock on their own when you reach their level. Next up: ${nextCount} item${nextCount === 1 ? "" : "s"} at Level ${nextLevel}.`
+      : rewardsLocked > 0
+        ? `Every level item is yours. ${rewardsLocked} reward${rewardsLocked === 1 ? "" : "s"} left: hit your weight milestones and goal weight.`
+        : "You've unlocked every item. New gear is on the way!";
 
   // Three cards per row across the measured panel.
   const cardWidth = Math.floor(
@@ -156,9 +148,7 @@ export default function PixelShopScreen() {
             darkColor={APP_SHELL_LABEL_COLOR}
             style={styles.levelHint}
           >
-            {totalLocked === 0
-              ? "You've unlocked every item. New gear is on the way!"
-              : `Items unlock on their own when you reach their level. Next up: ${nextCount} item${nextCount === 1 ? "" : "s"} at Level ${nextLevel}.`}
+            {levelHint}
           </ThemedText>
         </View>
 
@@ -171,49 +161,50 @@ export default function PixelShopScreen() {
           >
             <FilterChip
               label="All"
-              count={totalLocked}
+              count={locked.length}
               active={filter === "all"}
               onPress={() => setFilter("all")}
             />
-            {byCategory.map(({ category, offers }) => (
+            {byCategory.map(({ layerId, label, locked: count }) => (
               <FilterChip
-                key={category.id}
-                label={category.label}
-                count={offers.length}
-                active={filter === category.id}
-                onPress={() => setFilter(category.id)}
+                key={layerId}
+                label={label}
+                count={count}
+                active={filter === layerId}
+                onPress={() => setFilter(layerId)}
               />
             ))}
           </ScrollView>
         ) : null}
 
-        {visible.map(({ category, offers }) => (
-          <View key={category.id} style={styles.section}>
+        {visible.map(({ layerId, label, entries, locked: count }) => (
+          <View key={layerId} style={styles.section}>
             <View style={styles.sectionHeader} accessibilityRole="header">
               <ThemedText
                 lightColor={APP_SHELL_MAIN_TEXT_COLOR}
                 darkColor={APP_SHELL_MAIN_TEXT_COLOR}
                 style={styles.sectionTitle}
               >
-                {category.label}
+                {label}
               </ThemedText>
               <ThemedText
                 lightColor={APP_SHELL_LABEL_COLOR}
                 darkColor={APP_SHELL_LABEL_COLOR}
                 style={styles.sectionCount}
               >
-                {offers.length} to unlock
+                {count > 0
+                  ? `${count} to unlock · ${entries.length - count}/${entries.length}`
+                  : `All ${entries.length} unlocked`}
               </ThemedText>
             </View>
             <View style={styles.grid}>
-              {offers.map(({ offer, item }) => (
-                <OfferCard
-                  key={offer.itemId}
-                  offer={offer}
-                  item={item}
+              {entries.map((entry) => (
+                <ItemCard
+                  key={entry.item.id}
+                  entry={entry}
                   width={cardWidth}
                   wearer={loadout}
-                  levelsAway={offer.requiredLevel - xp.level}
+                  level={xp.level}
                 />
               ))}
             </View>
@@ -258,37 +249,41 @@ function FilterChip({
   );
 }
 
-function OfferCard({
-  offer,
-  item,
+function ItemCard({
+  entry,
   width,
   wearer,
-  levelsAway,
+  level,
 }: {
-  offer: PixelShopOffer;
-  item: PixelItem;
+  entry: CatalogEntry;
   width: number;
   wearer: PixelLoadout;
-  levelsAway: number;
+  level: number;
 }) {
+  const { item, owned, origin } = entry;
   const thumb = width - 16;
+  const levelsAway =
+    origin.unlockLevel != null ? origin.unlockLevel - level : 0;
+  const a11yState = owned
+    ? "Unlocked"
+    : `${origin.description}${
+        levelsAway > 0 ? `, ${levelsAway} level${levelsAway === 1 ? "" : "s"} to go` : ""
+      }`;
   return (
     <View
-      style={[styles.card, { width }]}
+      style={[styles.card, owned && styles.cardOwned, { width }]}
       accessible
-      accessibilityLabel={`${offer.label}. Unlocks at level ${offer.requiredLevel}${
-        levelsAway > 0 ? `, ${levelsAway} level${levelsAway === 1 ? "" : "s"} to go` : ""
-      }`}
+      accessibilityLabel={`${item.label}. ${a11yState}`}
     >
       <View style={styles.thumbWell}>
-        <PixelItemThumb item={item} size={thumb} wearer={wearer} dimmed />
-        <View style={styles.levelBadge}>
+        <PixelItemThumb item={item} size={thumb} wearer={wearer} dimmed={!owned} />
+        <View style={[styles.levelBadge, owned && styles.ownedBadge]}>
           <ThemedText
             lightColor={APP_SHELL_MAIN_TEXT_COLOR}
             darkColor={APP_SHELL_MAIN_TEXT_COLOR}
             style={styles.levelBadgeText}
           >
-            LV {offer.requiredLevel}
+            {owned ? "✓" : origin.badge}
           </ThemedText>
         </View>
       </View>
@@ -298,8 +293,18 @@ function OfferCard({
         style={styles.cardLabel}
         numberOfLines={2}
       >
-        {offer.label}
+        {item.label}
       </ThemedText>
+      {!owned && origin.unlockLevel == null ? (
+        <ThemedText
+          lightColor={APP_SHELL_LABEL_COLOR}
+          darkColor={APP_SHELL_LABEL_COLOR}
+          style={styles.cardHint}
+          numberOfLines={2}
+        >
+          {origin.description}
+        </ThemedText>
+      ) : null}
     </View>
   );
 }
@@ -411,6 +416,9 @@ const styles = StyleSheet.create({
     borderColor: CARD_RIM,
     backgroundColor: CARD_FILL,
   },
+  cardOwned: {
+    opacity: 0.75,
+  },
   thumbWell: {
     borderRadius: 10,
     overflow: "hidden",
@@ -427,6 +435,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: CARD_RIM_ACTIVE,
   },
+  ownedBadge: {
+    borderColor: "#5BD16B",
+  },
   levelBadgeText: {
     fontFamily: FONT_FAMILY,
     fontSize: 7,
@@ -437,6 +448,12 @@ const styles = StyleSheet.create({
     fontSize: 8,
     lineHeight: 12,
     minHeight: 24,
+    paddingHorizontal: 2,
+  },
+  cardHint: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 7,
+    lineHeight: 10,
     paddingHorizontal: 2,
   },
   pressed: {

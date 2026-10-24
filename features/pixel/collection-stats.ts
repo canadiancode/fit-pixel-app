@@ -1,6 +1,6 @@
 import { BODY_SIZE_LEVELS, fitsGender, parseBodyId } from "./character-catalog";
 import { PIXEL_LAYER_CATEGORIES } from "./data";
-import { getItemOrigin, type ItemRarity } from "./item-origin";
+import { getItemOrigin, type ItemOrigin, type ItemRarity } from "./item-origin";
 import { PIXEL_LAYER_ASSETS } from "./layer-assets";
 import type {
   PixelGender,
@@ -46,16 +46,52 @@ export const RARITY_ORDER: readonly ItemRarity[] = [
   "legendary",
 ];
 
+/** One catalog item this Pixel can wear, whether it's collected, and how it's earned. */
+export type CatalogEntry = {
+  item: PixelItem;
+  owned: boolean;
+  origin: ItemOrigin;
+};
+
+/**
+ * Every item this Pixel can wear, by layer in Customize order: gender-fitted
+ * clothing and bodies of its own skin tone. Bodies are owned by level, the
+ * rest by inventory.
+ */
+export function listCatalogByLayer(input: {
+  inventory: readonly PixelItemId[];
+  loadout: PixelLoadout;
+  gender: PixelGender | null;
+  level: number;
+}): { layerId: PixelLayerId; label: string; entries: CatalogEntry[] }[] {
+  const { inventory, loadout, gender, level } = input;
+  const inventorySet = new Set(inventory);
+  const tone = parseBodyId(loadout.skin)?.tone;
+
+  return PIXEL_LAYER_CATEGORIES.map((category) => {
+    const entries: CatalogEntry[] = [];
+    for (const item of PIXEL_LAYER_ASSETS[category.id]) {
+      if (!fitsGender(item, gender)) continue;
+      const body = parseBodyId(item.id);
+      // Bodies: one tone (yours); they unlock by level, not inventory.
+      if (body != null && tone != null && body.tone !== tone) continue;
+      const owned =
+        body != null
+          ? BODY_SIZE_LEVELS[body.size] <= level
+          : inventorySet.has(item.id);
+      entries.push({ item, owned, origin: getItemOrigin(item.id) });
+    }
+    return { layerId: category.id, label: category.label, entries };
+  });
+}
+
 export function getCollectionStats(input: {
   inventory: readonly PixelItemId[];
   loadout: PixelLoadout;
   gender: PixelGender | null;
   level: number;
 }): CollectionStats {
-  const { inventory, loadout, gender, level } = input;
-  const inventorySet = new Set(inventory);
-  const tone = parseBodyId(loadout.skin)?.tone;
-
+  const { level } = input;
   const byRarity = Object.fromEntries(
     RARITY_ORDER.map((rarity) => [rarity, { owned: 0, total: 0 }]),
   ) as CollectionStats["byRarity"];
@@ -65,21 +101,9 @@ export function getCollectionStats(input: {
   let nextUnlock: NextUnlock | null = null;
   const lockedRewards: PixelItem[] = [];
 
-  for (const category of PIXEL_LAYER_CATEGORIES) {
+  for (const { layerId, label, entries } of listCatalogByLayer(input)) {
     let layerOwned = 0;
-    let layerTotal = 0;
-    for (const item of PIXEL_LAYER_ASSETS[category.id]) {
-      if (!fitsGender(item, gender)) continue;
-      const body = parseBodyId(item.id);
-      // Bodies: one tone (yours); they unlock by level, not inventory.
-      if (body != null && tone != null && body.tone !== tone) continue;
-      const has =
-        body != null
-          ? BODY_SIZE_LEVELS[body.size] <= level
-          : inventorySet.has(item.id);
-      const origin = getItemOrigin(item.id);
-
-      layerTotal += 1;
+    for (const { item, owned: has, origin } of entries) {
       byRarity[origin.rarity].total += 1;
       if (has) {
         layerOwned += 1;
@@ -94,14 +118,9 @@ export function getCollectionStats(input: {
         lockedRewards.push(item);
       }
     }
-    layers.push({
-      layerId: category.id,
-      label: category.label,
-      owned: layerOwned,
-      total: layerTotal,
-    });
+    layers.push({ layerId, label, owned: layerOwned, total: entries.length });
     owned += layerOwned;
-    total += layerTotal;
+    total += entries.length;
   }
 
   return { owned, total, byRarity, layers, nextUnlock, lockedRewards };
