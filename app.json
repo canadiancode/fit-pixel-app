@@ -189,9 +189,9 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff",
+          "backgroundColor": "#060612",
           "dark": {
-            "backgroundColor": "#000000"
+            "backgroundColor": "#060612"
           },
           "android": {
             "image": "./assets/images/android-splash-icon.png",
