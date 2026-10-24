@@ -3,12 +3,23 @@ import { PIXEL_LAYER_CATEGORIES } from "./data";
 import { getItemOrigin, type ItemOrigin, type ItemRarity } from "./item-origin";
 import { PIXEL_LAYER_ASSETS } from "./layer-assets";
 import type {
+  PixelBodySize,
   PixelGender,
   PixelItem,
   PixelItemId,
   PixelLayerId,
   PixelLoadout,
 } from "./types";
+
+/**
+ * Body items are labelled by tone for the Customize tone picker. Here every
+ * body is the player's own tone, so they differ (and unlock) by size.
+ */
+const BODY_SIZE_LABELS: Record<PixelBodySize, string> = {
+  small: "Small body",
+  medium: "Medium body",
+  big: "Big body",
+};
 
 /**
  * What the collection screen shows: how much of the catalog this player has
@@ -79,7 +90,11 @@ export function listCatalogByLayer(input: {
         body != null
           ? BODY_SIZE_LEVELS[body.size] <= level
           : inventorySet.has(item.id);
-      entries.push({ item, owned, origin: getItemOrigin(item.id) });
+      entries.push({
+        item: body != null ? { ...item, label: BODY_SIZE_LABELS[body.size] } : item,
+        owned,
+        origin: getItemOrigin(item.id),
+      });
     }
     return { layerId: category.id, label: category.label, entries };
   });
