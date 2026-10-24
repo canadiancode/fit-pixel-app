@@ -1,5 +1,6 @@
 import { CommonActions, StackActions } from "@react-navigation/native";
 import { useNavigation, usePathname, useRouter } from "expo-router";
+import { useEffect, useRef } from "react";
 import { Platform, Pressable, ScrollView, StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
@@ -12,20 +13,28 @@ import { KeyboardAwareView } from "@/features/chat/components/keyboard-aware-vie
 
 type Props = {
   children: React.ReactNode;
+  /** Scroll back to the top whenever this changes (e.g. the step of a multi-step flow). */
+  scrollResetKey?: string | number;
 };
 
 /** Habit roots under Actions — Back should clear sibling stacks (e.g. weight then sleep). */
 const TOP_LEVEL_ACTION_PATH =
   /^\/actions\/(weight|sleep|water|steps|calories|train|food|heart)\/?$/;
 
-export function ActionsSubScreenLayout({ children }: Props) {
+export function ActionsSubScreenLayout({ children, scrollResetKey }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   // The Actions tab's own stack (also reachable from the nested food stack).
   const actionsStack = useNavigation("/(tabs)/actions");
 
+  const scrollRef = useRef<ScrollView>(null);
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
+  }, [scrollResetKey]);
+
   const body = (
     <ScrollView
+      ref={scrollRef}
       style={styles.bodyScroll}
       contentContainerStyle={styles.bodyContent}
       showsVerticalScrollIndicator={false}

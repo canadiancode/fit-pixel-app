@@ -13,6 +13,7 @@ export {
   ensureAuthLocalSchema,
   ensureRestoreStateSchema,
   ensureWeightJourneySchema,
+  ensureTrainingSchema,
 } from "./migrations";
 export {
   DAILY_GOAL_LIMITS,

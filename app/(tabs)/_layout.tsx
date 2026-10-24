@@ -18,6 +18,7 @@ import { useAuth } from "@/features/auth/auth-context";
 import { PixelGenderOnboarding } from "@/features/pixel/components/pixel-gender-onboarding";
 import { PixelLoadoutProvider } from "@/features/pixel/pixel-loadout-context";
 import { PushProvider } from "@/features/push/push-context";
+import { TrainingProvider } from "@/features/training/training-context";
 import { RestoreGate } from "@/features/restore/restore-gate";
 import { StreakCelebrationHost } from "@/features/streak/components/streak-celebration";
 import { StreakProvider } from "@/features/streak/streak-context";
@@ -94,6 +95,7 @@ export default function TabLayout() {
         <SyncDrainProvider>
           <DailyGoalsProvider>
             <HabitProgressProvider>
+            <TrainingProvider>
             <PixelLoadoutProvider>
             <StreakProvider>
             <WeightJourneyProvider>
@@ -107,6 +109,7 @@ export default function TabLayout() {
             </WeightJourneyProvider>
             </StreakProvider>
             </PixelLoadoutProvider>
+            </TrainingProvider>
             </HabitProgressProvider>
           </DailyGoalsProvider>
         </SyncDrainProvider>

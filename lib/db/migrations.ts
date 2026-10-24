@@ -71,7 +71,8 @@ export async function ensureXpSchema(db: SQLiteDatabase): Promise<void> {
       id TEXT PRIMARY KEY NOT NULL,
       amount INTEGER NOT NULL CHECK (amount > 0),
       reason TEXT NOT NULL CHECK (reason IN (
-        'habit_log', 'goal_met', 'day_complete', 'weigh_in', 'weight_milestone'
+        'habit_log', 'goal_met', 'day_complete', 'weigh_in', 'weight_milestone',
+        'workout_set', 'workout_complete'
       )),
       relatedEntityId TEXT,
       dayKey TEXT,
@@ -92,6 +93,44 @@ export async function ensureXpSchema(db: SQLiteDatabase): Promise<void> {
      VALUES (1, 0, 0, ?)`,
     nowIso(),
   );
+}
+
+/**
+ * Idempotent training schema (v14): the editable plan (one JSON document),
+ * the in-progress workout (survives the app closing mid-set) and finished
+ * sessions. Local only for now.
+ */
+export async function ensureTrainingSchema(db: SQLiteDatabase): Promise<void> {
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS training_plan (
+      id INTEGER PRIMARY KEY NOT NULL CHECK (id = 1),
+      json TEXT NOT NULL,
+      updatedAt TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS workout_active (
+      id INTEGER PRIMARY KEY NOT NULL CHECK (id = 1),
+      json TEXT NOT NULL,
+      updatedAt TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS workout_sessions (
+      id TEXT PRIMARY KEY NOT NULL,
+      workoutId TEXT NOT NULL,
+      workoutName TEXT NOT NULL,
+      dayKey TEXT NOT NULL,
+      unit TEXT NOT NULL CHECK (unit IN ('lb', 'kg')),
+      startedAt TEXT NOT NULL,
+      finishedAt TEXT NOT NULL,
+      durationSec INTEGER NOT NULL CHECK (durationSec >= 0),
+      setsDone INTEGER NOT NULL CHECK (setsDone >= 0),
+      volume REAL NOT NULL CHECK (volume >= 0),
+      xpEarned INTEGER NOT NULL CHECK (xpEarned >= 0),
+      json TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_workout_sessions_finished
+      ON workout_sessions (finishedAt);
+    CREATE INDEX IF NOT EXISTS idx_workout_sessions_day
+      ON workout_sessions (dayKey);
+  `);
 }
 
 /**
@@ -407,6 +446,31 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase): Promise<void> {
     currentVersion = 13;
   }
 
+  if (currentVersion === 13) {
+    // Rebuild xp_events again so its CHECK allows the workout reasons.
+    await db.execAsync(`
+      CREATE TABLE xp_events_v14 (
+        id TEXT PRIMARY KEY NOT NULL,
+        amount INTEGER NOT NULL CHECK (amount > 0),
+        reason TEXT NOT NULL CHECK (reason IN (
+          'habit_log', 'goal_met', 'day_complete', 'weigh_in', 'weight_milestone',
+          'workout_set', 'workout_complete'
+        )),
+        relatedEntityId TEXT,
+        dayKey TEXT,
+        createdAt TEXT NOT NULL
+      );
+      INSERT INTO xp_events_v14 (id, amount, reason, relatedEntityId, dayKey, createdAt)
+      SELECT id, amount, reason, relatedEntityId, dayKey, createdAt FROM xp_events;
+      DROP TABLE xp_events;
+      ALTER TABLE xp_events_v14 RENAME TO xp_events;
+      CREATE INDEX IF NOT EXISTS idx_xp_events_created
+        ON xp_events (createdAt);
+    `);
+    await ensureTrainingSchema(db);
+    currentVersion = 14;
+  }
+
   // Always repair derived/XP/saved/prefs tables — Fast Refresh can skip onInit while
   // stamping user_version ahead of CREATE TABLE.
   await ensureDailySummarySchema(db);
@@ -416,6 +480,7 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase): Promise<void> {
   await ensureAuthLocalSchema(db);
   await ensureRestoreStateSchema(db);
   await ensureWeightJourneySchema(db);
+  await ensureTrainingSchema(db);
 
   await db.execAsync(`PRAGMA user_version = ${DATABASE_VERSION}`);
 }

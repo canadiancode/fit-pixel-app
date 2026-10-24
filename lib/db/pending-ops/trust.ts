@@ -11,7 +11,7 @@ const UNTRUSTED_CLIENT_TYPES = new Set<PendingServerOpType>([
 
 /**
  * Facts to enqueue for sync truth. Prefer these over derived XP/unlock ops;
- * XP can be recomputed server-side from habit_log + daily_goals.
+ * XP can be recomputed server-side from habit_log + daily_goals + workout_session.
  */
 export const FACT_PENDING_OP_TYPES = [
   "habit_log",
@@ -20,6 +20,8 @@ export const FACT_PENDING_OP_TYPES = [
   "profile",
   "prefs",
   "saved_meal",
+  "workout_session",
+  "training_plan",
 ] as const satisfies readonly PendingServerOpType[];
 
 export function trustForOpType(

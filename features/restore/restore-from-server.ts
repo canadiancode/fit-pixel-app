@@ -14,6 +14,7 @@ import { PIXEL_LAYER_Z_INDEX, type PixelLayerId } from "@/features/pixel/types";
 import {
   fetchHabitLogsPage,
   fetchRestoreSnapshot,
+  fetchWorkoutSessionsPage,
   type RestoreHabitLog,
   type RestoreSnapshot,
 } from "@/lib/api/restore";
@@ -32,6 +33,7 @@ import {
   nowIso,
   XP_PER_HABIT_LOG,
 } from "@/lib/db";
+import { applyRestoredTrainingPlan, insertRestoredWorkoutSessions } from "@/lib/db/training";
 import { getPixelLevel } from "@/lib/xp-progress";
 
 /**
@@ -41,6 +43,7 @@ import { getPixelLevel } from "@/lib/xp-progress";
  */
 
 const HABIT_PAGE_SIZE = 500;
+const WORKOUT_PAGE_SIZE = 200;
 
 /** goal_bonus_awarded.xpEventId for bonuses the server already counted. */
 const RESTORED_BONUS_EVENT_ID = "restored";
@@ -297,7 +300,10 @@ async function claimRestoredGoalBonuses(db: SQLiteDatabase): Promise<void> {
   }
 }
 
-/** Server XP is truth; add base XP for local logs that have not uploaded yet. */
+/**
+ * Server XP is truth; add base XP for local logs, and the XP of local workouts,
+ * that have not uploaded yet.
+ */
 async function applyServerXp(
   db: SQLiteDatabase,
   snapshot: RestoreSnapshot,
@@ -307,8 +313,16 @@ async function applyServerXp(
     `SELECT COUNT(*) AS n FROM pending_server_ops
      WHERE type = 'habit_log' AND status IN ('pending', 'failed')`,
   );
+  const pendingWorkouts = await db.getFirstAsync<{ xp: number | null }>(
+    `SELECT SUM(w.xpEarned) AS xp
+     FROM pending_server_ops o
+     JOIN workout_sessions w ON w.id = json_extract(o.payload_json, '$.id')
+     WHERE o.type = 'workout_session' AND o.status IN ('pending', 'failed')`,
+  );
   const lifetimeXp =
-    snapshot.xp.lifetimeXp + (pending?.n ?? 0) * XP_PER_HABIT_LOG;
+    snapshot.xp.lifetimeXp +
+    (pending?.n ?? 0) * XP_PER_HABIT_LOG +
+    (pendingWorkouts?.xp ?? 0);
   const level = getPixelLevel(lifetimeXp);
   await db.runAsync(
     `UPDATE xp_state SET lifetimeXp = ?, level = ?, updatedAt = ? WHERE id = 1`,
@@ -434,6 +448,25 @@ export async function restoreFromServer(
     onProgress?.({ restoredLogs, totalLogs });
     if (!nextCursor) break;
     cursor = nextCursor;
+  }
+
+  // Training: the plan, then finished workouts (only when the server has any).
+  if (snapshot.trainingPlan) {
+    await applyRestoredTrainingPlan(db, snapshot.trainingPlan);
+  }
+  if ((snapshot.workoutSessionCount ?? 0) > 0) {
+    let after: string | null = null;
+    for (;;) {
+      const page = await fetchWorkoutSessionsPage(accessToken, {
+        after,
+        limit: WORKOUT_PAGE_SIZE,
+      });
+      await db.withTransactionAsync(async () => {
+        await insertRestoredWorkoutSessions(db, page.sessions);
+      });
+      if (!page.nextCursor) break;
+      after = page.nextCursor;
+    }
   }
 
   // File-backed, outside SQLite; the provider reloads it on the next data epoch.

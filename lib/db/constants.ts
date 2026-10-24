@@ -9,4 +9,4 @@ export const DATABASE_NAME = "fit-pixel.db";
  * v11 auth_local lastUserId (not JWTs); v12 restore_state (server → device restore progress);
  * v13 weight_journey / weight_xp_awards + weigh-in and milestone XP reasons.
  */
-export const DATABASE_VERSION = 13;
+export const DATABASE_VERSION = 14;
