@@ -395,7 +395,7 @@ export default function WorkoutScreen() {
               <View style={styles.restBtns}>
                 <PixelButton label="-15S" variant="blue" size="sm" onPress={() => void adjustRest(-15)} style={styles.restBtn} />
                 <PixelButton label="+15S" variant="blue" size="sm" onPress={() => void adjustRest(15)} style={styles.restBtn} />
-                <PixelButton label="SKIP" variant="yellow" size="sm" onPress={skipRest} style={styles.restBtn} />
+                <PixelButton label="SKIP" variant="orange" size="sm" onPress={skipRest} style={styles.restBtn} />
               </View>
             </View>
             <View style={styles.restBar}>
@@ -404,7 +404,7 @@ export default function WorkoutScreen() {
           </View>
         ) : null}
         {workoutDone ? (
-          <PixelButton label="FINISH WORKOUT" variant="yellow" onPress={() => void finish()} />
+          <PixelButton label="FINISH WORKOUT" variant="orange" onPress={() => void finish()} />
         ) : allSetsDone ? (
           <PixelButton label="NEXT EXERCISE" variant="cyan" onPress={() => goTo(session.exercises.findIndex((e, i) => i > exIndex && e.sets.some((s) => !s.done)) >= 0 ? session.exercises.findIndex((e, i) => i > exIndex && e.sets.some((s) => !s.done)) : session.exercises.findIndex((e) => e.sets.some((s) => !s.done)))} />
         ) : !rest ? (

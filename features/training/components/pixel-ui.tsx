@@ -1,11 +1,15 @@
 import * as Haptics from "expo-haptics";
-import type { ReactNode } from "react";
+import { Image, type ImageSource } from "expo-image";
+import { useState, type ReactNode } from "react";
 import {
   Pressable,
   StyleSheet,
   Text,
+  TextInput,
   View,
+  type LayoutChangeEvent,
   type StyleProp,
+  type TextInputProps,
   type TextStyle,
   type ViewStyle,
 } from "react-native";
@@ -38,14 +42,83 @@ export function tapHaptic() {
   if (process.env.EXPO_OS === "ios") void Haptics.selectionAsync();
 }
 
-type Variant = "lime" | "cyan" | "yellow" | "blue" | "danger";
+/** The pixel-art tiles the other action screens are built from (stretched to fit, like theirs). */
+export const BG = {
+  rectCard: require("@/assets/backgrounds/blue-rect-card.png"),
+  squareCard: require("@/assets/backgrounds/blue-square-card.png"),
+  tallCard: require("@/assets/backgrounds/blue-large-square-card.png"),
+  tile: require("@/assets/backgrounds/bulk-add-blue.png"),
+  tileOn: require("@/assets/backgrounds/blue-tab-button.png"),
+  tileCyan: require("@/assets/backgrounds/light-blue-rect-card.png"),
+  tileDone: require("@/assets/backgrounds/quick-add-food.png"),
+  lime: require("@/assets/backgrounds/lime-green-action.png"),
+  cyan: require("@/assets/backgrounds/custom-add-action.png"),
+  orange: require("@/assets/backgrounds/orange-action.png"),
+  red: require("@/assets/backgrounds/remove-action.png"),
+  input: require("@/assets/backgrounds/text-input-long.png"),
+  navRow: require("@/assets/backgrounds/settings-more-selections-button.png"),
+} as const;
 
-const VARIANT_BG: Record<Variant, string> = {
-  lime: T.lime,
-  cyan: T.cyan,
-  yellow: T.yellow,
-  blue: "#0b3f86",
-  danger: "#b3261e",
+const ADD_ICON = require("@/assets/icons/add.png");
+const SUBTRACT_ICON = require("@/assets/icons/subtract.png");
+
+/** Blue tiles by width / height, so a stretched tile keeps its corners close to the art. */
+const CARD_SHAPES = [
+  [1555 / 511, BG.rectCard],
+  [451 / 334, BG.squareCard],
+  [451 / 624, BG.tallCard],
+] as const;
+const BLUE_BUTTON_SHAPES = [
+  [145 / 122, BG.tile],
+  [1555 / 511, BG.rectCard],
+] as const;
+
+function closestShape(aspect: number, shapes: readonly (readonly [number, ImageSource])[]): ImageSource {
+  let best = shapes[0];
+  for (const s of shapes) {
+    if (Math.abs(Math.log(aspect / s[0])) < Math.abs(Math.log(aspect / best[0]))) best = s;
+  }
+  return best[1];
+}
+
+/** Width / height of a view, for picking the closest tile. */
+function useAspect(initial: number) {
+  const [aspect, setAspect] = useState(initial);
+  const onLayout = (e: LayoutChangeEvent) => {
+    const { width, height } = e.nativeEvent.layout;
+    if (width > 0 && height > 0) setAspect(width / height);
+  };
+  return { aspect, onLayout };
+}
+
+/** A tile stretched behind its children. */
+export function PixelBackdrop({ source }: { source: ImageSource }) {
+  return (
+    <Image
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+      source={source}
+      style={StyleSheet.absoluteFillObject}
+      contentFit="fill"
+    />
+  );
+}
+
+type Variant = "lime" | "cyan" | "orange" | "blue" | "danger";
+
+const VARIANT_BG: Record<Exclude<Variant, "blue">, ImageSource> = {
+  lime: BG.lime,
+  cyan: BG.cyan,
+  orange: BG.orange,
+  danger: BG.red,
+};
+
+const VARIANT_TEXT: Record<Variant, string> = {
+  lime: T.black,
+  cyan: T.black,
+  orange: T.text,
+  blue: T.text,
+  danger: T.text,
 };
 
 export function PixelButton({
@@ -67,40 +140,33 @@ export function PixelButton({
   icon?: ReactNode;
   style?: StyleProp<ViewStyle>;
 }) {
-  const filled = variant !== "blue";
   const height = size === "lg" ? 58 : size === "md" ? 48 : 40;
+  const { aspect, onLayout } = useAspect(4);
+  const source = variant === "blue" ? closestShape(aspect, BLUE_BUTTON_SHAPES) : VARIANT_BG[variant];
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ disabled: !!disabled }}
       disabled={disabled}
+      onLayout={onLayout}
       onPress={() => {
         tapHaptic();
         onPress();
       }}
       style={({ pressed }) => [
         styles.button,
-        {
-          height,
-          backgroundColor: VARIANT_BG[variant],
-          borderColor: filled ? T.black : T.border,
-          borderWidth: filled ? 4 : 3,
-          borderRadius: filled ? 2 : 10,
-        },
-        filled && !pressed && styles.buttonShadow,
-        pressed && styles.buttonPressed,
+        { height },
+        pressed && styles.pressed,
         disabled && styles.buttonDisabled,
         style,
       ]}
     >
+      <PixelBackdrop source={source} />
       {icon}
       <Text
         numberOfLines={1}
-        style={[
-          styles.buttonLabel,
-          { color: filled && variant !== "danger" ? T.black : T.text, fontSize: size === "lg" ? 13 : size === "md" ? 11 : 9 },
-        ]}
+        style={[styles.buttonLabel, { color: VARIANT_TEXT[variant], fontSize: size === "lg" ? 13 : size === "md" ? 11 : 9 }]}
       >
         {label}
       </Text>
@@ -108,16 +174,58 @@ export function PixelButton({
   );
 }
 
-export function PixelCard({
-  children,
-  active,
-  style,
+/** Blue card: the closest of the rect / square / tall card tiles for its shape. */
+export function PixelCard({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
+  const { aspect, onLayout } = useAspect(451 / 334);
+  return (
+    <View onLayout={onLayout} style={[styles.card, style]}>
+      <PixelBackdrop source={closestShape(aspect, CARD_SHAPES)} />
+      {children}
+    </View>
+  );
+}
+
+/** Full-width row that opens another screen (the Settings row tile, chevron included). */
+export function PixelNavRow({
+  label,
+  detail,
+  onPress,
+  accessibilityLabel,
 }: {
-  children: ReactNode;
-  active?: boolean;
-  style?: StyleProp<ViewStyle>;
+  label: string;
+  detail?: string;
+  onPress: () => void;
+  accessibilityLabel?: string;
 }) {
-  return <View style={[styles.card, active && styles.cardActive, style]}>{children}</View>;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? (detail ? `${label}. ${detail}` : label)}
+      onPress={() => {
+        tapHaptic();
+        onPress();
+      }}
+      style={({ pressed }) => [styles.navRow, pressed && styles.pressed]}
+    >
+      <PixelBackdrop source={BG.navRow} />
+      <PixelText size={10}>{label}</PixelText>
+      {detail ? (
+        <BodyText size={12} numberOfLines={1}>
+          {detail}
+        </BodyText>
+      ) : null}
+    </Pressable>
+  );
+}
+
+/** Text field on the shared input tile (Settings and custom meals use the same one). */
+export function PixelTextInput({ style, ...props }: TextInputProps) {
+  return (
+    <View style={styles.inputShell}>
+      <PixelBackdrop source={BG.input} />
+      <TextInput placeholderTextColor="#ffffff66" keyboardAppearance="dark" {...props} style={[styles.input, style]} />
+    </View>
+  );
 }
 
 export function PixelText({
@@ -188,9 +296,10 @@ export function Stepper({
 }) {
   const dec = useHoldToRepeat(onDecrease, { intervalMs: 90 });
   const inc = useHoldToRepeat(onIncrease, { intervalMs: 90 });
-  const btn = compact ? 40 : 48;
+  const btn = compact ? 34 : 42;
   return (
     <View style={[styles.stepper, compact && styles.stepperCompact]}>
+      <PixelBackdrop source={BG.tile} />
       <PixelText size={compact ? 6 : 7} color={T.muted}>
         {label}
       </PixelText>
@@ -198,14 +307,15 @@ export function Stepper({
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={decreaseLabel}
+          hitSlop={6}
           onPressIn={() => {
             tapHaptic();
             dec.onPressIn();
           }}
           onPressOut={dec.onPressOut}
-          style={({ pressed }) => [styles.stepBtn, { width: btn, height: btn }, pressed && styles.stepBtnPressed]}
+          style={({ pressed }) => pressed && styles.pressed}
         >
-          <PixelText size={16}>-</PixelText>
+          <Image source={SUBTRACT_ICON} style={{ width: btn, height: btn }} contentFit="contain" />
         </Pressable>
         <PixelText size={compact ? 12 : 16} style={styles.stepValue} numberOfLines={1}>
           {value}
@@ -213,14 +323,15 @@ export function Stepper({
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={increaseLabel}
+          hitSlop={6}
           onPressIn={() => {
             tapHaptic();
             inc.onPressIn();
           }}
           onPressOut={inc.onPressOut}
-          style={({ pressed }) => [styles.stepBtn, { width: btn, height: btn }, pressed && styles.stepBtnPressed]}
+          style={({ pressed }) => pressed && styles.pressed}
         >
-          <PixelText size={16}>+</PixelText>
+          <Image source={ADD_ICON} style={{ width: btn, height: btn }} contentFit="contain" />
         </Pressable>
       </View>
     </View>
@@ -250,16 +361,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 10,
     paddingHorizontal: 14,
+    borderRadius: 8,
+    overflow: "hidden",
   },
-  buttonShadow: {
-    shadowColor: T.black,
-    shadowOffset: { width: 5, height: 6 },
-    shadowOpacity: 1,
-    shadowRadius: 0,
-    elevation: 6,
-  },
-  buttonPressed: {
-    transform: [{ translateX: 3 }, { translateY: 4 }],
+  pressed: {
+    opacity: 0.85,
   },
   buttonDisabled: {
     opacity: 0.45,
@@ -268,20 +374,37 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILY,
   },
   card: {
-    backgroundColor: T.card,
-    borderWidth: 3,
-    borderColor: T.border,
     borderRadius: 12,
-    padding: 14,
+    overflow: "hidden",
+    paddingVertical: 20,
+    paddingHorizontal: 18,
     gap: 10,
   },
-  cardActive: {
-    borderWidth: 4,
-    borderColor: T.cyan,
-    shadowColor: T.cyan,
-    shadowOpacity: 0.45,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 0 },
+  navRow: {
+    alignSelf: "stretch",
+    aspectRatio: 1039 / 190,
+    borderRadius: 8,
+    overflow: "hidden",
+    justifyContent: "center",
+    paddingLeft: 20,
+    paddingRight: 56,
+    gap: 4,
+  },
+  inputShell: {
+    alignSelf: "stretch",
+    height: 52,
+    borderRadius: 12,
+    overflow: "hidden",
+    justifyContent: "center",
+  },
+  input: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 14,
+    color: T.text,
+    backgroundColor: "transparent",
+    paddingHorizontal: 18,
+    paddingVertical: 0,
+    height: 52,
   },
   badge: {
     paddingHorizontal: 6,
@@ -294,34 +417,20 @@ const styles = StyleSheet.create({
   },
   stepper: {
     flex: 1,
-    backgroundColor: T.deep,
-    borderWidth: 2,
-    borderColor: T.borderSoft,
-    borderRadius: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 6,
+    borderRadius: 8,
+    overflow: "hidden",
+    paddingVertical: 12,
+    paddingHorizontal: 8,
     alignItems: "center",
     gap: 6,
   },
   stepperCompact: {
-    paddingVertical: 6,
+    paddingVertical: 10,
   },
   stepperRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-  },
-  stepBtn: {
-    backgroundColor: "#0b3f86",
-    borderWidth: 3,
-    borderColor: T.border,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  stepBtnPressed: {
-    backgroundColor: T.cardActive,
-    borderColor: T.cyan,
+    gap: 4,
   },
   stepValue: {
     minWidth: 46,

@@ -144,7 +144,7 @@ export default function TrainQuestScreen() {
             ))}
           </View>
 
-          <PixelCard active>
+          <PixelCard>
             <View style={styles.rowBetween}>
               <PixelText size={11}>{preview.name.toUpperCase()}</PixelText>
               <PixelText size={7} color={T.muted}>{preview.weeks} WEEKS</PixelText>
