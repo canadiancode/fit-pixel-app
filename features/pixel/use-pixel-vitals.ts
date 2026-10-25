@@ -16,15 +16,12 @@ export type PixelVitals = {
   sweaty: boolean;
   /** Food landed in today's goal range: little hearts. */
   wellFed: boolean;
-  /** Water goal met: the bottle glows. */
-  hydrated: boolean;
 };
 
 export const CALM_VITALS: PixelVitals = {
   sleepy: false,
   sweaty: false,
   wellFed: false,
-  hydrated: false,
 };
 
 /** Under this share of the sleep goal counts as a short night. */
@@ -52,8 +49,6 @@ export function usePixelVitals(): PixelVitals {
         totals.foodKcal ?? 0,
         goals.foodKcal,
       ),
-      hydrated:
-        goals.waterAmount > 0 && (totals.waterAmount ?? 0) >= goals.waterAmount,
     };
   }, [goals, totals, isHydrated]);
 }

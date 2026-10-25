@@ -206,7 +206,7 @@ type Props = {
   pressed?: boolean;
   /**
    * The Pixel is alive: it breathes, fidgets now and then, and shows today's
-   * vitals (Zzz, sweat, hearts, glowing bottle). Paused while a part is in
+   * vitals (Zzz, sweat, hearts). Paused while a part is in
    * focus; all of it is off under Reduce Motion.
    */
   alive?: boolean;

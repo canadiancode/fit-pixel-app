@@ -19,9 +19,8 @@ import type { PixelVitals } from "../use-pixel-vitals";
 
 /**
  * Effects drawn on the scene canvas from today's vitals: Zzz after a short
- * night, sweat after a good burn, hearts after a good day of eating, and a
- * glowing bottle once the water goal is met. Lives inside the scene view, so
- * it follows the hero camera. Positions are fractions of the scene.
+ * night, sweat after a good burn, and hearts after a good day of eating.
+ * Lives inside the scene view, so it follows the hero camera. Positions are fractions of the scene.
  */
 
 /** A point on the character canvas (fractions) as a fraction of the scene. */
@@ -36,8 +35,6 @@ const HEAD_SIDE = onFigure(0.76, 0.12);
 const BROW_LEFT = onFigure(0.4, 0.15);
 const BROW_RIGHT = onFigure(0.6, 0.15);
 const BELLY = onFigure(0.5, 0.42);
-/** Centre of the held bottle (see the item_left focus rect). */
-const BOTTLE = { x: 455 / 1484, y: 798 / 1060 };
 
 const HEART = [".x.x.", "xxxxx", "xxxxx", ".xxx.", "..x.."] as const;
 
@@ -56,7 +53,6 @@ export function PixelVitalsLayer({ vitals, width, height }: Props) {
 
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-      {vitals.hydrated ? <BottleGlow at={at(BOTTLE)} size={unit * 0.34} /> : null}
       {vitals.sleepy
         ? [0, 1, 2].map((i) => (
             <SleepZ key={i} index={i} at={at(HEAD_SIDE)} unit={unit} />
@@ -210,57 +206,6 @@ function FloatingHeart({
   );
 }
 
-function BottleGlow({ at, size }: { at: { left: number; top: number }; size: number }) {
-  const pulse = useSharedValue(0);
-  const twinkle = useLoop(400, 700, 1900);
-  useEffect(() => {
-    pulse.value = withRepeat(
-      withTiming(1, { duration: 1400, easing: Easing.inOut(Easing.sin) }),
-      -1,
-      true,
-    );
-    return () => cancelAnimation(pulse);
-  }, [pulse]);
-
-  const glowStyle = useAnimatedStyle(() => ({
-    opacity: 0.35 + pulse.value * 0.35,
-    transform: [{ scale: 0.9 + pulse.value * 0.15 }],
-  }));
-  const sparkleStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(twinkle.value, [0, 0.5, 1], [0, 1, 0]),
-    transform: [{ scale: interpolate(twinkle.value, [0, 0.5, 1], [0.3, 1, 0.3]) }],
-  }));
-  const s = size * 0.12;
-  return (
-    <>
-      <Animated.View
-        style={[
-          styles.glow,
-          {
-            width: size,
-            height: size * 1.5,
-            borderRadius: size,
-            left: at.left - size / 2,
-            top: at.top - size * 0.75,
-            shadowRadius: size * 0.35,
-          },
-          glowStyle,
-        ]}
-      />
-      <Animated.View
-        style={[
-          styles.sparkle,
-          { left: at.left + size * 0.12, top: at.top - size * 0.7, width: s, height: s },
-          sparkleStyle,
-        ]}
-      >
-        <View style={[styles.sparkleBar, { width: s, height: s / 3, top: s / 3 }]} />
-        <View style={[styles.sparkleBar, { width: s / 3, height: s, left: s / 3 }]} />
-      </Animated.View>
-    </>
-  );
-}
-
 const styles = StyleSheet.create({
   anchor: {
     position: "absolute",
@@ -272,22 +217,5 @@ const styles = StyleSheet.create({
     textShadowColor: "#0B1446",
     textShadowOffset: { width: 2, height: 2 },
     textShadowRadius: 0,
-  },
-  glow: {
-    position: "absolute",
-    // Behind the bottle (held items sit at z 10–11).
-    zIndex: 9,
-    backgroundColor: "rgba(127, 231, 255, 0.16)",
-    shadowColor: "#7FE7FF",
-    shadowOpacity: 1,
-    shadowOffset: { width: 0, height: 0 },
-  },
-  sparkle: {
-    position: "absolute",
-    zIndex: 12,
-  },
-  sparkleBar: {
-    position: "absolute",
-    backgroundColor: "#FFFFFF",
   },
 });
