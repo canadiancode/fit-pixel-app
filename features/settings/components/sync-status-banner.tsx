@@ -1,5 +1,6 @@
-import { StyleSheet, View } from "react-native";
+import { StyleSheet } from "react-native";
 
+import { PixelPanel } from "@/components/pixel-panel";
 import { ThemedText } from "@/components/themed-text";
 import {
   APP_SHELL_LABEL_COLOR,
@@ -41,11 +42,12 @@ export function SyncStatusBanner() {
   const copy = statusCopy(status);
 
   return (
-    <View
+    <PixelPanel
+      frame={copy.failed ? "red" : "green"}
       accessibilityRole="text"
       accessibilityLiveRegion="polite"
       accessibilityLabel={`${copy.title}. ${copy.caption}`}
-      style={[styles.banner, copy.failed && styles.bannerFailed]}
+      style={styles.banner}
     >
       <ThemedText
         lightColor={APP_SHELL_MAIN_TEXT_COLOR}
@@ -61,23 +63,15 @@ export function SyncStatusBanner() {
       >
         {copy.caption}
       </ThemedText>
-    </View>
+    </PixelPanel>
   );
 }
 
 const styles = StyleSheet.create({
   banner: {
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: "rgba(95,211,95,0.55)",
-    backgroundColor: "rgba(95,211,95,0.08)",
-    paddingVertical: 14,
-    paddingHorizontal: 14,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
     gap: 8,
-  },
-  bannerFailed: {
-    borderColor: "rgba(255,138,138,0.6)",
-    backgroundColor: "rgba(255,138,138,0.08)",
   },
   title: {
     fontSize: 12,

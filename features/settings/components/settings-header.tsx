@@ -1,7 +1,12 @@
 import { useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
+import {
+  PixelFrameBackdrop,
+  PixelPanel,
+  PixelPressablePanel,
+} from "@/components/pixel-panel";
 import { ThemedText } from "@/components/themed-text";
 import { XpLevelBar } from "@/components/xp-level-bar";
 import {
@@ -28,14 +33,10 @@ import {
 
 import { usePrefsProfile } from "../prefs-profile-context";
 import { DisplayNameDialog } from "./display-name-dialog";
-import {
-  SETTINGS_CARD_FILL,
-  SETTINGS_CARD_RIM,
-  SETTINGS_CARD_RIM_ACTIVE,
-} from "./settings-ui";
 
 const AVATAR_SIZE = 76;
-const AVATAR_BORDER = 2;
+/** Inset of the recessed portrait well. */
+const AVATAR_BORDER = 4;
 const LEVEL_COLOR = "#6fc3ff";
 
 /**
@@ -110,19 +111,22 @@ export function SettingsHeader() {
 
   return (
     <View style={styles.headerRow}>
-      <View style={styles.card}>
+      <PixelPanel style={styles.card}>
         <View
           style={styles.avatar}
           accessibilityRole="image"
           accessibilityLabel="Your pixel"
         >
-          <PixelFigure
-            loadout={portraitLoadout(loadout)}
-            style={[
-              styles.avatarFigure,
-              figureFrameForCrop(PIXEL_HEAD_CROP, AVATAR_SIZE - 2 * AVATAR_BORDER),
-            ]}
-          />
+          <PixelFrameBackdrop frame="well" />
+          <View style={styles.avatarClip}>
+            <PixelFigure
+              loadout={portraitLoadout(loadout)}
+              style={[
+                styles.avatarFigure,
+                figureFrameForCrop(PIXEL_HEAD_CROP, AVATAR_SIZE - 2 * AVATAR_BORDER),
+              ]}
+            />
+          </View>
         </View>
 
         <View style={styles.info}>
@@ -136,20 +140,18 @@ export function SettingsHeader() {
             >
               {displayName}
             </ThemedText>
-            <Pressable
+            <PixelPressablePanel
+              frame="button"
               accessibilityRole="button"
               accessibilityLabel="Edit display name"
               accessibilityState={{ disabled: !isHydrated }}
               disabled={!isHydrated}
               hitSlop={8}
               onPress={() => setEditingName(true)}
-              style={({ pressed }) => [
-                styles.editButton,
-                pressed && styles.pressed,
-              ]}
+              style={styles.editButton}
             >
               <PencilIcon />
-            </Pressable>
+            </PixelPressablePanel>
           </View>
 
           <ThemedText
@@ -175,7 +177,7 @@ export function SettingsHeader() {
             {nextLevelXp.toLocaleString("en-US")} XP
           </ThemedText>
         </View>
-      </View>
+      </PixelPanel>
 
       <DisplayNameDialog
         visible={editingName}
@@ -194,20 +196,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 14,
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: SETTINGS_CARD_RIM_ACTIVE,
-    backgroundColor: SETTINGS_CARD_FILL,
+    padding: 14,
   },
   avatar: {
     width: AVATAR_SIZE,
     height: AVATAR_SIZE,
-    borderRadius: 8,
-    borderWidth: AVATAR_BORDER,
-    borderColor: SETTINGS_CARD_RIM_ACTIVE,
-    backgroundColor: APP_SHELL_PRIMARY_BACKGROUND,
+    padding: AVATAR_BORDER,
+  },
+  avatarClip: {
+    flex: 1,
     overflow: "hidden",
+    backgroundColor: APP_SHELL_PRIMARY_BACKGROUND,
   },
   avatarFigure: {
     position: "absolute",
@@ -229,12 +228,9 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   editButton: {
-    width: 30,
-    height: 30,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: SETTINGS_CARD_RIM,
-    backgroundColor: APP_SHELL_PRIMARY_BACKGROUND,
+    width: 34,
+    height: 34,
+    padding: 0,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -260,8 +256,5 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILY,
     fontSize: 9,
     lineHeight: 13,
-  },
-  pressed: {
-    opacity: 0.8,
   },
 });

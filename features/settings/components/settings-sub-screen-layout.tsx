@@ -1,13 +1,13 @@
 import { usePathname, useRouter } from "expo-router";
 import {
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 
+import { PixelBackButton } from "@/components/pixel-panel";
 import {
   APP_SHELL_MAIN_TEXT_COLOR,
   APP_SHELL_SECONDARY_BACKGROUND,
@@ -16,11 +16,7 @@ import { FONT_FAMILY } from "@/constants/fonts";
 import { KeyboardAwareView } from "@/features/chat/components/keyboard-aware-view";
 
 import { SETTINGS_ROWS } from "../data";
-import {
-  SETTINGS_CARD_FILL,
-  SETTINGS_CARD_RIM,
-  SETTINGS_DIVIDER,
-} from "./settings-ui";
+import { SETTINGS_TRACK_FILL } from "./settings-ui";
 
 type Props = {
   children: React.ReactNode;
@@ -55,15 +51,11 @@ export function SettingsSubScreenLayout({ children, title }: Props) {
   return (
     <View style={styles.root}>
       <View style={styles.toolbar}>
-        <Pressable
-          accessibilityRole="button"
+        <PixelBackButton
           accessibilityLabel="Back to settings"
-          hitSlop={8}
           onPress={() => router.back()}
-          style={({ pressed }) => [styles.back, pressed && styles.pressed]}
-        >
-          <Text style={styles.backGlyph}>‹</Text>
-        </Pressable>
+          size={40}
+        />
         <Text style={styles.title} numberOfLines={1} accessibilityRole="header">
           {heading}
         </Text>
@@ -86,25 +78,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingTop: 12,
     paddingBottom: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: SETTINGS_DIVIDER,
-  },
-  back: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: SETTINGS_CARD_RIM,
-    backgroundColor: SETTINGS_CARD_FILL,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  backGlyph: {
-    color: APP_SHELL_MAIN_TEXT_COLOR,
-    fontFamily: FONT_FAMILY,
-    fontSize: 16,
-    lineHeight: 20,
-    marginLeft: -2,
+    /** Dark pixel groove under the toolbar (same as the Pixel sub-screens'). */
+    borderBottomWidth: 2,
+    borderBottomColor: SETTINGS_TRACK_FILL,
   },
   title: {
     flex: 1,
@@ -112,9 +88,6 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILY,
     fontSize: 14,
     lineHeight: 20,
-  },
-  pressed: {
-    opacity: 0.8,
   },
   bodyScroll: {
     flex: 1,

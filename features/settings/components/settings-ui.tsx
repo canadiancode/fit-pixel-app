@@ -10,17 +10,22 @@ import {
   type ViewStyle,
 } from "react-native";
 
+import {
+  PixelChevron,
+  PixelFrameBackdrop,
+  PixelPanel,
+  PixelPressablePanel,
+} from "@/components/pixel-panel";
 import { ThemedText } from "@/components/themed-text";
 import {
   APP_SHELL_LABEL_COLOR,
   APP_SHELL_MAIN_TEXT_COLOR,
-  APP_SHELL_PRIMARY_BACKGROUND,
 } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
 
 /**
- * Settings building blocks, in the Chat tab's pixel-card style: a section is a
- * small lowercase label, a rimmed card of rows, and an optional footnote.
+ * Settings building blocks, in the Chat tab's pixel-frame style: a section is
+ * a small lowercase label, a framed card of rows, and an optional footnote.
  * Rows put the title on one line and the description under it with room to
  * breathe, and keep controls on the right where the thumb expects them.
  */
@@ -29,7 +34,8 @@ export const SETTINGS_CARD_FILL = "#01224e";
 export const SETTINGS_CARD_RIM = "#0b4f96";
 export const SETTINGS_CARD_RIM_ACTIVE = "#2f86e8";
 export const SETTINGS_TRACK_FILL = "#011a3a";
-export const SETTINGS_DIVIDER = "rgba(47,134,232,0.28)";
+/** Pixel rule between rows (2 pt, the frames' rim blue). */
+export const SETTINGS_DIVIDER = "#0b4f96";
 export const SETTINGS_ON_COLOR = "#5fd35f";
 export const SETTINGS_DANGER_COLOR = "#ff8a8a";
 export const SETTINGS_SUCCESS_COLOR = "#7dffb3";
@@ -67,7 +73,7 @@ export function SettingsSection({
           {title}
         </ThemedText>
       ) : null}
-      {bare ? children : <View style={styles.card}>{children}</View>}
+      {bare ? children : <PixelPanel style={styles.card}>{children}</PixelPanel>}
       {footer ? (
         <ThemedText
           lightColor={APP_SHELL_LABEL_COLOR}
@@ -81,7 +87,7 @@ export function SettingsSection({
   );
 }
 
-/** Hairline between rows inside a card. */
+/** Pixel rule between rows inside a card. */
 export function SettingsDivider() {
   return <View style={styles.divider} />;
 }
@@ -215,7 +221,7 @@ export function SettingsLinkRow({
           {value}
         </ThemedText>
       ) : null}
-      {trailing ?? <Text style={styles.chevron}>›</Text>}
+      {trailing ?? <PixelChevron />}
     </Pressable>
   );
 }
@@ -273,7 +279,8 @@ export function SettingsSegmented<T extends string | number>({
   accessibilityLabel,
 }: SegmentedProps<T>) {
   return (
-    <View
+    <PixelPanel
+      frame="well"
       style={[styles.segTrack, disabled && styles.rowDisabled]}
       accessibilityRole="radiogroup"
       accessibilityLabel={accessibilityLabel}
@@ -294,10 +301,10 @@ export function SettingsSegmented<T extends string | number>({
             }}
             style={({ pressed }) => [
               styles.segItem,
-              selected && styles.segItemSelected,
               pressed && !selected && styles.rowPressed,
             ]}
           >
+            {selected ? <PixelFrameBackdrop frame="button" /> : null}
             <Text
               style={[styles.segLabel, selected && styles.segLabelSelected]}
               numberOfLines={1}
@@ -307,7 +314,7 @@ export function SettingsSegmented<T extends string | number>({
           </Pressable>
         );
       })}
-    </View>
+    </PixelPanel>
   );
 }
 
@@ -379,7 +386,7 @@ type ButtonProps = {
   accessibilityLabel?: string;
 };
 
-/** Full-width outlined pixel button for secondary / destructive actions. */
+/** Full-width pixel button for secondary / destructive actions. */
 export function SettingsButton({
   label,
   onPress,
@@ -389,23 +396,19 @@ export function SettingsButton({
 }: ButtonProps) {
   const danger = tone === "danger";
   return (
-    <Pressable
+    <PixelPressablePanel
+      frame={danger ? "red" : "button"}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ disabled: Boolean(disabled) }}
       disabled={disabled}
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.button,
-        danger && styles.buttonDanger,
-        pressed && styles.rowPressed,
-        disabled && styles.rowDisabled,
-      ]}
+      style={[styles.button, disabled && styles.rowDisabled]}
     >
       <Text style={[styles.buttonLabel, danger && styles.buttonLabelDanger]}>
         {label}
       </Text>
-    </Pressable>
+    </PixelPressablePanel>
   );
 }
 
@@ -435,11 +438,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   card: {
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: SETTINGS_CARD_RIM,
-    backgroundColor: SETTINGS_CARD_FILL,
-    overflow: "hidden",
+    padding: 4,
   },
   footer: {
     fontFamily: FONT_FAMILY,
@@ -448,8 +447,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   divider: {
-    height: StyleSheet.hairlineWidth,
-    marginLeft: 14,
+    height: 2,
+    marginHorizontal: 10,
     backgroundColor: SETTINGS_DIVIDER,
   },
   row: {
@@ -489,11 +488,6 @@ const styles = StyleSheet.create({
     lineHeight: 13,
     textAlign: "right",
   },
-  chevron: {
-    color: APP_SHELL_LABEL_COLOR,
-    fontSize: 18,
-    lineHeight: 22,
-  },
   valuePill: {
     flexShrink: 0,
     color: APP_SHELL_LABEL_COLOR,
@@ -504,26 +498,15 @@ const styles = StyleSheet.create({
   segTrack: {
     flexDirection: "row",
     gap: 4,
-    padding: 4,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: SETTINGS_CARD_RIM,
-    backgroundColor: SETTINGS_TRACK_FILL,
+    padding: 6,
   },
   segItem: {
     flex: 1,
     minWidth: 0,
     height: 40,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: "transparent",
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 4,
-  },
-  segItemSelected: {
-    backgroundColor: APP_SHELL_PRIMARY_BACKGROUND,
-    borderColor: SETTINGS_CARD_RIM_ACTIVE,
   },
   segLabel: {
     color: APP_SHELL_LABEL_COLOR,
@@ -561,19 +544,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   button: {
-    minHeight: 48,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: SETTINGS_CARD_RIM_ACTIVE,
-    backgroundColor: SETTINGS_TRACK_FILL,
+    minHeight: 50,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  buttonDanger: {
-    borderColor: SETTINGS_DANGER_COLOR,
-    backgroundColor: "rgba(255,138,138,0.08)",
+    paddingVertical: 14,
   },
   buttonLabel: {
     color: APP_SHELL_MAIN_TEXT_COLOR,

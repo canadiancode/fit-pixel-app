@@ -10,6 +10,7 @@ import {
   View,
 } from "react-native";
 
+import { PixelFrameBackdrop } from "@/components/pixel-panel";
 import {
   APP_SHELL_INPUT_PLACEHOLDER_COLOR,
   APP_SHELL_LABEL_COLOR,
@@ -17,9 +18,8 @@ import {
 } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
 import {
-  CHAT_CARD_FILL,
+  CHAT_BODY_FONT,
   CHAT_CARD_RIM,
-  CHAT_CARD_RIM_ACTIVE,
   CHAT_TRACK_FILL,
 } from "@/features/chat/constants";
 
@@ -28,7 +28,6 @@ const MAX_LENGTH = 2000;
 /** Start counting down this close to the limit. */
 const COUNTER_FROM = 1800;
 const SEND_SIZE = 46;
-const BODY_FONT = Platform.select({ ios: "System", default: undefined });
 
 type Props = {
   onSend: (body: string) => Promise<void>;
@@ -65,7 +64,9 @@ export function MessageComposer({
 
   return (
     <View style={styles.bar}>
-      <View style={[styles.field, focused && styles.fieldFocused]}>
+      <View style={styles.field}>
+        {/* Recessed text box; lights up to the card frame while typing. */}
+        <PixelFrameBackdrop frame={focused ? "blue" : "well"} />
         <TextInput
           accessibilityLabel="Message"
           value={draft}
@@ -139,15 +140,8 @@ const styles = StyleSheet.create({
     maxHeight: 132,
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: CHAT_CARD_RIM,
-    backgroundColor: CHAT_CARD_FILL,
     paddingLeft: 14,
     paddingRight: 10,
-  },
-  fieldFocused: {
-    borderColor: CHAT_CARD_RIM_ACTIVE,
   },
   input: {
     flex: 1,
@@ -156,7 +150,7 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === "ios" ? 12 : 8,
     paddingBottom: Platform.OS === "ios" ? 12 : 8,
     color: APP_SHELL_MAIN_TEXT_COLOR,
-    fontFamily: BODY_FONT,
+    fontFamily: CHAT_BODY_FONT,
     fontSize: 16,
     lineHeight: 21,
   },

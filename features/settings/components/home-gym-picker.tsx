@@ -9,8 +9,8 @@ import {
   View,
 } from "react-native";
 
+import { PixelPanel, PixelPressablePanel } from "@/components/pixel-panel";
 import {
-  APP_SHELL_INPUT_BOARDER_COLOR,
   APP_SHELL_LABEL_COLOR,
   APP_SHELL_MAIN_TEXT_COLOR,
 } from "@/constants/app-colors";
@@ -79,12 +79,14 @@ export function HomeGymPicker({
 
   if (!open) {
     return (
-      <Pressable
+      <PixelPressablePanel
+        frame="well"
+        pressedFrame="blue"
         accessibilityRole="button"
         accessibilityLabel={`Home gym: ${homeGymName ?? "none"}. Tap to change.`}
         disabled={disabled}
         onPress={() => setOpen(true)}
-        style={({ pressed }) => [styles.current, pressed && styles.pressed]}
+        style={styles.current}
       >
         <Text
           numberOfLines={1}
@@ -93,7 +95,7 @@ export function HomeGymPicker({
           {homeGymName ?? "No gym selected"}
         </Text>
         <Text style={styles.change}>{homeGymName == null ? "Choose" : "Change"}</Text>
-      </Pressable>
+      </PixelPressablePanel>
     );
   }
 
@@ -113,7 +115,7 @@ export function HomeGymPicker({
       ) : gyms == null ? (
         <ActivityIndicator color={APP_SHELL_MAIN_TEXT_COLOR} style={styles.loading} />
       ) : (
-        <View style={styles.list} accessibilityRole="list">
+        <PixelPanel style={styles.list} accessibilityRole="list">
           {results.length === 0 ? (
             <Text style={styles.message}>{`No gyms match "${query.trim()}".`}</Text>
           ) : (
@@ -142,7 +144,7 @@ export function HomeGymPicker({
               );
             })
           )}
-        </View>
+        </PixelPanel>
       )}
       <View style={styles.footer}>
         {homeGymName != null ? (
@@ -177,11 +179,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    borderWidth: 2,
-    borderColor: APP_SHELL_INPUT_BOARDER_COLOR,
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
   },
   currentLabel: {
     flex: 1,
@@ -210,20 +209,18 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   list: {
-    borderWidth: 2,
-    borderColor: APP_SHELL_INPUT_BOARDER_COLOR,
-    borderRadius: 8,
-    overflow: "hidden",
+    padding: 4,
   },
   row: {
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     paddingVertical: 12,
     gap: 4,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: APP_SHELL_INPUT_BOARDER_COLOR,
+    /** 2 pt pixel rule, the frames' rim blue. */
+    borderBottomWidth: 2,
+    borderBottomColor: "#0b4f96",
   },
   rowSelected: {
-    backgroundColor: "rgba(255,255,255,0.1)",
+    backgroundColor: "#0b4f96",
   },
   rowLabel: {
     fontFamily: FONT_FAMILY,

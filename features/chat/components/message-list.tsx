@@ -2,13 +2,13 @@ import { router } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, type ReactNode } from "react";
 import {
   FlatList,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 
+import { PixelFrameBackdrop } from "@/components/pixel-panel";
 import { ThemedText } from "@/components/themed-text";
 import {
   APP_SHELL_LABEL_COLOR,
@@ -16,11 +16,7 @@ import {
 } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
 import { ActionListSectionDivider } from "@/features/actions/components/action-list-section-divider";
-import {
-  CHAT_CARD_FILL,
-  CHAT_CARD_RIM,
-  CHAT_CARD_RIM_ACTIVE,
-} from "@/features/chat/constants";
+import { CHAT_BODY_FONT } from "@/features/chat/constants";
 import { PixelHeadAvatar } from "@/features/social/components/pixel-head-avatar";
 import { usePixelLooks } from "@/features/social/pixel-looks-store";
 import type { ChatMessage, EquippedLook } from "@/lib/api/chat";
@@ -30,11 +26,6 @@ const AVATAR_GUTTER = AVATAR_SIZE + 8;
 /** Same sender within this window reads as one group (one name, one time). */
 const GROUP_WINDOW_MS = 5 * 60 * 1000;
 
-/** Bubbles: own = bright pixel-blue card, others = the Chat tab's card. */
-const OWN_FILL = "#0b4f96";
-const OWN_RIM = CHAT_CARD_RIM_ACTIVE;
-/** Sentences in a readable face; the pixel font stays on names and labels. */
-const BODY_FONT = Platform.select({ ios: "System", default: undefined });
 
 type Props = {
   messages: ChatMessage[];
@@ -161,19 +152,11 @@ function MessageRow({
       }
       style={({ pressed }) => [
         styles.bubble,
-        isOwn ? styles.ownBubble : styles.peerBubble,
-        isOwn
-          ? [
-              !startsGroup && styles.ownJoinTop,
-              !endsGroup && styles.ownJoinBottom,
-            ]
-          : [
-              !startsGroup && styles.peerJoinTop,
-              !endsGroup && styles.peerJoinBottom,
-            ],
         pressed && actionable && styles.bubblePressed,
       ]}
     >
+      {/* Bubbles are pixel windows: yours bright, everyone else's the Chat tab's card. */}
+      <PixelFrameBackdrop frame={isOwn ? "button" : "blue"} />
       {/* Not `selectable`: iOS text selection would swallow the long press. */}
       <Text style={styles.body}>{message.body}</Text>
     </Pressable>
@@ -391,38 +374,15 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   bubble: {
-    borderWidth: 2,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  ownBubble: {
-    backgroundColor: OWN_FILL,
-    borderColor: OWN_RIM,
-  },
-  peerBubble: {
-    backgroundColor: CHAT_CARD_FILL,
-    borderColor: CHAT_CARD_RIM,
-  },
-  /** Square off the corners where bubbles in one run meet. */
-  ownJoinTop: {
-    borderTopRightRadius: 3,
-  },
-  ownJoinBottom: {
-    borderBottomRightRadius: 3,
-  },
-  peerJoinTop: {
-    borderTopLeftRadius: 3,
-  },
-  peerJoinBottom: {
-    borderBottomLeftRadius: 3,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
   },
   bubblePressed: {
     opacity: 0.8,
   },
   body: {
     color: APP_SHELL_MAIN_TEXT_COLOR,
-    fontFamily: BODY_FONT,
+    fontFamily: CHAT_BODY_FONT,
     fontSize: 15,
     lineHeight: 21,
   },

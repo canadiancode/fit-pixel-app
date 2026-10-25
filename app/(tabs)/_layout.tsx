@@ -11,6 +11,7 @@ import {
   APP_SHELL_PRIMARY_BACKGROUND,
   APP_SHELL_SECONDARY_BACKGROUND,
 } from "@/constants/app-colors";
+import { FONT_FAMILY } from "@/constants/fonts";
 import { DailyGoalsProvider } from "@/features/actions/daily-goals-context";
 import { HabitProgressProvider } from "@/features/actions/habit-progress-context";
 import { WeightJourneyProvider } from "@/features/actions/weight/weight-journey-context";
@@ -208,10 +209,15 @@ function AppTabs() {
                 ? "9+"
                 : unreadCount
               : undefined,
+          /** Square pixel badge (same as the Chat section tabs'). */
           tabBarBadgeStyle: {
             backgroundColor: "#ff5a5a",
             color: APP_SHELL_MAIN_TEXT_COLOR,
-            fontSize: 9,
+            fontFamily: FONT_FAMILY,
+            fontSize: 7,
+            borderRadius: 0,
+            borderWidth: 2,
+            borderColor: "#000a1c",
           },
           tabBarIcon: ({ focused }) =>
             tabBarImageIcon(require("@/assets/icons/world.png"), focused),

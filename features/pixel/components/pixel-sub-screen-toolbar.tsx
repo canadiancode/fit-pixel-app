@@ -1,11 +1,9 @@
 import { Image } from "expo-image";
 import { Pressable, StyleSheet, View } from "react-native";
 
+import { PixelBackButton } from "@/components/pixel-panel";
 import { ThemedText } from "@/components/themed-text";
-import {
-  APP_SHELL_INPUT_BOARDER_COLOR,
-  APP_SHELL_MAIN_TEXT_COLOR,
-} from "@/constants/app-colors";
+import { APP_SHELL_MAIN_TEXT_COLOR } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
 
 /** Same lime asset as food “Search for food”. */
@@ -23,7 +21,7 @@ type Props = {
   trailingAction?: TrailingAction;
 };
 
-/** Shared ‹ Back toolbar for pixel customize sub-screens. */
+/** Shared back toolbar for pixel customize sub-screens. */
 export function PixelSubScreenToolbar({
   onBack,
   accessibilityLabel = "Back",
@@ -31,21 +29,11 @@ export function PixelSubScreenToolbar({
 }: Props) {
   return (
     <View style={styles.toolbar}>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={accessibilityLabel}
-        hitSlop={12}
+      <PixelBackButton
         onPress={onBack}
-        style={({ pressed }) => [styles.backHit, pressed && styles.backPressed]}
-      >
-        <ThemedText
-          lightColor={APP_SHELL_MAIN_TEXT_COLOR}
-          darkColor={APP_SHELL_MAIN_TEXT_COLOR}
-          style={styles.backLabel}
-        >
-          ‹ Back
-        </ThemedText>
-      </Pressable>
+        accessibilityLabel={accessibilityLabel}
+        size={40}
+      />
       {trailingAction != null ? (
         <Pressable
           accessibilityRole="button"
@@ -92,19 +80,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingTop: 14,
     paddingBottom: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: APP_SHELL_INPUT_BOARDER_COLOR,
-  },
-  backHit: {
-    paddingVertical: 4,
-    paddingHorizontal: 4,
-  },
-  backPressed: {
-    opacity: 0.85,
-  },
-  backLabel: {
-    fontSize: 16,
-    lineHeight: 22,
+    /** Dark pixel groove under the toolbar. */
+    borderBottomWidth: 2,
+    borderBottomColor: "#011a3a",
   },
   trailingOuter: {
     flexShrink: 0,

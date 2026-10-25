@@ -8,6 +8,7 @@ import {
   View,
 } from "react-native";
 
+import { PixelFrameBackdrop } from "@/components/pixel-panel";
 import { ThemedText } from "@/components/themed-text";
 import {
   APP_SHELL_LABEL_COLOR,
@@ -41,7 +42,9 @@ export function BlockedPixelsList() {
 
   const intro = (
     <SettingsIntro>
-      {"Blocked Pixels can't message you or send friend requests, and their chat messages are hidden from you."}
+      {
+        "Blocked Pixels can't message you or send friend requests, and their chat messages are hidden from you."
+      }
     </SettingsIntro>
   );
 
@@ -124,18 +127,22 @@ export function BlockedPixelsList() {
                           })
                           .finally(() => setPendingId(null));
                       }}
-                      style={({ pressed }) => [
-                        styles.unblock,
-                        (pressed || busy) && styles.pressed,
-                      ]}
+                      style={styles.unblock}
                     >
-                      {busy ? (
-                        <ActivityIndicator
-                          size="small"
-                          color={APP_SHELL_MAIN_TEXT_COLOR}
-                        />
-                      ) : (
-                        <Text style={styles.unblockLabel}>Unblock</Text>
+                      {({ pressed }) => (
+                        <>
+                          <PixelFrameBackdrop
+                            frame={pressed || busy ? "well" : "button"}
+                          />
+                          {busy ? (
+                            <ActivityIndicator
+                              size="small"
+                              color={APP_SHELL_MAIN_TEXT_COLOR}
+                            />
+                          ) : (
+                            <Text style={styles.unblockLabel}>Unblock</Text>
+                          )}
+                        </>
                       )}
                     </Pressable>
                   </View>

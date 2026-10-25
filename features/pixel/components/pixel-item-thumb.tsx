@@ -85,8 +85,8 @@ const SCENE_LAYER_ZOOM: Partial<
 };
 
 const styles = StyleSheet.create({
+  /** Square: thumbs sit in pixel frames, which have no rounded corners. */
   shell: {
-    borderRadius: 10,
     overflow: "hidden",
   },
   image: {

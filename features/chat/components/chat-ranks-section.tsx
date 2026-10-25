@@ -13,6 +13,11 @@ import {
 } from "react-native";
 
 import {
+  PixelFrameBackdrop,
+  PixelPanel,
+  PixelPressablePanel,
+} from "@/components/pixel-panel";
+import {
   APP_SHELL_LABEL_COLOR,
   APP_SHELL_MAIN_TEXT_COLOR,
   APP_SHELL_PRIMARY_BACKGROUND,
@@ -20,12 +25,7 @@ import {
 import { FONT_FAMILY } from "@/constants/fonts";
 import { useAuth } from "@/features/auth/auth-context";
 import { ChatEmptyState } from "@/features/chat/components/chat-empty-state";
-import {
-  CHAT_CARD_FILL,
-  CHAT_CARD_RIM,
-  CHAT_CARD_RIM_ACTIVE,
-  CHAT_TRACK_FILL,
-} from "@/features/chat/constants";
+import { CHAT_CARD_FILL, CHAT_CARD_RIM_ACTIVE } from "@/features/chat/constants";
 import { PixelFigure } from "@/features/pixel/components/pixel-character";
 import { DEFAULT_PIXEL_LOADOUT } from "@/features/pixel/default-loadout";
 import {
@@ -146,7 +146,7 @@ export function ChatRanksSection({ query, onFindFriends }: Props) {
 
   return (
     <View style={styles.root}>
-      <View style={styles.boardTrack} accessibilityRole="tablist">
+      <PixelPanel frame="well" style={styles.boardTrack} accessibilityRole="tablist">
         {BOARDS.map((option) => {
           const selected = option.id === board;
           return (
@@ -160,15 +160,16 @@ export function ChatRanksSection({ query, onFindFriends }: Props) {
                 void Haptics.selectionAsync();
                 setBoard(option.id);
               }}
-              style={[styles.boardTab, selected && styles.boardTabSelected]}
+              style={styles.boardTab}
             >
+              {selected ? <PixelFrameBackdrop frame="button" /> : null}
               <Text style={[styles.boardLabel, selected && styles.boardLabelSelected]}>
                 {option.label.toUpperCase()}
               </Text>
             </Pressable>
           );
         })}
-      </View>
+      </PixelPanel>
 
       <ScrollView
         style={styles.scroll}
@@ -272,15 +273,12 @@ function PodiumSpot({ entry, tall }: { entry: LeaderboardEntry; tall: boolean })
 
 function RankRow({ entry }: { entry: LeaderboardEntry }) {
   return (
-    <Pressable
+    <PixelPressablePanel
+      frame={entry.isMe ? "green" : "blue"}
       accessibilityRole="button"
       accessibilityLabel={`Rank ${entry.rank}, ${entry.displayName || "Pixel"}, level ${entry.level}, ${entry.lifetimeXp} XP${entry.isMe ? ", you" : ""}`}
       onPress={() => openPixel(entry.userId)}
-      style={({ pressed }) => [
-        styles.row,
-        entry.isMe && styles.rowMe,
-        pressed && styles.pressed,
-      ]}
+      style={styles.row}
     >
       <Text style={styles.rank}>{entry.rank}</Text>
       <PixelPortrait equipped={entry.equipped} size={52} rim={CHAT_CARD_RIM_ACTIVE} />
@@ -292,11 +290,11 @@ function RankRow({ entry }: { entry: LeaderboardEntry }) {
         <Text style={styles.rowXp}>{entry.lifetimeXp.toLocaleString("en-US")} XP</Text>
       </View>
       <LevelChip level={entry.level} />
-    </Pressable>
+    </PixelPressablePanel>
   );
 }
 
-/** Head-and-chest crop of a Pixel in a rounded pixel frame. */
+/** Head-and-chest crop of a Pixel in a square, medal-coloured pixel frame. */
 function PixelPortrait({
   equipped,
   size,
@@ -314,11 +312,11 @@ function PixelPortrait({
       importantForAccessibility="no-hide-descendants"
       style={[
         styles.portrait,
-        { width: size, height: size, borderColor: rim, borderRadius: size * 0.18 },
+        { width: size, height: size, borderColor: rim },
         style,
       ]}
     >
-      <View style={[styles.portraitSky, { borderRadius: size * 0.14 }]} />
+      <View style={styles.portraitSky} />
       <PixelFigure
         loadout={lookOf(equipped)}
         style={[styles.portraitFigure, figureFrameForCrop(CHEST_UP_CROP, size - 6)]}
@@ -372,19 +370,11 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     marginTop: 4,
     marginBottom: 6,
-    padding: 3,
-    borderRadius: 10,
-    backgroundColor: CHAT_TRACK_FILL,
-    borderWidth: 1,
-    borderColor: CHAT_CARD_RIM,
+    padding: 6,
   },
   boardTab: {
     paddingHorizontal: 18,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  boardTabSelected: {
-    backgroundColor: APP_SHELL_PRIMARY_BACKGROUND,
+    paddingVertical: 11,
   },
   boardLabel: {
     fontFamily: FONT_FAMILY,
@@ -439,7 +429,6 @@ const styles = StyleSheet.create({
     marginTop: -16,
     paddingHorizontal: 6,
     paddingVertical: 3,
-    borderRadius: 4,
     borderWidth: 2,
   },
   medalText: {
@@ -455,9 +444,7 @@ const styles = StyleSheet.create({
   },
   step: {
     alignSelf: "stretch",
-    borderTopLeftRadius: 6,
-    borderTopRightRadius: 6,
-    borderWidth: 2,
+    borderWidth: 4,
     borderBottomWidth: 0,
     backgroundColor: CHAT_CARD_FILL,
   },
@@ -471,15 +458,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: CHAT_CARD_RIM,
-    backgroundColor: CHAT_CARD_FILL,
-  },
-  rowMe: {
-    borderColor: "#7CFFB2",
+    paddingVertical: 10,
+    paddingHorizontal: 14,
   },
   rank: {
     width: 28,
@@ -528,10 +508,9 @@ const styles = StyleSheet.create({
     gap: 3,
     paddingHorizontal: 8,
     paddingVertical: 5,
-    borderRadius: 6,
     backgroundColor: "#FFD23F",
     borderWidth: 2,
-    borderColor: "#02284f",
+    borderColor: "#000a1c",
   },
   levelSmall: {
     fontFamily: FONT_FAMILY,

@@ -3,7 +3,6 @@ import { StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import {
-  APP_SHELL_INPUT_BOARDER_COLOR,
   APP_SHELL_LABEL_COLOR,
   APP_SHELL_MAIN_TEXT_COLOR,
 } from "@/constants/app-colors";
@@ -119,7 +118,7 @@ export function ProfileSettingsForm() {
               maxLength={BIO_MAX}
               editable={isHydrated}
               plain
-              shellStyle={[styles.inputBox, styles.bioBox]}
+              shellStyle={styles.bioBox}
               style={[styles.inputText, styles.bioText]}
             />
           </SettingsField>
@@ -193,12 +192,6 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILY,
     fontSize: 11,
     lineHeight: 16,
-  },
-  /** Same box as the home gym picker so the fields match. */
-  inputBox: {
-    borderWidth: 2,
-    borderColor: APP_SHELL_INPUT_BOARDER_COLOR,
-    borderRadius: 8,
   },
   inputText: {
     fontSize: 12,
