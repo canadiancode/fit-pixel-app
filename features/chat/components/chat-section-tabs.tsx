@@ -1,20 +1,15 @@
 import * as Haptics from "expo-haptics";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
+import { PixelFrameBackdrop, PixelPanel } from "@/components/pixel-panel";
 import { ThemedText } from "@/components/themed-text";
 import {
   APP_SHELL_LABEL_COLOR,
   APP_SHELL_MAIN_TEXT_COLOR,
-  APP_SHELL_PRIMARY_BACKGROUND,
 } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
 import type { ChatSection } from "@/features/chat/chat-search-context";
-import {
-  CHAT_BADGE_COLOR,
-  CHAT_CARD_RIM,
-  CHAT_CARD_RIM_ACTIVE,
-  CHAT_TRACK_FILL,
-} from "@/features/chat/constants";
+import { CHAT_BADGE_COLOR } from "@/features/chat/constants";
 
 const SECTIONS: readonly { id: ChatSection; label: string }[] = [
   { id: "gyms", label: "Gyms" },
@@ -33,7 +28,7 @@ type Props = {
 /** Gyms / Messages / Friends / Ranks switcher at the top of the Chat tab. */
 export function ChatSectionTabs({ active, onChange, badges }: Props) {
   return (
-    <View style={styles.track} accessibilityRole="tablist">
+    <PixelPanel frame="well" style={styles.track} accessibilityRole="tablist">
       {SECTIONS.map((section) => {
         const selected = section.id === active;
         const count = badges?.[section.id] ?? 0;
@@ -54,13 +49,8 @@ export function ChatSectionTabs({ active, onChange, badges }: Props) {
               }}
             >
               {({ pressed }) => (
-                <View
-                  style={[
-                    styles.tab,
-                    selected && styles.tabSelected,
-                    pressed && !selected && styles.tabPressed,
-                  ]}
-                >
+                <View style={[styles.tab, pressed && !selected && styles.tabPressed]}>
+                  {selected ? <PixelFrameBackdrop frame="button" /> : null}
                   <ThemedText
                     lightColor={
                       selected
@@ -92,7 +82,7 @@ export function ChatSectionTabs({ active, onChange, badges }: Props) {
           </View>
         );
       })}
-    </View>
+    </PixelPanel>
   );
 }
 
@@ -100,11 +90,7 @@ const styles = StyleSheet.create({
   track: {
     flexDirection: "row",
     gap: 4,
-    padding: 4,
-    borderRadius: 12,
-    backgroundColor: CHAT_TRACK_FILL,
-    borderWidth: 2,
-    borderColor: CHAT_CARD_RIM,
+    padding: 6,
   },
   tabOuter: {
     flex: 1,
@@ -116,13 +102,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 4,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: "transparent",
-  },
-  tabSelected: {
-    backgroundColor: APP_SHELL_PRIMARY_BACKGROUND,
-    borderColor: CHAT_CARD_RIM_ACTIVE,
   },
   tabPressed: {
     opacity: 0.7,
@@ -132,22 +111,24 @@ const styles = StyleSheet.create({
     fontSize: 10,
     lineHeight: 14,
   },
-  /** Pinned to the tab's corner so four labels keep their full width. */
+  /** Square pixel badge pinned to the tab's corner so four labels keep their full width. */
   badge: {
     position: "absolute",
-    top: -6,
+    top: -8,
     right: -4,
-    minWidth: 16,
-    height: 16,
-    paddingHorizontal: 4,
-    borderRadius: 8,
+    minWidth: 18,
+    height: 18,
+    paddingHorizontal: 3,
+    borderWidth: 2,
+    borderColor: "#000a1c",
     backgroundColor: CHAT_BADGE_COLOR,
     alignItems: "center",
     justifyContent: "center",
   },
   badgeText: {
     color: APP_SHELL_MAIN_TEXT_COLOR,
-    fontSize: 9,
-    fontWeight: "700",
+    fontFamily: FONT_FAMILY,
+    fontSize: 7,
+    lineHeight: 9,
   },
 });

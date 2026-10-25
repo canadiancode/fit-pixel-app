@@ -1,6 +1,7 @@
 import { Modal, Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { PixelFrameBackdrop } from "@/components/pixel-panel";
 import { ThemedText } from "@/components/themed-text";
 import {
   APP_SHELL_LABEL_COLOR,
@@ -77,26 +78,32 @@ export function OptionsSheet({
                 key={option.label}
                 accessibilityRole="button"
                 onPress={option.onPress}
-                style={({ pressed }) => [
-                  styles.option,
-                  pressed && styles.optionPressed,
-                ]}
+                style={styles.option}
               >
-                <ThemedText
-                  lightColor={
-                    option.destructive
-                      ? DESTRUCTIVE_COLOR
-                      : APP_SHELL_MAIN_TEXT_COLOR
-                  }
-                  darkColor={
-                    option.destructive
-                      ? DESTRUCTIVE_COLOR
-                      : APP_SHELL_MAIN_TEXT_COLOR
-                  }
-                  style={styles.optionLabel}
-                >
-                  {option.label}
-                </ThemedText>
+                {({ pressed }) => (
+                  <>
+                    <PixelFrameBackdrop
+                      frame={
+                        pressed ? "well" : option.destructive ? "red" : "blue"
+                      }
+                    />
+                    <ThemedText
+                      lightColor={
+                        option.destructive
+                          ? DESTRUCTIVE_COLOR
+                          : APP_SHELL_MAIN_TEXT_COLOR
+                      }
+                      darkColor={
+                        option.destructive
+                          ? DESTRUCTIVE_COLOR
+                          : APP_SHELL_MAIN_TEXT_COLOR
+                      }
+                      style={styles.optionLabel}
+                    >
+                      {option.label}
+                    </ThemedText>
+                  </>
+                )}
               </Pressable>
             ))}
             <Pressable
@@ -129,10 +136,11 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
     backgroundColor: "rgba(0,0,0,0.55)",
   },
+  /** Square top with a bright pixel rim, like a game dialog sliding up. */
   sheet: {
     backgroundColor: APP_SHELL_SECONDARY_BACKGROUND,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
+    borderTopWidth: 4,
+    borderTopColor: "#2f86e8",
     paddingHorizontal: 16,
     paddingTop: 18,
     gap: 8,
@@ -143,6 +151,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   message: {
+    fontFamily: "PixeloidSans",
     fontSize: 13,
     lineHeight: 18,
   },
@@ -151,10 +160,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   option: {
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    backgroundColor: "rgba(255,255,255,0.08)",
+    paddingHorizontal: 16,
+    paddingVertical: 16,
   },
   optionPressed: {
     opacity: 0.8,

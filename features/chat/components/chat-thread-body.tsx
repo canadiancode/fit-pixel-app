@@ -1,6 +1,7 @@
 import { useCallback, useState, type ReactNode } from "react";
 import { Pressable, StyleSheet, Text } from "react-native";
 
+import { PixelFrameBackdrop } from "@/components/pixel-panel";
 import { APP_SHELL_MAIN_TEXT_COLOR } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
 import { useUserSafetyActions } from "@/features/chat/use-user-safety-actions";
@@ -77,8 +78,9 @@ export function ChatThreadBody({
           onPress={() => setSendError(null)}
           style={styles.errorBanner}
         >
+          <PixelFrameBackdrop frame="red" />
           <Text style={styles.errorText}>{sendError}</Text>
-          <Text style={styles.errorDismiss}>×</Text>
+          <Text style={styles.errorDismiss}>X</Text>
         </Pressable>
       ) : null}
       <MessageComposer
@@ -99,12 +101,8 @@ const styles = StyleSheet.create({
     gap: 10,
     marginHorizontal: 12,
     marginBottom: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: "#ff8a8a",
-    backgroundColor: "rgba(255, 90, 90, 0.16)",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
   errorText: {
     flex: 1,
@@ -115,7 +113,8 @@ const styles = StyleSheet.create({
   },
   errorDismiss: {
     color: APP_SHELL_MAIN_TEXT_COLOR,
-    fontSize: 18,
-    lineHeight: 20,
+    fontFamily: FONT_FAMILY,
+    fontSize: 12,
+    lineHeight: 16,
   },
 });

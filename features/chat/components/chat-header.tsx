@@ -10,6 +10,7 @@ import {
   View,
 } from "react-native";
 
+import { PixelBackButton } from "@/components/pixel-panel";
 import {
   APP_SHELL_INPUT_PLACEHOLDER_COLOR,
   APP_SHELL_MAIN_TEXT_COLOR,
@@ -28,7 +29,6 @@ import {
   useChatThreadHeaderState,
   type ChatThreadHeader,
 } from "@/features/chat/chat-thread-header-context";
-import { CHAT_CARD_FILL, CHAT_CARD_RIM } from "@/features/chat/constants";
 import { goBackInChat } from "@/features/chat/navigation";
 import { useNotifications } from "@/features/social/notifications-context";
 
@@ -156,15 +156,7 @@ function ThreadTitle({ header }: { header: ChatThreadHeader }) {
   );
   return (
     <View style={styles.threadRow}>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Back"
-        hitSlop={8}
-        onPress={() => goBackInChat(nav)}
-        style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
-      >
-        <Text style={styles.backGlyph}>‹</Text>
-      </Pressable>
+      <PixelBackButton onPress={() => goBackInChat(nav)} />
       {header.onTitlePress ? (
         <Pressable
           accessibilityRole="button"
@@ -204,23 +196,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-  },
-  backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: CHAT_CARD_RIM,
-    backgroundColor: CHAT_CARD_FILL,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  backGlyph: {
-    color: APP_SHELL_MAIN_TEXT_COLOR,
-    fontFamily: FONT_FAMILY,
-    fontSize: 18,
-    lineHeight: 22,
-    marginLeft: -2,
   },
   threadTextHit: {
     flex: 1,
@@ -293,21 +268,24 @@ const styles = StyleSheet.create({
     width: BELL_ICON_SIZE,
     height: BELL_ICON_SIZE,
   },
+  /** Square pixel badge, like the section tabs'. */
   bellBadge: {
     position: "absolute",
-    top: 4,
-    right: 2,
-    minWidth: 18,
-    height: 18,
-    paddingHorizontal: 4,
-    borderRadius: 9,
+    top: 2,
+    right: 0,
+    minWidth: 20,
+    height: 20,
+    paddingHorizontal: 3,
+    borderWidth: 2,
+    borderColor: "#000a1c",
     backgroundColor: "#ff5a5a",
     alignItems: "center",
     justifyContent: "center",
   },
   bellBadgeText: {
     color: APP_SHELL_MAIN_TEXT_COLOR,
-    fontSize: 10,
-    fontWeight: "700",
+    fontFamily: FONT_FAMILY,
+    fontSize: 8,
+    lineHeight: 10,
   },
 });

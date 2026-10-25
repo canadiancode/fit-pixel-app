@@ -8,23 +8,16 @@ import {
   View,
 } from "react-native";
 
+import { PixelFrameBackdrop } from "@/components/pixel-panel";
 import { ThemedText } from "@/components/themed-text";
 import {
-  APP_SHELL_INPUT_BOARDER_COLOR,
   APP_SHELL_LABEL_COLOR,
   APP_SHELL_MAIN_TEXT_COLOR,
-  APP_SHELL_PRIMARY_BACKGROUND,
 } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
 
 import { usePrefsProfile } from "../prefs-profile-context";
 import { SettingsSingleLineTextField } from "./settings-text-field";
-import {
-  SETTINGS_CARD_FILL,
-  SETTINGS_CARD_RIM,
-  SETTINGS_CARD_RIM_ACTIVE,
-  SETTINGS_ON_COLOR,
-} from "./settings-ui";
 
 const NAME_MAX = 80;
 
@@ -80,6 +73,7 @@ export function DisplayNameDialog({ visible, onClose }: Props) {
             onPress={() => {}}
             accessibilityViewIsModal
           >
+            <PixelFrameBackdrop frame="button" />
             <View style={styles.titleRow}>
               <ThemedText
                 lightColor={APP_SHELL_MAIN_TEXT_COLOR}
@@ -110,7 +104,6 @@ export function DisplayNameDialog({ visible, onClose }: Props) {
               returnKeyType="done"
               onSubmitEditing={() => void save()}
               plain
-              shellStyle={styles.inputBox}
               style={styles.inputText}
             />
 
@@ -126,28 +119,34 @@ export function DisplayNameDialog({ visible, onClose }: Props) {
               <Pressable
                 accessibilityRole="button"
                 onPress={onClose}
-                style={({ pressed }) => [
-                  styles.button,
-                  pressed && styles.pressed,
-                ]}
+                style={styles.button}
               >
-                <Text style={[styles.buttonLabel, styles.cancelLabel]}>
-                  Cancel
-                </Text>
+                {({ pressed }) => (
+                  <>
+                    <PixelFrameBackdrop frame={pressed ? "well" : "blue"} />
+                    <Text style={[styles.buttonLabel, styles.cancelLabel]}>
+                      Cancel
+                    </Text>
+                  </>
+                )}
               </Pressable>
               <Pressable
                 accessibilityRole="button"
                 accessibilityState={{ disabled: !canSave }}
                 disabled={!canSave}
                 onPress={() => void save()}
-                style={({ pressed }) => [
-                  styles.button,
-                  styles.saveButton,
-                  pressed && styles.pressed,
-                  !canSave && styles.disabled,
-                ]}
+                style={[styles.button, !canSave && styles.disabled]}
               >
-                <Text style={[styles.buttonLabel, styles.saveLabel]}>Save</Text>
+                {({ pressed }) => (
+                  <>
+                    <PixelFrameBackdrop
+                      frame={pressed && canSave ? "well" : "green"}
+                    />
+                    <Text style={[styles.buttonLabel, styles.saveLabel]}>
+                      Save
+                    </Text>
+                  </>
+                )}
               </Pressable>
             </View>
           </Pressable>
@@ -168,11 +167,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.6)",
   },
   card: {
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: SETTINGS_CARD_RIM_ACTIVE,
-    backgroundColor: SETTINGS_CARD_FILL,
-    padding: 16,
+    padding: 20,
     gap: 12,
   },
   titleRow: {
@@ -191,12 +186,6 @@ const styles = StyleSheet.create({
     fontSize: 9,
     lineHeight: 13,
   },
-  /** Same box as the Profile fields. */
-  inputBox: {
-    borderWidth: 2,
-    borderColor: APP_SHELL_INPUT_BOARDER_COLOR,
-    borderRadius: 8,
-  },
   inputText: {
     fontSize: 12,
     paddingHorizontal: 14,
@@ -213,17 +202,9 @@ const styles = StyleSheet.create({
   },
   button: {
     flex: 1,
-    minHeight: 44,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: SETTINGS_CARD_RIM,
-    backgroundColor: APP_SHELL_PRIMARY_BACKGROUND,
+    minHeight: 48,
     alignItems: "center",
     justifyContent: "center",
-  },
-  saveButton: {
-    borderColor: SETTINGS_ON_COLOR,
-    backgroundColor: "rgba(95,211,95,0.18)",
   },
   buttonLabel: {
     fontFamily: FONT_FAMILY,
@@ -235,9 +216,6 @@ const styles = StyleSheet.create({
   },
   saveLabel: {
     color: APP_SHELL_MAIN_TEXT_COLOR,
-  },
-  pressed: {
-    opacity: 0.8,
   },
   disabled: {
     opacity: 0.45,

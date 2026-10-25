@@ -1,7 +1,8 @@
 import * as Haptics from "expo-haptics";
 import { useMemo } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 
+import { PixelPanel, PixelPressablePanel } from "@/components/pixel-panel";
 import {
   APP_SHELL_LABEL_COLOR,
   APP_SHELL_MAIN_TEXT_COLOR,
@@ -18,9 +19,8 @@ import { usePixelLoadout } from "../pixel-loadout-context";
 import { PixelItemThumb } from "./pixel-item-thumb";
 
 const CELL_HEADING_FONT_FAMILY = "PixeloidSans";
-const CARD_FILL = "#01224e";
-const CARD_RIM = "#0b4f96";
 const TRACK = "#011a3a";
+const OUTLINE = "#000a1c";
 const GOLD = "#FFD23F";
 const GREEN = "#7CFFB2";
 
@@ -65,7 +65,8 @@ export function PixelCollection({ onSelectCategory }: Props) {
       showsVerticalScrollIndicator={false}
     >
       {/* Summary */}
-      <View
+      <PixelPanel
+        frame="gold"
         style={styles.summary}
         accessible
         accessibilityLabel={`Collection ${Math.round(percent)} percent complete. ${stats.owned} of ${stats.total} items.`}
@@ -88,10 +89,7 @@ export function PixelCollection({ onSelectCategory }: Props) {
             (rarity) => {
               const { owned, total } = stats.byRarity[rarity];
               return (
-                <View
-                  key={rarity}
-                  style={[styles.rarityChip, { borderColor: RARITY_COLORS[rarity] }]}
-                >
+                <PixelPanel key={rarity} frame="well" style={styles.rarityChip}>
                   <View
                     style={[styles.rarityDot, { backgroundColor: RARITY_COLORS[rarity] }]}
                   />
@@ -99,26 +97,29 @@ export function PixelCollection({ onSelectCategory }: Props) {
                   <Text style={[styles.rarityCount, { color: RARITY_COLORS[rarity] }]}>
                     {owned}/{total}
                   </Text>
-                </View>
+                </PixelPanel>
               );
             },
           )}
         </View>
-      </View>
+      </PixelPanel>
 
       {/* Next unlock */}
       {next != null ? (
-        <View
+        <PixelPanel
+          frame="green"
           style={styles.nextCard}
           accessible
           accessibilityLabel={`Next unlock: ${next.item.label} at level ${next.level}. ${xpToNext} XP to go.`}
         >
-          <View style={styles.nextThumbFrame}>
-            <PixelItemThumb item={next.item} size={60} wearer={loadout} dimmed />
-            <View style={styles.lock}>
-              <Text style={styles.lockText}>LV {next.level}</Text>
+          <PixelPanel frame="well" style={styles.thumbWell}>
+            <View style={styles.nextThumbClip}>
+              <PixelItemThumb item={next.item} size={60} wearer={loadout} dimmed />
+              <View style={styles.lock}>
+                <Text style={styles.lockText}>LV {next.level}</Text>
+              </View>
             </View>
-          </View>
+          </PixelPanel>
           <View style={styles.nextText}>
             <Text style={styles.kicker}>NEXT UNLOCK</Text>
             <Text numberOfLines={1} style={styles.nextName}>
@@ -129,11 +130,11 @@ export function PixelCollection({ onSelectCategory }: Props) {
               {xpToNext.toLocaleString("en-US")} XP to go · log anything to earn XP
             </Text>
           </View>
-        </View>
+        </PixelPanel>
       ) : null}
 
       {stats.lockedRewards.length > 0 ? (
-        <View style={styles.rewardsCard}>
+        <PixelPanel frame="purple" style={styles.rewardsCard}>
           <Text style={styles.kicker}>EARNED ONLY</Text>
           <Text style={styles.rewardsBody}>
             {stats.lockedRewards.length === 1
@@ -142,7 +143,7 @@ export function PixelCollection({ onSelectCategory }: Props) {
             be bought. Hit weight-journey milestones to win{" "}
             {listLabels(stats.lockedRewards.map((item) => item.label))}.
           </Text>
-        </View>
+        </PixelPanel>
       ) : null}
 
       {/* Layers */}
@@ -154,8 +155,9 @@ export function PixelCollection({ onSelectCategory }: Props) {
           const complete = layer.total > 0 && layer.owned >= layer.total;
           const layerPercent = layer.total > 0 ? (layer.owned / layer.total) * 100 : 0;
           return (
-            <Pressable
+            <PixelPressablePanel
               key={layer.layerId}
+              frame={complete ? "gold" : "blue"}
               accessibilityRole="button"
               accessibilityLabel={`${layer.label}, ${layer.owned} of ${layer.total} collected`}
               accessibilityHint="Choose what to wear"
@@ -163,17 +165,15 @@ export function PixelCollection({ onSelectCategory }: Props) {
                 void Haptics.selectionAsync();
                 onSelectCategory({ id: layer.layerId, label: layer.label });
               }}
-              style={({ pressed }) => [
-                styles.tile,
-                complete && styles.tileComplete,
-                pressed && styles.tilePressed,
-              ]}
+              style={styles.tile}
             >
-              <View style={styles.tileThumb}>
-                {equipped != null ? (
-                  <PixelItemThumb item={equipped} size={48} wearer={loadout} />
-                ) : null}
-              </View>
+              <PixelPanel frame="well" style={styles.thumbWell}>
+                <View style={styles.tileThumb}>
+                  {equipped != null ? (
+                    <PixelItemThumb item={equipped} size={44} wearer={loadout} />
+                  ) : null}
+                </View>
+              </PixelPanel>
               <View style={styles.tileText}>
                 <Text
                   numberOfLines={1}
@@ -192,7 +192,7 @@ export function PixelCollection({ onSelectCategory }: Props) {
                   height={5}
                 />
               </View>
-            </Pressable>
+            </PixelPressablePanel>
           );
         })}
       </View>
@@ -216,15 +216,17 @@ function Bar({
   height: number;
 }) {
   return (
-    <View style={[styles.barTrack, { height, borderRadius: height / 2 }]}>
+    <View style={[styles.barTrack, { height: height + 4 }]}>
       <View
         style={{
           width: `${Math.max(percent > 0 ? 4 : 0, Math.min(100, percent))}%`,
           height: "100%",
-          borderRadius: height / 2,
           backgroundColor: color,
         }}
-      />
+      >
+        {/* Top-row shine, like an old HP bar. */}
+        <View style={styles.barShine} />
+      </View>
     </View>
   );
 }
@@ -247,12 +249,8 @@ const styles = StyleSheet.create({
     color: APP_SHELL_LABEL_COLOR,
   },
   summary: {
-    padding: 14,
+    padding: 16,
     gap: 10,
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: GOLD,
-    backgroundColor: CARD_FILL,
   },
   summaryTop: {
     flexDirection: "row",
@@ -275,10 +273,9 @@ const styles = StyleSheet.create({
   percentBadge: {
     paddingHorizontal: 10,
     paddingVertical: 8,
-    borderRadius: 8,
     backgroundColor: GOLD,
     borderWidth: 2,
-    borderColor: "#02284f",
+    borderColor: OUTLINE,
   },
   percentText: {
     fontFamily: FONT_FAMILY,
@@ -295,11 +292,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    paddingHorizontal: 7,
-    paddingVertical: 4,
-    borderRadius: 6,
-    borderWidth: 1,
-    backgroundColor: TRACK,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
   },
   rarityDot: {
     width: 6,
@@ -319,17 +313,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    padding: 12,
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: GREEN,
-    backgroundColor: CARD_FILL,
+    padding: 14,
   },
-  nextThumbFrame: {
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: CARD_RIM,
-    backgroundColor: TRACK,
+  /** Recessed slot a thumbnail sits in. */
+  thumbWell: {
+    padding: 4,
+  },
+  nextThumbClip: {
     overflow: "hidden",
   },
   lock: {
@@ -363,12 +353,8 @@ const styles = StyleSheet.create({
     color: APP_SHELL_LABEL_COLOR,
   },
   rewardsCard: {
-    padding: 12,
+    padding: 16,
     gap: 6,
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: "#B57CFF",
-    backgroundColor: CARD_FILL,
   },
   rewardsBody: {
     fontFamily: CELL_HEADING_FONT_FAMILY,
@@ -392,26 +378,13 @@ const styles = StyleSheet.create({
     width: "48.5%",
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 8,
     padding: 10,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: CARD_RIM,
-    backgroundColor: CARD_FILL,
-  },
-  tileComplete: {
-    borderColor: GOLD,
-  },
-  tilePressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.97 }],
   },
   tileThumb: {
-    width: 48,
-    height: 48,
-    borderRadius: 10,
+    width: 44,
+    height: 44,
     overflow: "hidden",
-    backgroundColor: TRACK,
   },
   tileText: {
     flex: 1,
@@ -429,9 +402,16 @@ const styles = StyleSheet.create({
     lineHeight: 10,
     color: APP_SHELL_LABEL_COLOR,
   },
+  /** Square pixel bar: black outline, flat fill, a lighter top row. */
   barTrack: {
     alignSelf: "stretch",
     overflow: "hidden",
+    borderWidth: 2,
+    borderColor: OUTLINE,
     backgroundColor: TRACK,
+  },
+  barShine: {
+    height: 2,
+    backgroundColor: "rgba(255,255,255,0.35)",
   },
 });

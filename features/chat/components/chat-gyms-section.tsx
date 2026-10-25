@@ -9,6 +9,7 @@ import {
   View,
 } from "react-native";
 
+import { PixelChevron, PixelPressablePanel } from "@/components/pixel-panel";
 import { ThemedText } from "@/components/themed-text";
 import {
   APP_SHELL_LABEL_COLOR,
@@ -19,7 +20,6 @@ import { ActionListSectionDivider } from "@/features/actions/components/action-l
 import { useChatSearch } from "@/features/chat/chat-search-context";
 import { ChatEmptyState } from "@/features/chat/components/chat-empty-state";
 import { ChatListRow } from "@/features/chat/components/chat-list-row";
-import { CHAT_CARD_RIM } from "@/features/chat/constants";
 import { timeAgo } from "@/features/chat/time-ago";
 import { gymHeroSource } from "@/features/map/gym-catalog";
 import type { GymListItem } from "@/lib/api/chat";
@@ -220,15 +220,17 @@ function GymRow({ gym }: { gym: GymListItem }) {
   );
 }
 
-/** Dashed "find another gym" card under your lists. */
+/** Recessed "empty slot" card under your lists: find another gym. */
 function FindGymFooter({ onSearch }: { onSearch: () => void }) {
   return (
     <View style={styles.footer}>
-      <Pressable
+      <PixelPressablePanel
+        frame="well"
+        pressedFrame="blue"
         accessibilityRole="button"
         accessibilityLabel="Find another gym on the map"
         onPress={openMap}
-        style={({ pressed }) => [styles.findCard, pressed && styles.pressed]}
+        style={styles.findCard}
       >
         <Image
           source={MAP_ICON}
@@ -252,14 +254,8 @@ function FindGymFooter({ onSearch }: { onSearch: () => void }) {
             Browse the map to enter a new gym chat
           </ThemedText>
         </View>
-        <ThemedText
-          lightColor={APP_SHELL_LABEL_COLOR}
-          darkColor={APP_SHELL_LABEL_COLOR}
-          style={styles.chevron}
-        >
-          ›
-        </ThemedText>
-      </Pressable>
+        <PixelChevron />
+      </PixelPressablePanel>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Search all gyms"
@@ -299,10 +295,12 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     paddingVertical: 8,
   },
+  /** Square snapshot with a dark pixel outline. */
   thumb: {
     width: GYM_THUMB_SIZE,
     height: GYM_THUMB_SIZE,
-    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: "#000a1c",
   },
   starBadge: {
     position: "absolute",
@@ -320,12 +318,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderStyle: "dashed",
-    borderColor: CHAT_CARD_RIM,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
   },
   findIcon: {
     width: 36,
@@ -345,10 +339,6 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILY,
     fontSize: 8,
     lineHeight: 12,
-  },
-  chevron: {
-    fontSize: 16,
-    lineHeight: 20,
   },
   searchLink: {
     alignSelf: "center",

@@ -9,6 +9,7 @@ import {
   type ViewStyle,
 } from "react-native";
 
+import { PixelFrameBackdrop } from "@/components/pixel-panel";
 import {
   APP_SHELL_INPUT_PLACEHOLDER_COLOR,
   APP_SHELL_MAIN_TEXT_COLOR,
@@ -29,7 +30,7 @@ const SINGLE_LINE_ANDROID = Platform.select({
 type SingleLineProps = TextInputProps & {
   /** Merged onto the outer image shell (e.g. `marginTop`). */
   shellStyle?: StyleProp<ViewStyle>;
-  /** No frame image: the shell's own border (via `shellStyle`) frames it. */
+  /** Recessed pixel well (the Settings look) instead of the input art. */
   plain?: boolean;
 };
 
@@ -42,8 +43,10 @@ export function SettingsSingleLineTextField({
   ...rest
 }: SingleLineProps) {
   return (
-    <View style={[styles.singleShell, shellStyle]}>
-      {plain ? null : (
+    <View style={[styles.singleShell, plain && styles.square, shellStyle]}>
+      {plain ? (
+        <PixelFrameBackdrop frame="well" />
+      ) : (
         <Image
           accessibilityElementsHidden
           importantForAccessibility="no-hide-descendants"
@@ -65,7 +68,7 @@ export function SettingsSingleLineTextField({
 
 type BioProps = TextInputProps & {
   shellStyle?: StyleProp<ViewStyle>;
-  /** No frame image: the shell's own border (via `shellStyle`) frames it. */
+  /** Recessed pixel well (the Settings look) instead of the input art. */
   plain?: boolean;
 };
 
@@ -80,8 +83,10 @@ export function SettingsBioTextField({
   ...rest
 }: BioProps) {
   return (
-    <View style={[styles.bioShell, shellStyle]}>
-      {plain ? null : (
+    <View style={[styles.bioShell, plain && styles.square, shellStyle]}>
+      {plain ? (
+        <PixelFrameBackdrop frame="well" />
+      ) : (
         <Image
           accessibilityElementsHidden
           importantForAccessibility="no-hide-descendants"
@@ -129,6 +134,10 @@ const styles = StyleSheet.create({
     minHeight: 132,
     borderRadius: 12,
     overflow: "hidden",
+  },
+  /** Pixel frames bring their own notched corners. */
+  square: {
+    borderRadius: 0,
   },
   bioInput: {
     width: "100%",

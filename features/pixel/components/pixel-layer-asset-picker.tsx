@@ -1,10 +1,10 @@
 import * as Haptics from "expo-haptics";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
 
+import { PixelPanel, PixelPressablePanel } from "@/components/pixel-panel";
 import { PopFlashView, usePopFlash } from "@/components/pop-flash";
 import { ThemedText } from "@/components/themed-text";
 import {
-  APP_SHELL_INPUT_BOARDER_COLOR,
   APP_SHELL_LABEL_COLOR,
   APP_SHELL_MAIN_TEXT_COLOR,
 } from "@/constants/app-colors";
@@ -41,8 +41,8 @@ type Props = {
 };
 
 /**
- * Layer asset list styled like gym chats (`GymChatListRow`):
- * thumb + wrapping label on one row, hairline bottom dividers.
+ * Layer asset list: one pixel-frame card per item (thumb + wrapping label),
+ * the equipped one on the brighter frame.
  */
 export function PixelLayerAssetPicker({
   layerId,
@@ -64,21 +64,15 @@ export function PixelLayerAssetPicker({
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.list} accessibilityRole="list">
-        {options.map((option, index) => {
-          const isSelected = option.id === selectedItemId;
-          const showBottomBorder = index < options.length - 1;
-
-          return (
-            <PixelLayerAssetRow
-              key={option.id}
-              option={option}
-              isSelected={isSelected}
-              wearer={wearer}
-              showBottomBorder={showBottomBorder}
-              onSelect={() => onSelectItem(option.id)}
-            />
-          );
-        })}
+        {options.map((option) => (
+          <PixelLayerAssetRow
+            key={option.id}
+            option={option}
+            isSelected={option.id === selectedItemId}
+            wearer={wearer}
+            onSelect={() => onSelectItem(option.id)}
+          />
+        ))}
       </View>
     </ScrollView>
   );
@@ -88,13 +82,11 @@ function PixelLayerAssetRow({
   option,
   isSelected,
   wearer,
-  showBottomBorder,
   onSelect,
 }: {
   option: PixelItem;
   isSelected: boolean;
   wearer: PixelLoadout;
-  showBottomBorder: boolean;
   onSelect: () => void;
 }) {
   const popFlash = usePopFlash();
@@ -103,51 +95,45 @@ function PixelLayerAssetRow({
     origin.unlockLevel != null ? `LV ${origin.unlockLevel}` : origin.badge;
 
   return (
-    <View style={[styles.cell, showBottomBorder && styles.cellBorderBottom]}>
-      <Pressable
-        accessibilityRole="button"
+    <PixelPressablePanel
+      frame={isSelected ? "button" : "blue"}
+      accessibilityRole="button"
         accessibilityLabel={`${option.label}. ${origin.description}${isSelected ? ", selected" : ""}`}
         accessibilityState={{ selected: isSelected }}
-        onPress={() => {
-          if (!isSelected) {
-            void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            popFlash.play();
-          }
-          onSelect();
-        }}
-        style={({ pressed }) => [styles.hit, pressed && styles.hitPressed]}
-      >
-        <View style={styles.row}>
-          <PopFlashView
-            popFlash={popFlash}
-            flashRadius={10}
-            style={[styles.thumbShell, isSelected && styles.thumbSelected]}
+      onPress={() => {
+        if (!isSelected) {
+          void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          popFlash.play();
+        }
+        onSelect();
+      }}
+      style={styles.row}
+    >
+      <PopFlashView popFlash={popFlash} flashRadius={0} style={styles.thumbShell}>
+        <PixelPanel frame="well" style={styles.thumbWell}>
+          <PixelItemThumb item={option} size={THUMB_SIZE - 8} wearer={wearer} />
+        </PixelPanel>
+      </PopFlashView>
+      <View style={styles.textColumn}>
+        <ThemedText
+          lightColor={APP_SHELL_MAIN_TEXT_COLOR}
+          darkColor={APP_SHELL_MAIN_TEXT_COLOR}
+          style={styles.label}
+        >
+          {option.label}
+        </ThemedText>
+        <View style={styles.metaLine}>
+          {isSelected ? <ThemedText style={styles.equipped}>EQUIPPED</ThemedText> : <View />}
+          <ThemedText
+            lightColor={APP_SHELL_LABEL_COLOR}
+            darkColor={APP_SHELL_LABEL_COLOR}
+            style={styles.unlock}
           >
-            <PixelItemThumb
-              item={option}
-              size={THUMB_SIZE - 4}
-              wearer={wearer}
-            />
-          </PopFlashView>
-          <View style={styles.textColumn}>
-            <ThemedText
-              lightColor={APP_SHELL_MAIN_TEXT_COLOR}
-              darkColor={APP_SHELL_MAIN_TEXT_COLOR}
-              style={styles.label}
-            >
-              {option.label}
-            </ThemedText>
-            <ThemedText
-              lightColor={APP_SHELL_LABEL_COLOR}
-              darkColor={APP_SHELL_LABEL_COLOR}
-              style={styles.unlock}
-            >
-              {unlockLabel}
-            </ThemedText>
-          </View>
+            {unlockLabel}
+          </ThemedText>
         </View>
-      </Pressable>
-    </View>
+      </View>
+    </PixelPressablePanel>
   );
 }
 
@@ -162,57 +148,47 @@ const styles = StyleSheet.create({
   },
   list: {
     alignSelf: "stretch",
-    borderRadius: 12,
-    overflow: "hidden",
-  },
-  cell: {
-    alignSelf: "stretch",
-    paddingVertical: 10,
-  },
-  cellBorderBottom: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: APP_SHELL_INPUT_BOARDER_COLOR,
-  },
-  hit: {
-    alignSelf: "stretch",
-  },
-  hitPressed: {
-    opacity: 0.85,
+    gap: 10,
   },
   row: {
     flexDirection: "row",
-    alignItems: "stretch",
+    alignItems: "center",
     gap: 12,
     alignSelf: "stretch",
+    padding: 10,
   },
   thumbShell: {
-    width: THUMB_SIZE,
-    height: THUMB_SIZE,
-    borderRadius: 10,
     flexShrink: 0,
-    alignSelf: "center",
-    overflow: "hidden",
-    borderWidth: 2,
-    borderColor: "transparent",
   },
-  thumbSelected: {
-    borderColor: APP_SHELL_MAIN_TEXT_COLOR,
+  thumbWell: {
+    padding: 4,
   },
   textColumn: {
     flex: 1,
     minWidth: 0,
-    justifyContent: "center",
+    alignSelf: "stretch",
+    justifyContent: "space-between",
+    paddingVertical: 4,
+    gap: 8,
   },
   label: {
     fontFamily: FONT_FAMILY,
     fontSize: LABEL_FONT_SIZE,
     lineHeight: 18,
-    fontWeight: "600",
+  },
+  metaLine: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  equipped: {
+    color: "#FFD23F",
+    fontFamily: FONT_FAMILY,
+    fontSize: 8,
+    lineHeight: 12,
   },
   unlock: {
-    position: "absolute",
-    right: 0,
-    bottom: 0,
     fontFamily: FONT_FAMILY,
     fontSize: UNLOCK_FONT_SIZE,
     lineHeight: 14,

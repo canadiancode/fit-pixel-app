@@ -2,13 +2,13 @@ import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
 import {
-  Pressable,
   ScrollView,
   StyleSheet,
   useWindowDimensions,
   View,
 } from "react-native";
 
+import { PixelPanel, PixelPressablePanel } from "@/components/pixel-panel";
 import { ThemedText } from "@/components/themed-text";
 import { XpLevelBar } from "@/components/xp-level-bar";
 import {
@@ -34,11 +34,11 @@ import {
 
 const STAR_ICON = require("@/assets/icons/star.png");
 
-/** Same pixel-card palette as the Chat tab rows. */
-const CARD_FILL = "#01224e";
-const CARD_RIM = "#0b4f96";
 const CARD_RIM_ACTIVE = "#2f86e8";
-const TRACK_FILL = "#011a3a";
+const OUTLINE = "#000a1c";
+/** Card padding plus the thumbnail well's own padding, per side. */
+const CARD_PADDING = 8;
+const WELL_PADDING = 4;
 
 const GRID_GAP = 10;
 const GRID_COLUMNS = 3;
@@ -114,7 +114,7 @@ export default function PixelShopScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.levelCard}>
+        <PixelPanel style={styles.levelCard}>
           <View style={styles.levelRow}>
             <Image
               source={STAR_ICON}
@@ -150,7 +150,7 @@ export default function PixelShopScreen() {
           >
             {levelHint}
           </ThemedText>
-        </View>
+        </PixelPanel>
 
         {byCategory.length > 1 ? (
           <ScrollView
@@ -227,16 +227,13 @@ function FilterChip({
   onPress: () => void;
 }) {
   return (
-    <Pressable
+    <PixelPressablePanel
+      frame={active ? "button" : "blue"}
       accessibilityRole="tab"
       accessibilityState={{ selected: active }}
       accessibilityLabel={`${label}, ${count} items`}
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.chip,
-        active && styles.chipActive,
-        pressed && styles.pressed,
-      ]}
+      style={styles.chip}
     >
       <ThemedText
         lightColor={active ? APP_SHELL_MAIN_TEXT_COLOR : APP_SHELL_LABEL_COLOR}
@@ -245,7 +242,7 @@ function FilterChip({
       >
         {label} {count}
       </ThemedText>
-    </Pressable>
+    </PixelPressablePanel>
   );
 }
 
@@ -261,7 +258,7 @@ function ItemCard({
   level: number;
 }) {
   const { item, owned, origin } = entry;
-  const thumb = width - 16;
+  const thumb = width - (CARD_PADDING + WELL_PADDING) * 2;
   const levelsAway =
     origin.unlockLevel != null ? origin.unlockLevel - level : 0;
   const a11yState = owned
@@ -270,12 +267,12 @@ function ItemCard({
         levelsAway > 0 ? `, ${levelsAway} level${levelsAway === 1 ? "" : "s"} to go` : ""
       }`;
   return (
-    <View
+    <PixelPanel
       style={[styles.card, owned && styles.cardOwned, { width }]}
       accessible
       accessibilityLabel={`${item.label}. ${a11yState}`}
     >
-      <View style={styles.thumbWell}>
+      <PixelPanel frame="well" style={styles.thumbWell}>
         <PixelItemThumb item={item} size={thumb} wearer={wearer} dimmed={!owned} />
         <View style={[styles.levelBadge, owned && styles.ownedBadge]}>
           <ThemedText
@@ -286,7 +283,7 @@ function ItemCard({
             {owned ? "✓" : origin.badge}
           </ThemedText>
         </View>
-      </View>
+      </PixelPanel>
       <ThemedText
         lightColor={APP_SHELL_MAIN_TEXT_COLOR}
         darkColor={APP_SHELL_MAIN_TEXT_COLOR}
@@ -305,7 +302,7 @@ function ItemCard({
           {origin.description}
         </ThemedText>
       ) : null}
-    </View>
+    </PixelPanel>
   );
 }
 
@@ -326,11 +323,7 @@ const styles = StyleSheet.create({
   },
   levelCard: {
     gap: 12,
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: CARD_RIM,
-    backgroundColor: CARD_FILL,
+    padding: 16,
   },
   levelRow: {
     flexDirection: "row",
@@ -366,18 +359,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: SCREEN_PADDING,
   },
   chip: {
-    height: 36,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: CARD_RIM,
-    backgroundColor: TRACK_FILL,
+    height: 38,
+    paddingVertical: 0,
+    paddingHorizontal: 14,
     alignItems: "center",
     justifyContent: "center",
-  },
-  chipActive: {
-    borderColor: CARD_RIM_ACTIVE,
-    backgroundColor: CARD_RIM,
   },
   chipLabel: {
     fontFamily: FONT_FAMILY,
@@ -409,34 +395,28 @@ const styles = StyleSheet.create({
     gap: GRID_GAP,
   },
   card: {
-    padding: 6,
+    padding: CARD_PADDING,
     gap: 6,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: CARD_RIM,
-    backgroundColor: CARD_FILL,
   },
   cardOwned: {
     opacity: 0.75,
   },
   thumbWell: {
-    borderRadius: 10,
-    overflow: "hidden",
-    backgroundColor: TRACK_FILL,
+    padding: WELL_PADDING,
   },
+  /** Square pixel tag in the thumbnail's corner. */
   levelBadge: {
     position: "absolute",
-    top: 4,
-    right: 4,
-    paddingHorizontal: 5,
+    top: 2,
+    right: 2,
+    paddingHorizontal: 4,
     paddingVertical: 2,
-    borderRadius: 6,
-    backgroundColor: "rgba(1,26,58,0.85)",
-    borderWidth: 1,
-    borderColor: CARD_RIM_ACTIVE,
+    backgroundColor: CARD_RIM_ACTIVE,
+    borderWidth: 2,
+    borderColor: OUTLINE,
   },
   ownedBadge: {
-    borderColor: "#5BD16B",
+    backgroundColor: "#2f9e44",
   },
   levelBadgeText: {
     fontFamily: FONT_FAMILY,
@@ -455,8 +435,5 @@ const styles = StyleSheet.create({
     fontSize: 7,
     lineHeight: 10,
     paddingHorizontal: 2,
-  },
-  pressed: {
-    opacity: 0.8,
   },
 });

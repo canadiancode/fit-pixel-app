@@ -2,14 +2,13 @@ import * as Haptics from "expo-haptics";
 import { useEffect } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
+import { PixelFrameBackdrop } from "@/components/pixel-panel";
 import {
   APP_SHELL_LABEL_COLOR,
   APP_SHELL_MAIN_TEXT_COLOR,
 } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
 import {
-  SETTINGS_CARD_FILL,
-  SETTINGS_CARD_RIM,
   SETTINGS_ON_COLOR,
   SettingsSection,
   SettingsSegmented,
@@ -102,11 +101,11 @@ export function PreferencesSettingsForm() {
                   onPress={() => selectTheme(theme.id)}
                   style={({ pressed }) => [
                     styles.themeTile,
-                    selected && styles.themeTileSelected,
                     !owned && styles.themeTileLocked,
                     pressed && styles.pressed,
                   ]}
                 >
+                  <PixelFrameBackdrop frame={selected ? "green" : "blue"} />
                   <View
                     style={[styles.swatch, { backgroundColor: theme.swatch }]}
                   >
@@ -192,14 +191,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    padding: 10,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: SETTINGS_CARD_RIM,
-    backgroundColor: SETTINGS_CARD_FILL,
-  },
-  themeTileSelected: {
-    borderColor: SETTINGS_ON_COLOR,
+    padding: 12,
   },
   themeTileLocked: {
     opacity: 0.5,
@@ -210,16 +202,16 @@ const styles = StyleSheet.create({
   swatch: {
     width: 36,
     height: 36,
-    borderRadius: 8,
     borderWidth: 2,
-    borderColor: "rgba(255,255,255,0.35)",
+    borderColor: "#000a1c",
     alignItems: "center",
     justifyContent: "center",
   },
   check: {
     color: APP_SHELL_MAIN_TEXT_COLOR,
-    fontSize: 16,
-    fontWeight: "800",
+    fontFamily: FONT_FAMILY,
+    fontSize: 12,
+    lineHeight: 16,
   },
   themeText: {
     flex: 1,

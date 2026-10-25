@@ -11,9 +11,10 @@ import {
   type ImageSourcePropType,
 } from "react-native";
 
+import { PixelFrameBackdrop } from "@/components/pixel-panel";
 import { APP_SHELL_MAIN_TEXT_COLOR } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
-import { CHAT_CARD_FILL, CHAT_CARD_RIM } from "@/features/chat/constants";
+import { CHAT_CARD_RIM } from "@/features/chat/constants";
 
 const EMPTY_FAVOURITE = require("@/assets/icons/empty-favourite.png");
 const FILLED_FAVOURITE = require("@/assets/icons/favourite.png");
@@ -95,12 +96,9 @@ export function GymChatInfoStrip({
         disabled={favoriteBusy}
         hitSlop={6}
         onPress={onToggleFavorite}
-        style={({ pressed }) => [
-          styles.favouriteChip,
-          favorite && styles.favouriteChipOn,
-          pressed && styles.pressed,
-        ]}
+        style={({ pressed }) => [styles.favouriteChip, pressed && styles.pressed]}
       >
+        <PixelFrameBackdrop frame={favorite ? "gold" : "blue"} />
         <Image
           source={favorite ? FILLED_FAVOURITE : EMPTY_FAVOURITE}
           style={styles.starIcon}
@@ -155,15 +153,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    paddingLeft: 8,
-    paddingRight: 12,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: CHAT_CARD_RIM,
-    backgroundColor: CHAT_CARD_FILL,
-  },
-  favouriteChipOn: {
-    borderColor: "#f4c430",
+    paddingLeft: 10,
+    paddingRight: 14,
   },
   starIcon: {
     width: 22,

@@ -1,18 +1,14 @@
 import type { ReactNode } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
+import { PixelChevron, PixelPanel } from "@/components/pixel-panel";
 import { ThemedText } from "@/components/themed-text";
 import {
   APP_SHELL_LABEL_COLOR,
   APP_SHELL_MAIN_TEXT_COLOR,
 } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
-import {
-  CHAT_CARD_FILL,
-  CHAT_CARD_RIM,
-  CHAT_CARD_RIM_ACTIVE,
-  CHAT_UNREAD_DOT_COLOR,
-} from "@/features/chat/constants";
+import { CHAT_UNREAD_DOT_COLOR } from "@/features/chat/constants";
 
 type Props = {
   leading: ReactNode;
@@ -20,7 +16,7 @@ type Props = {
   subtitle?: string | null;
   /** Small text at the top-right (e.g. "5m"). */
   meta?: string | null;
-  /** Bold title, bright preview, brighter rim and a dot. */
+  /** Bold title, bright preview, brighter frame and a dot. */
   unread?: boolean;
   /** Buttons at the end of the row (outside the row's own press target). */
   trailing?: ReactNode;
@@ -34,7 +30,7 @@ type Props = {
   accessibilityLabel: string;
 };
 
-/** Pixel-card list row for the Chat tab (DMs, friends, requests, gyms). */
+/** Pixel-frame list row for the Chat tab (DMs, friends, requests, gyms). */
 export function ChatListRow({
   leading,
   title,
@@ -49,7 +45,7 @@ export function ChatListRow({
   accessibilityLabel,
 }: Props) {
   return (
-    <View style={[styles.card, unread && styles.cardUnread]}>
+    <PixelPanel frame={unread ? "button" : "blue"} style={styles.card}>
       <View style={styles.mainRow}>
         <View style={styles.hitOuter}>
           <Pressable
@@ -103,15 +99,7 @@ export function ChatListRow({
                     </View>
                   ) : null}
                 </View>
-                {showChevron ? (
-                  <ThemedText
-                    lightColor={APP_SHELL_LABEL_COLOR}
-                    darkColor={APP_SHELL_LABEL_COLOR}
-                    style={styles.chevron}
-                  >
-                    ›
-                  </ThemedText>
-                ) : null}
+                {showChevron ? <PixelChevron style={styles.chevron} /> : null}
               </View>
             )}
           </Pressable>
@@ -121,24 +109,17 @@ export function ChatListRow({
         ) : null}
       </View>
       {footer != null ? <View style={styles.footer}>{footer}</View> : null}
-    </View>
+    </PixelPanel>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: CHAT_CARD_RIM,
-    backgroundColor: CHAT_CARD_FILL,
-    overflow: "hidden",
+    padding: 0,
   },
   mainRow: {
     flexDirection: "row",
     alignItems: "center",
-  },
-  cardUnread: {
-    borderColor: CHAT_CARD_RIM_ACTIVE,
   },
   hitOuter: {
     flex: 1,
@@ -148,9 +129,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    paddingVertical: 10,
-    paddingLeft: 12,
-    paddingRight: 12,
+    paddingVertical: 12,
+    paddingLeft: 14,
+    paddingRight: 14,
   },
   pressed: {
     opacity: 0.85,
@@ -196,23 +177,23 @@ const styles = StyleSheet.create({
     fontSize: 9,
     lineHeight: 13,
   },
+  /** Square pixel dot with a dark outline. */
   unreadDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 10,
+    height: 10,
+    borderWidth: 2,
+    borderColor: "#000a1c",
     backgroundColor: CHAT_UNREAD_DOT_COLOR,
   },
   chevron: {
     flexShrink: 0,
-    fontSize: 16,
-    lineHeight: 20,
   },
   trailing: {
     flexShrink: 0,
-    paddingRight: 12,
+    paddingRight: 14,
   },
   footer: {
-    paddingHorizontal: 12,
-    paddingBottom: 12,
+    paddingHorizontal: 14,
+    paddingBottom: 14,
   },
 });
