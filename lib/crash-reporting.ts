@@ -7,7 +7,7 @@ import * as Updates from "expo-updates";
  * it. EXPO_PUBLIC_SENTRY_DSN overrides it (e.g. to point at a test project).
  */
 const SENTRY_DSN =
-  "https://6f03b440a8752fec2688358cc5b3dc48@o4512295722418176.ingest.us.sentry.io/4512295736573952";
+  "https://cfe8668540d286ed75889f73d692526e@o4512295722418176.ingest.us.sentry.io/4512295739981824";
 
 /**
  * Crash reporting via Sentry, in release builds only (always off in
