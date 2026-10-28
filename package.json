@@ -17,6 +17,7 @@
     "ios:device": "expo run:ios --device",
     "update:preview": "eas update --channel preview --environment preview",
     "update:production": "eas update --channel production --environment production",
+    "sentry:sourcemaps": "npx sentry-expo-upload-sourcemaps dist",
     "web": "expo start --web",
     "lint": "expo lint"
   },

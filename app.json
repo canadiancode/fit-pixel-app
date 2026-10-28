@@ -204,7 +204,14 @@
           }
         }
       ],
-      "@sentry/react-native/expo"
+      [
+        "@sentry/react-native/expo",
+        {
+          "url": "https://sentry.io/",
+          "organization": "fit-pixel",
+          "project": "fit-pixel-app"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
