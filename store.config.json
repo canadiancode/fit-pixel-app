@@ -1,0 +1,42 @@
+{
+  "configVersion": 0,
+  "apple": {
+    "version": "1.0",
+    "release": {
+      "automaticRelease": false
+    },
+    "info": {
+      "en-CA": {
+        "description": "Level up in real life.\n\nFit Pixel turns your healthy habits into XP for a pixel-art character that gets stronger as you do. Log your day, keep your streak alive, and watch your Pixel level up.\n\nYOUR DAY IS A QUEST LOG\n• Log food, water, workouts, sleep and weight in a couple of taps\n• Search foods with full macros, save your go-to meals, or add your own\n• Steps, sleep, active calories, resting heart rate and weight sync from Apple Health\n• Set daily goals and fill every bar\n\nEARN XP, LEVEL UP\n• Every goal you hit earns XP, and every 100 XP is a new level\n• Keep a daily streak going and watch your flame grow from Spark to Legend\n• Your Pixel bulks up as you level: more muscle at level 5, and more again at level 15\n• Your Pixel reacts to your day: Zzz after a short night, sweat after a big burn, a glowing bottle when you hit your water goal\n\nTRAIN WITH A PLAN\n• Answer a few questions and get a workout plan: full body, upper/lower, push-pull-legs, dumbbell-only or bodyweight\n• Workout mode logs every set and rep, with a built-in rest timer\n• Fit Pixel tells you when it's time to add weight\n• Earn XP for every set you finish\n\nBUILD YOUR PIXEL\n• 170 items to collect, from Common to Legendary\n• Pick skin tone, hair, eyes, tops, bottoms, shoes, bottles and bags\n• Choose the gym your Pixel trains in, from a neon purple gym to an Italian courtyard\n• Hit your weight goals to win earned-only gear like the Purple Bottle and the Gold King Bag\n\nMULTIPLAYER\n• Climb the leaderboard against your friends, or against everyone on Fit Pixel\n• Find your gym on the map and join its chat\n• Add friends, check out their Pixels and message them directly\n• Report or block anyone in a tap. We have zero tolerance for abuse\n\nPRIVATE BY DESIGN\n• Fit Pixel only reads Health data, never writes it\n• Health data stays on your phone unless you save it as a habit log\n• We never sell your data or use it for advertising\n\nFit Pixel is free. Questions? hello@fitpixel.app",
+        "keywords": [
+          "gym",
+          "gamified",
+          "steps",
+          "water",
+          "tracker",
+          "sleep",
+          "xp",
+          "avatar",
+          "8bit",
+          "retro",
+          "game",
+          "exercise",
+          "health",
+          "quest",
+          "chat",
+          "goals"
+        ],
+        "marketingUrl": "https://fitpixel.app",
+        "promoText": "Your workouts are now a game. Earn XP for steps, water, sleep and training, level up a pixel-art character, and chat with the people at your gym.",
+        "supportUrl": "https://fitpixel.app/support",
+        "title": "Fit Pixel: Level Up Fitness",
+        "subtitle": "Pixel-art habit & workout RPG",
+        "privacyPolicyUrl": "https://fitpixel.app/privacy"
+      }
+    },
+    "categories": [
+      "HEALTH_AND_FITNESS",
+      "LIFESTYLE"
+    ]
+  }
+}
