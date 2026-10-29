@@ -11,7 +11,7 @@ Food search and outbox drain require a session. Local SQLite is empty until the 
 Put these in `.env` (never a service-role key):
 
 ```
-EXPO_PUBLIC_FIT_PIXEL_API_URL=https://api.aurashields.com
+EXPO_PUBLIC_FIT_PIXEL_API_URL=https://api.fitpixel.app
 EXPO_PUBLIC_SUPABASE_URL=
 EXPO_PUBLIC_SUPABASE_ANON_KEY=
 EXPO_PUBLIC_GOOGLE_MAPS_API_KEY=
@@ -31,7 +31,7 @@ Then `npx eas env:list preview` (names only). Never add a service-role key to EA
 
 Session tokens are stored in expo-secure-store, not SQLite. Sign-out revokes the refresh token, wipes SecureStore, and resets local data.
 
-Password reset: the app emails a link to `https://api.aurashields.com/auth/callback`. Set the new password in the browser, then sign in to Fit Pixel. Do not enable magic-link or OAuth on the custom `fitpixel://` scheme alone.
+Password reset: the app emails a link to `https://api.fitpixel.app/auth/callback`. Set the new password in the browser, then sign in to Fit Pixel. Do not enable magic-link or OAuth on the custom `fitpixel://` scheme alone.
 
 ## Get started
 
@@ -106,9 +106,9 @@ npx eas submit -p android --profile production
 
 ### Digital Asset Links (App Links)
 
-Password-reset App Links use `https://api.aurashields.com/auth/callback`. Host a Digital Asset Links file at:
+Password-reset App Links use `https://api.fitpixel.app/auth/callback`. Host a Digital Asset Links file at:
 
-`https://api.aurashields.com/.well-known/assetlinks.json`
+`https://api.fitpixel.app/.well-known/assetlinks.json`
 
 Use the template in `store/android/assetlinks.json.example`. The SHA-256 fingerprint must be the **Play / EAS upload certificate**, not the local debug keystore. After the first production Android build:
 

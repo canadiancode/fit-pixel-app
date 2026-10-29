@@ -9,7 +9,7 @@
       "distribution": "internal",
       "environment": "development",
       "env": {
-        "EXPO_PUBLIC_FIT_PIXEL_API_URL": "https://api.aurashields.com",
+        "EXPO_PUBLIC_FIT_PIXEL_API_URL": "https://api.fitpixel.app",
         "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       },
       "channel": "development"
@@ -21,7 +21,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_FIT_PIXEL_API_URL": "https://api.aurashields.com",
+        "EXPO_PUBLIC_FIT_PIXEL_API_URL": "https://api.fitpixel.app",
         "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       },
       "channel": "preview"
@@ -33,7 +33,7 @@
         "credentialsSource": "remote"
       },
       "env": {
-        "EXPO_PUBLIC_FIT_PIXEL_API_URL": "https://api.aurashields.com",
+        "EXPO_PUBLIC_FIT_PIXEL_API_URL": "https://api.fitpixel.app",
         "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       },
       "channel": "production"

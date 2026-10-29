@@ -1,8 +1,11 @@
 import { openBrowserAsync, WebBrowserPresentationStyle } from "expo-web-browser";
 
-import { getFitPixelApiBaseUrl } from "@/lib/api/config";
+/**
+ * Written in fit-pixel-server (src/routes/legal-html.ts) and served on the
+ * website, so the app links to the same fitpixel.app URLs as App Store Connect.
+ */
+const LEGAL_SITE_URL = "https://fitpixel.app";
 
-/** Served by fit-pixel-server (src/routes/legal-html.ts). */
 export const LEGAL_PAGES = {
   privacy: { path: "/privacy", label: "Privacy Policy" },
   terms: { path: "/terms", label: "Terms of Use" },
@@ -11,7 +14,7 @@ export const LEGAL_PAGES = {
 export type LegalPageId = keyof typeof LEGAL_PAGES;
 
 export function legalPageUrl(page: LegalPageId): string {
-  return `${getFitPixelApiBaseUrl()}${LEGAL_PAGES[page].path}`;
+  return `${LEGAL_SITE_URL}${LEGAL_PAGES[page].path}`;
 }
 
 /** Opens the page in an in-app browser sheet. */

@@ -130,16 +130,16 @@ equivalent; they need to allow installs from their browser).
 - **Health apps declaration** (App content → Health apps): list the six read
   permissions (steps, active calories, resting heart rate, weight, hydration,
   sleep) and why. Health Connect's permission sheet links to
-  `https://api.aurashields.com/privacy` through
+  `https://fitpixel.app/privacy` through
   `plugins/with-health-connect-rationale.js`.
 - **Data safety**: mirror the iOS privacy label (email, user ID, name, health,
   fitness, messages, other user content, crash data; none used for tracking).
-- **Privacy policy URL**: `https://api.aurashields.com/privacy`.
+- **Privacy policy URL**: `https://fitpixel.app/privacy`.
 - **Account deletion URL**: Play asks for a web link; Settings → Account in the
   app covers in-app deletion.
 - **Closed testing**: personal developer accounts need a closed test with at
   least 12 opted-in testers for 14 days before production access.
-- **App links**: `api.aurashields.com/.well-known/assetlinks.json` still has a
+- **App links**: `api.fitpixel.app/.well-known/assetlinks.json` still has a
   placeholder fingerprint (`fit-pixel-server/src/routes/well-known.ts`). Put in
   the SHA-256 of the **Play app signing** key (Play Console → App integrity)
   and the EAS upload key so `/auth/callback` links open the app.

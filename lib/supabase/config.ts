@@ -13,4 +13,4 @@ export function getSupabasePublicConfig(): {
   return { url: url.replace(/\/$/, ""), anonKey };
 }
 
-export const AUTH_CALLBACK_URL = "https://api.aurashields.com/auth/callback";
+export const AUTH_CALLBACK_URL = "https://api.fitpixel.app/auth/callback";
