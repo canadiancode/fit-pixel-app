@@ -2,7 +2,7 @@ import Constants from "expo-constants";
 
 /**
  * Fit Pixel API base URL (no trailing slash).
- * Set `EXPO_PUBLIC_FIT_PIXEL_API_URL` in `.env` (e.g. https://api.aurashields.com).
+ * Set `EXPO_PUBLIC_FIT_PIXEL_API_URL` in `.env` (e.g. https://api.fitpixel.app).
  * Defaults to production so food search works once FatSecret is live on the server.
  */
 export function getFitPixelApiBaseUrl(): string {
@@ -16,5 +16,5 @@ export function getFitPixelApiBaseUrl(): string {
     return fromExtra.trim().replace(/\/$/, "");
   }
 
-  return "https://api.aurashields.com";
+  return "https://api.fitpixel.app";
 }

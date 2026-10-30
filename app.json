@@ -20,7 +20,7 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.fitpixel.app",
       "associatedDomains": [
-        "applinks:api.aurashields.com"
+        "applinks:api.fitpixel.app"
       ],
       "entitlements": {
         "com.apple.developer.healthkit": true
@@ -131,7 +131,7 @@
           "data": [
             {
               "scheme": "https",
-              "host": "api.aurashields.com",
+              "host": "api.fitpixel.app",
               "pathPrefix": "/auth/callback"
             }
           ],
@@ -212,7 +212,7 @@
     },
     "extra": {
       "router": {},
-      "fitPixelApiUrl": "https://api.aurashields.com",
+      "fitPixelApiUrl": "https://api.fitpixel.app",
       "eas": {
         "projectId": "9e6ef890-8751-4a1b-ba96-3cecae61cd37"
       }

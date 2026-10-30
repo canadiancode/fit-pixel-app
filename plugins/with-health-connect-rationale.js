@@ -14,15 +14,14 @@ const ALIAS_NAME = "ViewPermissionUsageActivity";
  * Health Connect's permission sheet links to "the developer's privacy policy",
  * and Google Play requires that link to show it. react-native-health-connect
  * routes the link to MainActivity, which just opens the app, so hand it to a
- * tiny activity that opens the server's /privacy page and finishes.
+ * tiny activity that opens the website's /privacy page and finishes.
  *
  * Mods of one type run last-registered-first, so list this plugin *before*
  * react-native-health-connect in app.json: its manifest mod then runs after the
  * library's and can move the intent filter it added.
  */
 module.exports = function withHealthConnectRationale(config) {
-  const apiUrl = config.extra?.fitPixelApiUrl ?? "https://api.aurashields.com";
-  const privacyUrl = `${apiUrl.replace(/\/$/, "")}/privacy`;
+  const privacyUrl = "https://fitpixel.app/privacy";
 
   config = withAndroidManifest(config, (cfg) => {
     const app = AndroidConfig.Manifest.getMainApplicationOrThrow(cfg.modResults);
