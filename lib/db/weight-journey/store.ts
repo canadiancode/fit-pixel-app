@@ -5,6 +5,7 @@ import { convertWeightValue } from "../habit-log/units";
 import type { HabitLogSource } from "../habit-log/types";
 import { newLocalRecord, nowIso } from "../ids";
 import { ensureWeightJourneySchema } from "../migrations";
+import { enqueueOp } from "../pending-ops/enqueue";
 import { applyXpAward } from "../xp/store";
 import type { XpEvent } from "../xp/types";
 import type { XpEventReason } from "../xp/amounts";
@@ -154,11 +155,16 @@ export async function listWeightEntries(
   return entries;
 }
 
+type WeightXpAwardPayload = {
+  awardKey: string;
+  reason: Extract<XpEventReason, "weigh_in" | "weight_milestone">;
+  amount: number;
+  dayKey: string;
+};
+
 /**
- * Award weigh-in / milestone XP at most once per `awardKey`.
- * Returns null when the key was already claimed.
- *
- * SECURITY: local XP prototype — cheatable, like the daily goal bonuses.
+ * Award weigh-in / milestone XP at most once per `awardKey`. Returns null when
+ * the key was already claimed. enqueueUnsyncedWeightXpAwards sends it later.
  */
 export async function claimWeightXpAward(
   db: SQLiteDatabase,
@@ -186,6 +192,45 @@ export async function claimWeightXpAward(
     relatedEntityId: input.awardKey,
     dayKey: input.dayKey,
   });
+}
+
+/**
+ * Queue every weight award not yet sent as an xp_award op, keyed by its XP
+ * event id. Weight XP can't be worked out on the server (the journey settings
+ * stay on this device), so claim_my_weight_xp() records and bounds it there.
+ *
+ * Call only once the server is known to score weight XP (GET /v1/me/xp
+ * answered): an older server acks xp_award as ignored, which would mark the
+ * award sent and lose it. Returns how many were queued.
+ */
+export async function enqueueUnsyncedWeightXpAwards(
+  db: SQLiteDatabase,
+): Promise<number> {
+  await ensureWeightJourneySchema(db);
+  const rows = await db.getAllAsync<{
+    awardKey: string;
+    xpEventId: string;
+    amount: number;
+    reason: string;
+    dayKey: string | null;
+  }>(
+    `SELECT w.awardKey, w.xpEventId, e.amount, e.reason, e.dayKey
+     FROM weight_xp_awards w
+     JOIN xp_events e ON e.id = w.xpEventId
+     WHERE e.reason IN ('weigh_in', 'weight_milestone')
+       AND e.dayKey IS NOT NULL
+       AND NOT EXISTS (SELECT 1 FROM pending_server_ops o WHERE o.id = w.xpEventId)`,
+  );
+  for (const row of rows) {
+    const payload: WeightXpAwardPayload = {
+      awardKey: row.awardKey,
+      reason: row.reason as WeightXpAwardPayload["reason"],
+      amount: row.amount,
+      dayKey: row.dayKey as string,
+    };
+    await enqueueOp(db, "xp_award", payload, { id: row.xpEventId });
+  }
+  return rows.length;
 }
 
 export async function hasWeightXpAward(

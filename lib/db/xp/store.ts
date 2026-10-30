@@ -76,8 +76,9 @@ export async function getXpState(db: SQLiteDatabase): Promise<XpState> {
 /**
  * Append xp_event + bump xp_state. Caller owns the transaction if needed.
  *
- * SECURITY: local-only UX prototype — cheatable; server must recompute from facts.
- * SECURITY: does not enqueueOp("xp_award"); habit_log facts remain sync truth.
+ * Local awards are instant feedback; once everything has synced, the server's
+ * total replaces xp_state (see setXpStateFromServer).
+ * SECURITY: does not enqueue anything; weight XP is queued by its caller.
  * SECURITY: does not touch inventory / unlocks (Phase 5 owns those checks).
  */
 export async function applyXpAward(
@@ -240,4 +241,58 @@ export async function listRecentXpEvents(
     dayKey: row.dayKey,
     createdAt: row.createdAt,
   }));
+}
+
+const xpStateListeners = new Set<() => void>();
+
+/** Called when xp_state changes outside an award (the server total arrived). */
+export function subscribeXpStateChange(listener: () => void): () => void {
+  xpStateListeners.add(listener);
+  return () => {
+    xpStateListeners.delete(listener);
+  };
+}
+
+/**
+ * Replace local XP with the server's total, which counts every device and is
+ * what the leaderboard shows. Skipped (returns false) if xp_state changed since
+ * `expectUpdatedAt` was read, or an XP-bearing op is still waiting to sync, so
+ * an award made meanwhile isn't wiped before the server has seen it.
+ */
+export async function setXpStateFromServer(
+  db: SQLiteDatabase,
+  input: { lifetimeXp: number; expectUpdatedAt: string },
+): Promise<boolean> {
+  const lifetimeXp = Math.max(0, Math.floor(input.lifetimeXp));
+  let changed = false;
+  await db.withTransactionAsync(async () => {
+    const current = await getXpState(db);
+    if (current.updatedAt !== input.expectUpdatedAt) return;
+    if (await hasUnsyncedXpOps(db)) return;
+    if (current.lifetimeXp === lifetimeXp) return;
+    await db.runAsync(
+      `UPDATE xp_state SET lifetimeXp = ?, level = ?, updatedAt = ? WHERE id = 1`,
+      lifetimeXp,
+      getPixelLevel(lifetimeXp),
+      nowIso(),
+    );
+    changed = true;
+  });
+  if (changed) {
+    for (const listener of xpStateListeners) {
+      listener();
+    }
+  }
+  return changed;
+}
+
+/** Ops the server scores XP from, still pending or failed. */
+export async function hasUnsyncedXpOps(db: SQLiteDatabase): Promise<boolean> {
+  const row = await db.getFirstAsync<{ ok: number }>(
+    `SELECT 1 AS ok FROM pending_server_ops
+     WHERE status IN ('pending', 'failed')
+       AND type IN ('habit_log', 'daily_goals', 'workout_session', 'xp_award', 'prefs')
+     LIMIT 1`,
+  );
+  return row != null;
 }

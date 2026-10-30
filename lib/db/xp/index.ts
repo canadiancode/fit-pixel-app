@@ -25,7 +25,10 @@ export {
   claimGoalBonusSlot,
   getXpState,
   hasGoalBonusBeenAwarded,
+  hasUnsyncedXpOps,
   listRecentXpEvents,
   revokeXpForEntity,
+  setXpStateFromServer,
+  subscribeXpStateChange,
 } from "./store";
 export type { AwardXpInput, XpEvent, XpState } from "./types";

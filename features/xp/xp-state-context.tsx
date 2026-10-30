@@ -10,7 +10,7 @@ import {
   type ReactNode,
 } from "react";
 
-import { getXpState, type XpState } from "@/lib/db";
+import { getXpState, subscribeXpStateChange, type XpState } from "@/lib/db";
 import { maybeAskForReview } from "@/lib/review-prompt";
 
 type XpStateContextValue = {
@@ -29,8 +29,9 @@ const DEFAULT_XP: XpState = {
 const XpStateContext = createContext<XpStateContextValue | null>(null);
 
 /**
- * App-wide local XP state. Cheatable until server is authoritative.
- * Habit writes award XP in SQLite; call refreshXp after awards so UI updates.
+ * App-wide XP state from SQLite. Habit writes award XP there right away (call
+ * refreshXp after awards so the UI updates); once synced, the server's total
+ * replaces it and this refreshes on its own.
  */
 export function XpStateProvider({ children }: { children: ReactNode }) {
   const db = useSQLiteContext();
@@ -49,6 +50,8 @@ export function XpStateProvider({ children }: { children: ReactNode }) {
       void maybeAskForReview(next.level);
     }
   }, [db]);
+
+  useEffect(() => subscribeXpStateChange(() => void refreshXp()), [refreshXp]);
 
   useEffect(() => {
     let cancelled = false;

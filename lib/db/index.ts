@@ -215,8 +215,11 @@ export {
   DAY_COMPLETE_BONUS_KEY,
   getXpState,
   hasGoalBonusBeenAwarded,
+  hasUnsyncedXpOps,
   listRecentXpEvents,
   maybeAwardGoalBonusesForDay,
+  setXpStateFromServer,
+  subscribeXpStateChange,
   XP_DAY_COMPLETE,
   XP_EVENT_REASONS,
   XP_PER_GOAL_MET,
@@ -234,6 +237,7 @@ export {
 } from "./xp";
 export {
   claimWeightXpAward,
+  enqueueUnsyncedWeightXpAwards,
   getWeightJourney,
   hasWeightXpAward,
   listWeightEntries,
