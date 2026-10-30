@@ -71,7 +71,7 @@ export function useBarPulse(pulse: BarPulse | null | undefined) {
     setWidth(e.nativeEvent.layout.width);
   };
 
-  return { containerStyle, glintStyle, glowStyle, gold, onLayout };
+  return { containerStyle, glintStyle, glowStyle, gold, onLayout, width };
 }
 
 /** Place inside the bar's fill clip so the glint only crosses filled pixels. */

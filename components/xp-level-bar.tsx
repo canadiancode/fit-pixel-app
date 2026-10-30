@@ -21,6 +21,14 @@ const XP_BAR_RIGHT_END_WIDTH = 14;
  * the hard right edge of the clipped fill so the seam reads as a rounded end.
  */
 const XP_BAR_RIGHT_END_OFFSET = 8;
+/** Inner edge of the frame's right border: x 1529 of 1555 in the container art. */
+const XP_BAR_TRACK_RIGHT = 1529 / 1555;
+/**
+ * The cap art is opaque for 58 of its 78 px, so its rounded end shows this
+ * far (px) past the fill's cut.
+ */
+const XP_BAR_RIGHT_END_OVERHANG =
+  (XP_BAR_RIGHT_END_WIDTH * 58) / 78 - XP_BAR_RIGHT_END_OFFSET;
 
 type Props = {
   fillPercent: number;
@@ -38,8 +46,17 @@ type Props = {
 export function XpLevelBar(props: Props) {
   const { fillPercent, progressPercent, style, height = 28, pulse, barRef } =
     props;
-  const { containerStyle, glintStyle, glowStyle, gold, onLayout } =
+  const { containerStyle, glintStyle, glowStyle, gold, onLayout, width } =
     useBarPulse(pulse);
+  // Stop the fill where the cap's rounded end meets the border's inner edge,
+  // so a full bar ends inside the frame instead of running over it.
+  const fillWidth =
+    width > 0
+      ? Math.min(
+          (fillPercent / 100) * width,
+          width * XP_BAR_TRACK_RIGHT - XP_BAR_RIGHT_END_OVERHANG,
+        )
+      : null;
 
   const percentLabel =
     progressPercent != null
@@ -58,16 +75,18 @@ export function XpLevelBar(props: Props) {
       }
     >
       <View
-        style={[styles.fillClip, { width: `${fillPercent}%` }]}
+        style={[styles.fillClip, { width: fillWidth ?? `${fillPercent}%` }]}
       >
         <Image
           accessibilityIgnoresInvertColors
           source={require("@/assets/bars/xp-level-large.png")}
           style={[
             styles.fillImage,
-            fillPercent > 0
-              ? { width: `${10000 / fillPercent}%` }
-              : { width: "100%" },
+            width > 0
+              ? { width }
+              : fillPercent > 0
+                ? { width: `${10000 / fillPercent}%` }
+                : { width: "100%" },
           ]}
           contentFit="fill"
         />
@@ -76,7 +95,7 @@ export function XpLevelBar(props: Props) {
       <View
         style={[
           styles.fillRightEndWrap,
-          { left: `${fillPercent}%` },
+          { left: fillWidth ?? `${fillPercent}%` },
         ]}
       >
         <Image
