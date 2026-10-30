@@ -8,12 +8,15 @@ import {
   subscribePendingOpEnqueue,
 } from "@/lib/db";
 import { drainPendingServerOps } from "@/lib/sync/drain";
+import { reconcileXpWithServer } from "@/lib/sync/xp-reconcile";
 
 const DEBOUNCE_MS = 800;
 const POLL_MS = 20_000;
 /** After a failed POST: 5 s, 10 s, 20 s … capped at 5 min. */
 const BACKOFF_BASE_MS = 5_000;
 const BACKOFF_MAX_MS = 5 * 60_000;
+/** Pick up XP earned on other devices at most this often while idle. */
+const XP_RECONCILE_MIN_MS = 60_000;
 
 export function SyncDrainProvider({ children }: { children: ReactNode }) {
   const db = useSQLiteContext();
@@ -25,6 +28,18 @@ export function SyncDrainProvider({ children }: { children: ReactNode }) {
     let inFlight = false;
     let failures = 0;
     let retryAt = 0;
+    let xpCheckedAt = 0;
+
+    // Once the outbox is empty, show the server's XP total (every device,
+    // same as the leaderboard). `force` after a sync that sent ops.
+    const reconcileXp = (force: boolean) => {
+      if (!token) return;
+      if (!force && Date.now() - xpCheckedAt < XP_RECONCILE_MIN_MS) return;
+      xpCheckedAt = Date.now();
+      void reconcileXpWithServer(db, token).catch(() => {
+        // Next sync or foreground retries.
+      });
+    };
 
     // A failed drain marks its ops failed, which fires the enqueue listener;
     // without the backoff gate that re-sent the batch every ~800 ms while
@@ -42,6 +57,7 @@ export function SyncDrainProvider({ children }: { children: ReactNode }) {
           } else {
             failures = 0;
             retryAt = 0;
+            reconcileXp(outcome === "sent");
           }
         })
         .catch(() => {
@@ -71,10 +87,12 @@ export function SyncDrainProvider({ children }: { children: ReactNode }) {
     const unsubscribeEnqueue = subscribePendingOpEnqueue(schedule);
     syncTimeZone();
     run();
+    reconcileXp(true);
     const appSub = AppState.addEventListener("change", (state) => {
       if (state === "active") {
         // Back in the foreground the network may be back: retry now.
         retryAt = 0;
+        xpCheckedAt = 0;
         syncTimeZone();
         schedule();
       }

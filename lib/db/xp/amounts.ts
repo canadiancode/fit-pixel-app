@@ -1,8 +1,10 @@
 /**
  * Local XP amounts (v1 — dumb & explicit).
  *
- * SECURITY: Local XP / level / day bonuses are cheatable until a server
- * recomputes from habit_log + goals facts. Do not enqueue xp_award as sync truth.
+ * Local awards are instant feedback; the server's recompute_my_xp() mirrors
+ * these rules and its total replaces local XP after each sync. Only weight XP
+ * is sent as xp_award (the server can't derive it); everything else it scores
+ * from synced facts.
  */
 
 /** Awarded per habit_log insert, up to the daily cap below. */

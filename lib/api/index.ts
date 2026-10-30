@@ -48,3 +48,4 @@ export {
   type PixelSearchItem,
   type ReportReason,
 } from "./chat";
+export { fetchServerXp, type ServerXp } from "./xp";

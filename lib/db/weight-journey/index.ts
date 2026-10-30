@@ -1,5 +1,6 @@
 export {
   claimWeightXpAward,
+  enqueueUnsyncedWeightXpAwards,
   getWeightJourney,
   hasWeightXpAward,
   listWeightEntries,
