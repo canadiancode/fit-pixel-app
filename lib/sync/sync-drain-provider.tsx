@@ -72,13 +72,18 @@ export function SyncDrainProvider({ children }: { children: ReactNode }) {
     const unsubscribeEnqueue = subscribePendingOpEnqueue(schedule);
     syncTimeZone();
     // Signed in: queue anything saved on this device that never reached the
-    // outbox (older builds, or a crash between save and queue).
+    // outbox (older builds, or a crash between save and queue), then drain.
+    // Backfill first, so a repaired op isn't held by a drain that saw it
+    // before the repair.
     if (token) {
-      void enqueueMissingSyncOps(db).catch(() => {
-        // Retried on the next launch.
-      });
+      void enqueueMissingSyncOps(db)
+        .catch(() => {
+          // Retried on the next launch.
+        })
+        .finally(run);
+    } else {
+      run();
     }
-    run();
     const appSub = AppState.addEventListener("change", (state) => {
       if (state === "active") {
         // Back in the foreground the network (or a server update) may be
