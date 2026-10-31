@@ -18,6 +18,7 @@ import {
 } from "@/constants/app-colors";
 import { FONT_FAMILY } from "@/constants/fonts";
 import { ActionsSubScreenLayout } from "@/features/actions/components/actions-sub-screen-layout";
+import { FatSecretAttribution } from "@/features/actions/components/fatsecret-attribution";
 import { FoodMealListRow } from "@/features/actions/components/food-meal-list-row";
 import type { FoodMealListItem } from "@/features/actions/food-meal-types";
 import { useFoodMeals } from "@/features/actions/food-meals-context";
@@ -229,6 +230,8 @@ export default function FoodSearchScreen() {
           );
         })}
       </View>
+
+      <FatSecretAttribution />
     </ActionsSubScreenLayout>
   );
 }
