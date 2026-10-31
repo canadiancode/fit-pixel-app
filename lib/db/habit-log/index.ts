@@ -10,6 +10,7 @@ export {
 } from "./recent-food";
 export {
   getHabitLog,
+  enqueueUnqueuedHabitLogs,
   insertHabitLog,
   listHabitLogsForDay,
   logActiveKcal,

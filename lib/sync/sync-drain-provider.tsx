@@ -7,7 +7,8 @@ import {
   enqueueDayBoundaryTimeZoneIfUnsynced,
   subscribePendingOpEnqueue,
 } from "@/lib/db";
-import { drainPendingServerOps } from "@/lib/sync/drain";
+import { enqueueMissingSyncOps } from "@/lib/sync/backfill";
+import { clearDeferredOps, drainPendingServerOps } from "@/lib/sync/drain";
 
 const DEBOUNCE_MS = 800;
 const POLL_MS = 20_000;
@@ -70,11 +71,25 @@ export function SyncDrainProvider({ children }: { children: ReactNode }) {
 
     const unsubscribeEnqueue = subscribePendingOpEnqueue(schedule);
     syncTimeZone();
-    run();
+    // Signed in: queue anything saved on this device that never reached the
+    // outbox (older builds, or a crash between save and queue), then drain.
+    // Backfill first, so a repaired op isn't held by a drain that saw it
+    // before the repair.
+    if (token) {
+      void enqueueMissingSyncOps(db)
+        .catch(() => {
+          // Retried on the next launch.
+        })
+        .finally(run);
+    } else {
+      run();
+    }
     const appSub = AppState.addEventListener("change", (state) => {
       if (state === "active") {
-        // Back in the foreground the network may be back: retry now.
+        // Back in the foreground the network (or a server update) may be
+        // back: retry now, held ops included.
         retryAt = 0;
+        clearDeferredOps();
         syncTimeZone();
         schedule();
       }

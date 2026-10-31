@@ -587,6 +587,37 @@ export async function logActiveKcal(
 }
 
 /** How many `type` logs `dayKey` holds (the daily XP cap counts these). */
+/**
+ * Queue habit logs that have no outbox op: the app was killed between saving
+ * a log and queueing it, or the log predates sync. Restored logs carry a
+ * synced marker op, so they are skipped. Returns how many were queued.
+ */
+export async function enqueueUnqueuedHabitLogs(
+  db: SQLiteDatabase,
+): Promise<number> {
+  const rows = await db.getAllAsync<HabitLogRow>(
+    `SELECT h.id, h.type, h.timestamp, h.createdAt, h.source, h.notes, h.dayKey, h.payload_json
+     FROM habit_logs h
+     WHERE NOT EXISTS (SELECT 1 FROM pending_server_ops o WHERE o.id = h.id)
+     ORDER BY h.timestamp ASC`,
+  );
+  let queued = 0;
+  for (const row of rows) {
+    let log: HabitLog;
+    try {
+      log = mapRow(row);
+    } catch {
+      continue;
+    }
+    await enqueueOp(db, "habit_log", habitLogToEnqueuePayload(log), {
+      id: log.id,
+      clientClockAt: log.timestamp,
+    });
+    queued += 1;
+  }
+  return queued;
+}
+
 async function countHabitLogsForDay(
   db: SQLiteDatabase,
   dayKey: string,

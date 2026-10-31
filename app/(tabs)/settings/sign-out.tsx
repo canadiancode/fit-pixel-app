@@ -1,4 +1,5 @@
 import { Image } from "expo-image";
+import { useSQLiteContext } from "expo-sqlite";
 import { useState } from "react";
 import { Alert, Pressable, StyleSheet, View } from "react-native";
 
@@ -11,24 +12,65 @@ import {
   SETTINGS_SIGN_OUT_BACKGROUND,
   SETTINGS_SIGN_OUT_BG_ASPECT_RATIO,
 } from "@/features/settings/constants";
+import { drainUntilIdle } from "@/lib/sync/drain";
+
+type SignOutStep = "idle" | "backing-up" | "signing-out";
 
 export default function SignOutSettingsScreen() {
-  const { signOut } = useAuth();
-  const [signingOut, setSigningOut] = useState(false);
+  const db = useSQLiteContext();
+  const { session, signOut } = useAuth();
+  const [step, setStep] = useState<SignOutStep>("idle");
+  const signingOut = step !== "idle";
+
+  const finishSignOut = () => {
+    setStep("signing-out");
+    void signOut().catch(() => setStep("idle"));
+  };
+
+  // Sign-out clears this phone, so upload everything first. Only if some
+  // changes still can't reach the account does the user decide to lose them.
+  const backUpThenSignOut = async () => {
+    setStep("backing-up");
+    let waiting: number;
+    try {
+      waiting = await drainUntilIdle(db, session?.access_token);
+    } catch {
+      waiting = -1;
+    }
+    if (waiting === 0) {
+      finishSignOut();
+      return;
+    }
+    const one = waiting === 1;
+    const what =
+      waiting > 0
+        ? `${waiting} ${one ? "change hasn't" : "changes haven't"}`
+        : "Some changes haven't";
+    Alert.alert(
+      "Not backed up yet",
+      `${what} reached your account yet, usually because you're offline. ` +
+        `If you sign out now, ${one ? "it" : "they"}'ll be lost. Stay signed ` +
+        `in and try again when you're online to keep ${one ? "it" : "them"}.`,
+      [
+        { text: "Stay signed in", style: "cancel", onPress: () => setStep("idle") },
+        { text: "Sign out anyway", style: "destructive", onPress: finishSignOut },
+      ],
+      { cancelable: true, onDismiss: () => setStep("idle") },
+    );
+  };
 
   const confirmSignOut = () => {
     if (signingOut) return;
     Alert.alert(
       "Sign out?",
-      "Your synced data comes back when you sign in again. Anything not synced yet on this device will be lost.",
+      "We'll back up this phone first. Everything comes back when you sign in again.",
       [
         { text: "Cancel", style: "cancel" },
         {
           text: "Sign out",
           style: "destructive",
           onPress: () => {
-            setSigningOut(true);
-            void signOut().catch(() => setSigningOut(false));
+            void backUpThenSignOut();
           },
         },
       ],
@@ -40,7 +82,8 @@ export default function SignOutSettingsScreen() {
       <View style={styles.block}>
         <SettingsIntro>
           Signing out ends this session and clears Fit Pixel data from this
-          phone. Everything that has synced comes back when you sign in again.
+          phone. We back everything up to your account first, and it all
+          comes back when you sign in again.
         </SettingsIntro>
         <SyncStatusBanner />
         <Pressable
@@ -74,7 +117,11 @@ export default function SignOutSettingsScreen() {
                 darkColor="#ff8a8a"
                 style={styles.buttonLabel}
               >
-                {signingOut ? "Signing out..." : "Sign out"}
+                {step === "backing-up"
+                  ? "Backing up..."
+                  : step === "signing-out"
+                    ? "Signing out..."
+                    : "Sign out"}
               </ThemedText>
             </View>
           </View>

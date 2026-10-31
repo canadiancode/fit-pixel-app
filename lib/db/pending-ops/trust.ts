@@ -22,6 +22,7 @@ export const FACT_PENDING_OP_TYPES = [
   "saved_meal",
   "workout_session",
   "training_plan",
+  "weight_journey",
 ] as const satisfies readonly PendingServerOpType[];
 
 export function trustForOpType(
