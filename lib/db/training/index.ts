@@ -14,5 +14,6 @@ export {
   saveTrainingPlan,
   TRAINING_SYNC_LIMITS,
   workoutSessionToSyncPayload,
+  workoutSyncId,
   type RestoredWorkoutSession,
 } from "./store";

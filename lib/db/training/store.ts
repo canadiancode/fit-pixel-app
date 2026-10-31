@@ -105,6 +105,33 @@ export async function insertWorkoutSession(db: SQLiteDatabase, summary: WorkoutS
   );
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/** 32-bit FNV-1a with a seed, for a deterministic id (not for security). */
+function fnv1a(text: string, seed: number): number {
+  let hash = (0x811c9dc5 ^ seed) >>> 0;
+  for (let i = 0; i < text.length; i += 1) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return hash >>> 0;
+}
+
+/**
+ * The id a session syncs under. Builds before workout sync made ids like
+ * "ws-mvmqrx4s-s-l3zw", which the server (uuid column) refuses, so those map
+ * to a stable UUID derived from the old id: the same workout always gets the
+ * same server id, and re-sends stay idempotent.
+ */
+export function workoutSyncId(sessionId: string): string {
+  if (UUID_RE.test(sessionId)) return sessionId;
+  const hex = [0, 1, 2, 3]
+    .map((seed) => fnv1a(sessionId, seed * 0x9e3779b1).toString(16).padStart(8, "0"))
+    .join("");
+  const variant = ((parseInt(hex[16], 16) & 0x3) | 0x8).toString(16);
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-5${hex.slice(13, 16)}-${variant}${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
+}
+
 /** Wire payload for a finished workout (server types/sync.ts workoutSessionPayloadSchema). */
 export function workoutSessionToSyncPayload(session: WorkoutSession, finishedAt: string): Record<string, unknown> {
   const startedAt = session.startedAt;
@@ -112,7 +139,7 @@ export function workoutSessionToSyncPayload(session: WorkoutSession, finishedAt:
   const latest = Date.parse(startedAt) + 24 * 3_600_000;
   const finished = Date.parse(finishedAt) > latest ? new Date(latest).toISOString() : finishedAt;
   return {
-    id: session.id,
+    id: workoutSyncId(session.id),
     workoutId: clip(session.workoutId, L.idMax, "workout"),
     workoutName: clip(session.workoutName, L.nameMax, "Workout"),
     unit: session.unit,
@@ -271,14 +298,40 @@ export async function insertRestoredWorkoutSessions(
 export async function enqueueUnqueuedTraining(db: SQLiteDatabase): Promise<number> {
   await ensureTrainingSchema(db);
   let queued = 0;
-  const rows = await db.getAllAsync<{ json: string; finishedAt: string }>(
-    `SELECT w.json, w.finishedAt FROM workout_sessions w
-     WHERE NOT EXISTS (
-       SELECT 1 FROM pending_server_ops o
-       WHERE o.type = 'workout_session' AND json_extract(o.payload_json, '$.id') = w.id
-     )
-     ORDER BY w.finishedAt ASC`,
+  // Repair: workout ops queued with a pre-sync id were refused by the server
+  // forever. Re-key them to their sync id and send them again (the only
+  // payload edit the outbox allows: same workout, valid id).
+  const legacyOps = await db.getAllAsync<{ id: string; sessionId: string | null }>(
+    `SELECT id, json_extract(payload_json, '$.id') AS sessionId FROM pending_server_ops
+     WHERE type = 'workout_session' AND status IN ('pending', 'failed', 'rejected')`,
   );
+  for (const op of legacyOps) {
+    if (op.sessionId == null || workoutSyncId(op.sessionId) === op.sessionId) continue;
+    await db.runAsync(
+      `UPDATE pending_server_ops
+       SET payload_json = json_set(payload_json, '$.id', ?), status = 'pending'
+       WHERE id = ?`,
+      workoutSyncId(op.sessionId),
+      op.id,
+    );
+    queued += 1;
+  }
+
+  // Matched in JS: the op payload carries the sync id, which differs from the
+  // local id for sessions from builds before workout sync.
+  const queuedIds = new Set(
+    (
+      await db.getAllAsync<{ id: string | null }>(
+        `SELECT json_extract(payload_json, '$.id') AS id FROM pending_server_ops
+         WHERE type = 'workout_session'`,
+      )
+    ).map((row) => row.id),
+  );
+  const rows = (
+    await db.getAllAsync<{ id: string; json: string; finishedAt: string }>(
+      `SELECT id, json, finishedAt FROM workout_sessions ORDER BY finishedAt ASC`,
+    )
+  ).filter((row) => !queuedIds.has(row.id) && !queuedIds.has(workoutSyncId(row.id)));
   for (const row of rows) {
     let session: WorkoutSession;
     try {
