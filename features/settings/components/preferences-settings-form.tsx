@@ -1,5 +1,5 @@
 import * as Haptics from "expo-haptics";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { PixelFrameBackdrop } from "@/components/pixel-panel";
@@ -14,6 +14,7 @@ import {
   SettingsSegmented,
 } from "@/features/settings/components/settings-ui";
 import { usePrefsProfile } from "@/features/settings/prefs-profile-context";
+import { Stepper } from "@/features/training/components/pixel-ui";
 import { useXpState } from "@/features/xp/xp-state-context";
 import {
   APP_THEME_CATALOG,
@@ -26,13 +27,46 @@ const UNIT_OPTIONS: readonly { value: UnitSystem; label: string }[] = [
   { value: "metric", label: "Metric" },
 ];
 
-/** Common fitness "day starts at" presets (minutes from midnight). */
+/**
+ * One-tap "day starts at" picks (minutes from midnight): midnight, training
+ * after midnight, and two night-shift starts. The stepper reaches any time.
+ */
 const DAY_START_OPTIONS: readonly { value: number; label: string }[] = [
   { value: 0, label: "12 AM" },
-  { value: 3 * 60, label: "3 AM" },
   { value: 4 * 60, label: "4 AM" },
-  { value: 5 * 60, label: "5 AM" },
+  { value: 12 * 60, label: "Noon" },
+  { value: 18 * 60, label: "6 PM" },
 ];
+
+const MINUTES_PER_DAY = 24 * 60;
+const DAY_START_STEP_MINUTES = 30;
+/** Holding the stepper sends many steps; save once it settles. */
+const DAY_START_SAVE_DELAY_MS = 700;
+
+function stepDayStart(minutes: number, direction: 1 | -1): number {
+  // Snap off-grid values (set elsewhere) to the step, then wrap around midnight.
+  const snapped =
+    Math.round(minutes / DAY_START_STEP_MINUTES) * DAY_START_STEP_MINUTES;
+  const next =
+    snapped === minutes ? minutes + direction * DAY_START_STEP_MINUTES : snapped;
+  return ((next % MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY;
+}
+
+function dayStartFooter(minutes: number): string {
+  if (minutes === 0) {
+    return (
+      "Habits, goals and your streak reset at midnight. Work nights or " +
+      "train after midnight? Set this to when your day really starts."
+    );
+  }
+  const end = formatDayStart(
+    (minutes + MINUTES_PER_DAY - 1) % MINUTES_PER_DAY,
+  );
+  return (
+    `Your day runs ${formatDayStart(minutes)} to ${end}. Habits, goals ` +
+    `and your streak reset at ${formatDayStart(minutes)}.`
+  );
+}
 
 function formatDayStart(minutes: number): string {
   const h = Math.floor(minutes / 60);
@@ -71,9 +105,49 @@ export function PreferencesSettingsForm() {
     void updatePrefs({ selectedThemeId: id });
   };
 
-  const isPreset = DAY_START_OPTIONS.some(
-    (option) => option.value === prefs.dayStartsAtMinutes,
+  // The stepper edits a draft; it's saved (and synced) once it settles.
+  const [dayStartDraft, setDayStartDraft] = useState<number | null>(null);
+  const dayStart = dayStartDraft ?? prefs.dayStartsAtMinutes;
+  const unsavedDayStartRef = useRef<number | null>(null);
+  const updatePrefsRef = useRef(updatePrefs);
+  updatePrefsRef.current = updatePrefs;
+
+  useEffect(() => {
+    if (dayStartDraft == null) return;
+    if (dayStartDraft === prefs.dayStartsAtMinutes) {
+      unsavedDayStartRef.current = null;
+      setDayStartDraft(null);
+      return;
+    }
+    unsavedDayStartRef.current = dayStartDraft;
+    const timer = setTimeout(() => {
+      unsavedDayStartRef.current = null;
+      void updatePrefs({ dayStartsAtMinutes: dayStartDraft })
+        .catch(() => undefined)
+        .finally(() => setDayStartDraft(null));
+    }, DAY_START_SAVE_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [dayStartDraft, prefs.dayStartsAtMinutes, updatePrefs]);
+
+  // Leaving the screen mid-wait still saves the pick.
+  useEffect(
+    () => () => {
+      const unsaved = unsavedDayStartRef.current;
+      if (unsaved != null) {
+        void updatePrefsRef
+          .current({ dayStartsAtMinutes: unsaved })
+          .catch(() => undefined);
+      }
+    },
+    [],
   );
+
+  const stepDayStartBy = (direction: 1 | -1) => {
+    if (!isHydrated) return;
+    setDayStartDraft((draft) =>
+      stepDayStart(draft ?? prefs.dayStartsAtMinutes, direction),
+    );
+  };
 
   return (
     <View style={styles.root}>
@@ -155,22 +229,27 @@ export function PreferencesSettingsForm() {
 
       <SettingsSection
         title="day starts at"
-        footer={
-          isPreset
-            ? "When your habits and daily goals reset. Pick a later time if you often train after midnight."
-            : `Currently ${formatDayStart(prefs.dayStartsAtMinutes)}. Pick a preset to change it.`
-        }
+        footer={dayStartFooter(dayStart)}
         bare
       >
-        <SettingsSegmented
-          accessibilityLabel="Day starts at"
-          options={DAY_START_OPTIONS}
-          value={prefs.dayStartsAtMinutes}
-          disabled={!isHydrated}
-          onChange={(dayStartsAtMinutes) => {
-            void updatePrefs({ dayStartsAtMinutes });
-          }}
-        />
+        <View style={styles.dayStart}>
+          <Stepper
+            compact
+            label="NEW DAY AT"
+            value={formatDayStart(dayStart)}
+            decreaseLabel={`Earlier, ${DAY_START_STEP_MINUTES} minutes`}
+            increaseLabel={`Later, ${DAY_START_STEP_MINUTES} minutes`}
+            onDecrease={() => stepDayStartBy(-1)}
+            onIncrease={() => stepDayStartBy(1)}
+          />
+          <SettingsSegmented
+            accessibilityLabel="Day starts at presets"
+            options={DAY_START_OPTIONS}
+            value={dayStart}
+            disabled={!isHydrated}
+            onChange={(minutes) => setDayStartDraft(minutes)}
+          />
+        </View>
       </SettingsSection>
     </View>
   );
@@ -179,6 +258,9 @@ export function PreferencesSettingsForm() {
 const styles = StyleSheet.create({
   root: {
     gap: 28,
+  },
+  dayStart: {
+    gap: 12,
   },
   themeGrid: {
     flexDirection: "row",
