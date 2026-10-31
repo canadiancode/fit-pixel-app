@@ -34,8 +34,10 @@ export const BAR_CHART_PLOT_HEIGHT = 300;
 const CHART_OUTER_PADDING = 7;
 const CHART_MIN_WIDTH = 300;
 const Y_AXIS_WIDTH = 50;
+const Y_AXIS_LABEL_LINE_HEIGHT = 14;
 const X_AXIS_HEIGHT = 15;
-const DATA_PADDING_TOP = 0;
+/** Room for the top grid/goal line, whose border draws just above its position. */
+const DATA_PADDING_TOP = 2;
 /** Symmetric with top inset on `#data` (see DevTools: `padding-bottom: 7px`). */
 const DATA_PADDING_BOTTOM = 7;
 const BAR_BORDER_RADIUS = 7;
@@ -305,7 +307,21 @@ export function BarChart({
           {markerValues.map((markerValue) => (
             <Text
               key={`y-${String(markerValue)}`}
-              style={[styles.yAxisLabel, { color: tokens.axisText }]}
+              style={[
+                styles.yAxisLabel,
+                {
+                  color: tokens.axisText,
+                  bottom:
+                    DATA_PADDING_BOTTOM +
+                    bottomPxForValue(
+                      markerValue,
+                      innerHeight,
+                      lowestMarker,
+                      highestMarker,
+                    ) -
+                    Y_AXIS_LABEL_LINE_HEIGHT / 2,
+                },
+              ]}
             >
               {formatBarChartYAxisLabel(markerValue)}
             </Text>
@@ -431,16 +447,19 @@ const styles = StyleSheet.create({
     minHeight: BAR_CHART_PLOT_HEIGHT,
     alignItems: "flex-start",
   },
+  /** Labels are centered on their grid line, so they line up with the plot. */
   yAxis: {
-    flexDirection: "column-reverse",
-    justifyContent: "space-between",
+    position: "relative",
   },
   yAxisLabel: {
+    position: "absolute",
+    left: 0,
+    right: 0,
     margin: 0,
     textAlign: "center",
     fontFamily: FONT_FAMILY,
     fontSize: 12,
-    lineHeight: 14,
+    lineHeight: Y_AXIS_LABEL_LINE_HEIGHT,
   },
   /** Target value: top-left of plot, bottom edge on the goal line (outside Y-axis gutter). */
   plotTargetLabel: {
@@ -481,7 +500,8 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 0,
     right: 0,
-    top: 0,
+    /** Absolute children ignore the parent's padding, so offset to match the bars. */
+    top: DATA_PADDING_TOP,
     overflow: "visible",
   },
   /**

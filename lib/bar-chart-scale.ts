@@ -9,15 +9,79 @@ export type BarChartYScale = {
   range: number;
 };
 
+/** Most gaps between Y-axis labels; past this the labels overlap the plot. */
+const MAX_MARKER_INTERVALS = 6;
+/** Step multipliers tried per power of ten (×1, ×2, ×2.5, ×4, ×5, ×10, …). */
+const NICE_STEP_MULTIPLIERS = [1, 2, 2.5, 4, 5] as const;
+/** Leading digits that read well on an axis (e.g. 5K, 25 oz, 60 min); rules out 4 h, 8K, 37.5. */
+const NICE_LEADING_VALUES = [1, 1.5, 2, 2.5, 3, 5, 6] as const;
+
+function isNiceStep(step: number): boolean {
+  if (!Number.isInteger(step)) return false;
+  const leading = step / 10 ** Math.floor(Math.log10(step));
+  return NICE_LEADING_VALUES.some((nice) => Math.abs(leading - nice) < 1e-9);
+}
+
+/** `formatBarChartYAxisLabel` shows `value` without rounding (1.5K yes, 1.25K → "1.3K" no). */
+function hasExactLabel(value: number): boolean {
+  return Math.abs(value) < 1000
+    ? Number.isInteger(value)
+    : Number.isInteger(Math.round((value / 100) * 1e9) / 1e9);
+}
+
+function snapDomain(
+  lowestVal: number,
+  highestVal: number,
+  step: number,
+  yDomainFromZero: boolean,
+  hasTarget: boolean,
+) {
+  const lowestMarker = yDomainFromZero ? 0 : Math.floor(lowestVal / step) * step;
+  let highestMarker = Math.ceil(highestVal / step) * step;
+  if (!hasTarget && highestMarker === lowestMarker) {
+    highestMarker += step;
+  }
+  return { lowestMarker, highestMarker };
+}
+
+/** Smallest nice multiple of `increment` that fits in `MAX_MARKER_INTERVALS` gaps. */
+function pickStep(
+  lowestVal: number,
+  highestVal: number,
+  increment: number,
+  yDomainFromZero: boolean,
+  hasTarget: boolean,
+) {
+  for (let scale = 1; ; scale *= 10) {
+    for (const multiplier of NICE_STEP_MULTIPLIERS) {
+      const step = increment * multiplier * scale;
+      // ×1 always counts, so the search ends even for an unusual `increment`.
+      if (multiplier !== 1 && !isNiceStep(step)) continue;
+      const domain = snapDomain(lowestVal, highestVal, step, yDomainFromZero, hasTarget);
+      const intervals = Math.round(
+        (domain.highestMarker - domain.lowestMarker) / step,
+      );
+      if (intervals > MAX_MARKER_INTERVALS) continue;
+      const labelsExact = Array.from({ length: intervals + 1 }, (_, index) =>
+        hasExactLabel(domain.lowestMarker + index * step),
+      ).every(Boolean);
+      if (multiplier === 1 || labelsExact) return { step, ...domain };
+    }
+  }
+}
+
 /**
- * Snaps the Y domain to multiples of `increment`, matching the prototype HTML chart.
+ * Snaps the Y domain to multiples of a step, starting from `increment` (matching the
+ * prototype HTML chart) and growing it to a nice multiple of `increment` when the data
+ * would need more than `MAX_MARKER_INTERVALS` labels (e.g. a 35 h sleep day at 1 h steps
+ * becomes 0–40 h in 10 h steps).
  *
  * @param yDomainFromZero When `true`, the domain floor is pinned to `0` so bar heights are
  *   proportional to absolute values. When `false`, the floor is the data minimum (snapped
- *   down to `increment`), matching the original `bar-chart.html` behavior.
+ *   down to the step), matching the original `bar-chart.html` behavior.
  * @param targetVal When set, included in the domain so the goal line stays inside the plot
  *   (at the top when series values are empty or all below the target). When omitted, a
- *   zero-range domain (empty or all-zero series) expands by one `increment`.
+ *   zero-range domain (empty or all-zero series) expands by one step.
  */
 export function generateMarkers(
   yValues: readonly number[],
@@ -30,10 +94,9 @@ export function generateMarkers(
   }
 
   const hasTarget = targetVal !== undefined && Number.isFinite(targetVal);
-  const domainValues =
-    targetVal !== undefined && Number.isFinite(targetVal)
-      ? [...yValues, targetVal]
-      : yValues;
+  const domainValues = (hasTarget ? [...yValues, targetVal] : [...yValues]).filter(
+    (value) => Number.isFinite(value),
+  );
 
   if (domainValues.length === 0) {
     if (!hasTarget) {
@@ -54,23 +117,24 @@ export function generateMarkers(
 
   const lowestVal = Math.min(...domainValues);
   const highestVal = Math.max(...domainValues);
-  const lowestMarker = yDomainFromZero
-    ? 0
-    : Math.floor(lowestVal / increment) * increment;
-  let highestMarker = Math.ceil(highestVal / increment) * increment;
-  if (!hasTarget && highestMarker === lowestMarker) {
-    highestMarker += increment;
-  }
-  const markers: number[] = [];
-  for (let i = lowestMarker; i <= highestMarker; i += increment) {
-    markers.push(i);
-  }
-  const range = highestMarker - lowestMarker;
+
+  const { step, lowestMarker, highestMarker } = pickStep(
+    lowestVal,
+    highestVal,
+    increment,
+    yDomainFromZero,
+    hasTarget,
+  );
+  const intervals = Math.round((highestMarker - lowestMarker) / step);
+  const markers = Array.from(
+    { length: intervals + 1 },
+    (_, index) => lowestMarker + index * step,
+  );
   return {
     markerValues: markers,
     lowestMarker,
     highestMarker,
-    range,
+    range: highestMarker - lowestMarker,
   };
 }
 
