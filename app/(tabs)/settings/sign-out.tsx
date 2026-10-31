@@ -41,15 +41,16 @@ export default function SignOutSettingsScreen() {
       finishSignOut();
       return;
     }
+    const one = waiting === 1;
     const what =
       waiting > 0
-        ? `${waiting} ${waiting === 1 ? "change hasn't" : "changes haven't"}`
+        ? `${waiting} ${one ? "change hasn't" : "changes haven't"}`
         : "Some changes haven't";
     Alert.alert(
       "Not backed up yet",
       `${what} reached your account yet, usually because you're offline. ` +
-        "If you sign out now, they'll be lost. Stay signed in and try again " +
-        "when you're online to keep them.",
+        `If you sign out now, ${one ? "it" : "they"}'ll be lost. Stay signed ` +
+        `in and try again when you're online to keep ${one ? "it" : "them"}.`,
       [
         { text: "Stay signed in", style: "cancel", onPress: () => setStep("idle") },
         { text: "Sign out anyway", style: "destructive", onPress: finishSignOut },
