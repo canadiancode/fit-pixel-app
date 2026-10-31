@@ -5,13 +5,15 @@ import { convertWeightValue } from "../habit-log/units";
 import type { HabitLogSource } from "../habit-log/types";
 import { newLocalRecord, nowIso } from "../ids";
 import { ensureWeightJourneySchema } from "../migrations";
+import { enqueueOp, recordRestoredOp } from "../pending-ops";
 import { applyXpAward } from "../xp/store";
 import type { XpEvent } from "../xp/types";
 import type { XpEventReason } from "../xp/amounts";
 
 /**
- * Long-term weight settings (singleton). Local only: weight is a journey,
- * not a daily goal, so none of this syncs as goals.
+ * Long-term weight settings (singleton). Weight is a journey, not a daily
+ * goal, so it syncs as its own `weight_journey` op (never as goals). The
+ * reminder notification id and last Health sync stay on this device.
  */
 export type WeightJourney = {
   /** Weight the current journey started from (in `startUnit`). */
@@ -29,6 +31,36 @@ export type WeightJourney = {
 };
 
 export type WeightJourneyUpdate = Partial<Omit<WeightJourney, "updatedAt">>;
+
+/** The fields that back up to the account (see `weight_journey` sync). */
+type SyncedWeightJourney = Pick<
+  WeightJourney,
+  | "startWeight"
+  | "startUnit"
+  | "startDayKey"
+  | "weighInWeekday"
+  | "reminderEnabled"
+  | "hideNumbers"
+>;
+
+function syncedFields(journey: WeightJourney): SyncedWeightJourney {
+  return {
+    startWeight: journey.startWeight,
+    startUnit: journey.startUnit,
+    startDayKey: journey.startDayKey,
+    weighInWeekday: journey.weighInWeekday,
+    reminderEnabled: journey.reminderEnabled,
+    hideNumbers: journey.hideNumbers,
+  };
+}
+
+function syncedFieldsChanged(a: WeightJourney, b: WeightJourney): boolean {
+  const x = syncedFields(a);
+  const y = syncedFields(b);
+  return (Object.keys(x) as (keyof SyncedWeightJourney)[]).some(
+    (key) => x[key] !== y[key],
+  );
+}
 
 type WeightJourneyRow = {
   startWeight: number | null;
@@ -103,7 +135,91 @@ export async function updateWeightJourney(
     next.lastHealthSyncAt,
     next.updatedAt,
   );
+  // Health sync stamps and reminder ids change often and stay local; only a
+  // change the account should keep is uploaded.
+  if (syncedFieldsChanged(current, next)) {
+    await enqueueOp(
+      db,
+      "weight_journey",
+      { ...syncedFields(next), updatedAt: next.updatedAt },
+      { clientClockAt: next.updatedAt },
+    );
+  }
   return next;
+}
+
+/**
+ * Queue the journey once if it has never been uploaded (set on a build before
+ * weight journey sync). Returns true when an op was queued.
+ */
+export async function enqueueUnqueuedWeightJourney(
+  db: SQLiteDatabase,
+): Promise<boolean> {
+  const journey = await getWeightJourney(db);
+  if (journey.startWeight == null) return false;
+  const any = await db.getFirstAsync<{ ok: number }>(
+    `SELECT 1 AS ok FROM pending_server_ops WHERE type = 'weight_journey' LIMIT 1`,
+  );
+  if (any != null) return false;
+  await enqueueOp(
+    db,
+    "weight_journey",
+    { ...syncedFields(journey), updatedAt: journey.updatedAt },
+    { clientClockAt: journey.updatedAt },
+  );
+  return true;
+}
+
+/**
+ * Restore: take the account's journey settings as they are. Server rows are
+ * already-synced facts, so nothing is enqueued.
+ */
+export async function applyRestoredWeightJourney(
+  db: SQLiteDatabase,
+  journey: SyncedWeightJourney & { updatedAt: string },
+): Promise<void> {
+  await getWeightJourney(db);
+  const weekday =
+    Number.isInteger(journey.weighInWeekday) &&
+    journey.weighInWeekday >= 0 &&
+    journey.weighInWeekday <= 6
+      ? journey.weighInWeekday
+      : 1;
+  const hasStart = journey.startWeight != null && journey.startUnit != null;
+  await db.runAsync(
+    `UPDATE weight_journey SET startWeight = ?, startUnit = ?, startDayKey = ?,
+      weighInWeekday = ?, reminderEnabled = ?, hideNumbers = ?, updatedAt = ?
+     WHERE id = 1`,
+    hasStart ? journey.startWeight : null,
+    hasStart ? journey.startUnit : null,
+    journey.startDayKey,
+    weekday,
+    journey.reminderEnabled ? 1 : 0,
+    journey.hideNumbers ? 1 : 0,
+    journey.updatedAt,
+  );
+  await recordRestoredOp(db, "weight_journey", `restored-journey:${journey.updatedAt}`, {
+    updatedAt: journey.updatedAt,
+  });
+}
+
+/**
+ * Restore: mark weight awards the account already earned on another install
+ * as paid, so the next weigh-in doesn't pay them again. Never awards XP.
+ */
+export async function markWeightAwardsRestored(
+  db: SQLiteDatabase,
+  awardKeys: readonly string[],
+): Promise<void> {
+  const createdAt = nowIso();
+  for (const awardKey of awardKeys) {
+    await db.runAsync(
+      `INSERT OR IGNORE INTO weight_xp_awards (awardKey, xpEventId, createdAt)
+       VALUES (?, 'restored', ?)`,
+      awardKey,
+      createdAt,
+    );
+  }
 }
 
 /** One weight reading, converted to the requested unit. */

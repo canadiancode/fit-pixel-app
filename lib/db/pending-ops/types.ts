@@ -16,6 +16,7 @@ export const PENDING_SERVER_OP_TYPES = [
   "saved_meal",
   "workout_session",
   "training_plan",
+  "weight_journey",
 ] as const;
 
 export type PendingServerOpType = (typeof PENDING_SERVER_OP_TYPES)[number];

@@ -1,5 +1,6 @@
 import type { SQLiteDatabase } from "expo-sqlite";
 
+import { computeJourney } from "@/features/actions/weight/weight-journey-math";
 import {
   completeLoadout,
   genderOfLoadout,
@@ -20,7 +21,9 @@ import {
 } from "@/lib/api/restore";
 import {
   APP_THEME_CATALOG,
+  applyRestoredWeightJourney,
   claimGoalBonusSlot,
+  convertWeightValue,
   DAILY_SUMMARY_GOAL_KEYS,
   DAY_COMPLETE_BONUS_KEY,
   DEFAULT_THEME_ID,
@@ -28,9 +31,13 @@ import {
   getDailyGoals,
   getDailySummary,
   getDayBoundary,
+  getWeightJourney,
   HABIT_LOG_SOURCES,
   HABIT_LOG_TYPES,
+  listWeightEntries,
+  markWeightAwardsRestored,
   nowIso,
+  recordRestoredOp,
   XP_PER_HABIT_LOG,
 } from "@/lib/db";
 import { applyRestoredTrainingPlan, insertRestoredWorkoutSessions } from "@/lib/db/training";
@@ -269,6 +276,8 @@ async function insertHabitLogs(
       getAppDayKey(new Date(log.timestamp), boundary),
       JSON.stringify(log.payload ?? {}),
     );
+    // Already on the server: keeps the outbox backfill from re-sending it.
+    await recordRestoredOp(db, "habit_log", log.id, {});
     inserted += result.changes;
   }
   return inserted;
@@ -374,28 +383,86 @@ async function reconcileThemes(
   );
 }
 
-/** Equip the server loadout; equipped items join the device inventory. */
+/**
+ * Weight journey: take the account's journey settings, then treat every
+ * milestone a restored weigh-in already crossed as paid. Returns the reward
+ * items those milestones earned, so the gear comes back even when it isn't
+ * equipped. Never awards XP (the server total already counts it).
+ */
+async function restoreWeightJourney(
+  db: SQLiteDatabase,
+  snapshot: RestoreSnapshot,
+): Promise<string[]> {
+  if (snapshot.weightJourney && !(await hasPendingOp(db, "weight_journey"))) {
+    await applyRestoredWeightJourney(db, snapshot.weightJourney);
+  }
+
+  const journey = await getWeightJourney(db);
+  const goals = await getDailyGoals(db);
+  const unit = goals.weightUnit;
+  const entries = await listWeightEntries(db, unit);
+  // Same fallback as the weight screen: no saved start pins the first reading.
+  const start =
+    journey.startWeight != null && journey.startUnit != null
+      ? convertWeightValue(journey.startWeight, journey.startUnit, unit)
+      : (entries[0]?.value ?? null);
+  if (start == null) return [];
+
+  const awardKeys = new Set<string>();
+  const rewardItems = new Set<string>();
+  for (const entry of entries) {
+    if (journey.startDayKey != null && entry.dayKey < journey.startDayKey) continue;
+    const progress = computeJourney({
+      start,
+      current: entry.value,
+      target: goals.weightGoal,
+      unit,
+    });
+    for (const milestone of progress.milestones) {
+      if (!milestone.reached) continue;
+      awardKeys.add(milestone.awardKey);
+      if (milestone.reward != null) rewardItems.add(milestone.reward.itemId);
+    }
+  }
+  await markWeightAwardsRestored(db, [...awardKeys]);
+  return [...rewardItems];
+}
+
+/**
+ * Equip the server loadout; equipped items join the device inventory, and so
+ * do earned-only items the restored data proves (weight milestone gear).
+ */
 async function applyServerLoadout(
   db: SQLiteDatabase,
   snapshot: RestoreSnapshot,
+  earnedItems: readonly string[],
 ): Promise<void> {
-  if (!snapshot.loadout || (await hasPendingOp(db, "loadout"))) return;
+  const useServerLoadout =
+    snapshot.loadout != null && !(await hasPendingOp(db, "loadout"));
+  if (!useServerLoadout && earnedItems.length === 0) return;
 
   const state = await loadPixelPersistedState();
   const loadout = { ...state.loadout };
   const inventory = new Set(state.inventory);
-  for (const layerId of LAYER_IDS) {
-    const itemId = snapshot.loadout.equipped[layerId];
-    if (!itemId) continue;
-    if (getPixelItem(itemId)?.layer !== layerId) continue;
-    loadout[layerId] = itemId;
-    inventory.add(itemId);
+  for (const itemId of earnedItems) {
+    if (getPixelItem(itemId) != null) inventory.add(itemId);
+  }
+  if (useServerLoadout && snapshot.loadout) {
+    for (const layerId of LAYER_IDS) {
+      const itemId = snapshot.loadout.equipped[layerId];
+      if (!itemId) continue;
+      if (getPixelItem(itemId)?.layer !== layerId) continue;
+      loadout[layerId] = itemId;
+      inventory.add(itemId);
+    }
   }
 
   // A look on the current art says which body it wears: no gender prompt.
-  const gender = genderOfLoadout(loadout) ?? state.gender;
+  const gender = useServerLoadout
+    ? (genderOfLoadout(loadout) ?? state.gender)
+    : state.gender;
   await savePixelPersistedState({
-    loadout: completeLoadout(loadout),
+    loadout: useServerLoadout ? completeLoadout(loadout) : state.loadout,
     inventory: [...inventory],
     inventoryGrantVersion: PIXEL_INVENTORY_GRANT_VERSION,
     gender,
@@ -469,8 +536,13 @@ export async function restoreFromServer(
     }
   }
 
+  let earnedItems: string[] = [];
+  await db.withTransactionAsync(async () => {
+    earnedItems = await restoreWeightJourney(db, snapshot);
+  });
+
   // File-backed, outside SQLite; the provider reloads it on the next data epoch.
-  await applyServerLoadout(db, snapshot);
+  await applyServerLoadout(db, snapshot, earnedItems);
 
   await db.withTransactionAsync(async () => {
     // Derived cache; summaries rebuild lazily from the restored logs.

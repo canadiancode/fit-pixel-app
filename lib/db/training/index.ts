@@ -3,6 +3,7 @@ export {
   clearActiveWorkout,
   countWorkoutXpEvents,
   enqueueTrainingPlan,
+  enqueueUnqueuedTraining,
   getActiveWorkout,
   getTrainingPlan,
   insertRestoredWorkoutSessions,

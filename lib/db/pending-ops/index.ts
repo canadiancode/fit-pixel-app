@@ -7,6 +7,7 @@ export {
   listDrainableOps,
   listInventoryUnlocks,
   markOpFailed,
+  recordRestoredOp,
   subscribePendingOpEnqueue,
   type DrainableOpCounts,
   type InventoryUnlockRecord,

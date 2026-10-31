@@ -8,7 +8,7 @@ import type {
 
 import { ensureTrainingSchema } from "../migrations";
 import { nowIso } from "../ids";
-import { enqueueOp } from "../pending-ops";
+import { enqueueOp, recordRestoredOp } from "../pending-ops";
 
 /**
  * Local training storage: the plan (one JSON document), the in-progress
@@ -195,6 +195,9 @@ export async function applyRestoredTrainingPlan(
     JSON.stringify(next),
     next.updatedAt,
   );
+  await recordRestoredOp(db, "training_plan", `restored-plan:${next.updatedAt}`, {
+    updatedAt: next.updatedAt,
+  });
   return true;
 }
 
@@ -252,9 +255,58 @@ export async function insertRestoredWorkoutSessions(
       0,
       JSON.stringify(session),
     );
+    // Op ids aren't session ids, so the marker is keyed for the backfill's
+    // payload lookup; a re-run of the restore reuses the same marker.
+    await recordRestoredOp(db, "workout_session", `restored:${r.id}`, { id: r.id });
     inserted += result.changes;
   }
   return inserted;
+}
+
+/**
+ * Queue what never reached the outbox: workouts finished on builds before
+ * workout sync, and a plan last saved before plan sync. Restored sessions
+ * carry a synced marker op. Returns how many ops were queued.
+ */
+export async function enqueueUnqueuedTraining(db: SQLiteDatabase): Promise<number> {
+  await ensureTrainingSchema(db);
+  let queued = 0;
+  const rows = await db.getAllAsync<{ json: string; finishedAt: string }>(
+    `SELECT w.json, w.finishedAt FROM workout_sessions w
+     WHERE NOT EXISTS (
+       SELECT 1 FROM pending_server_ops o
+       WHERE o.type = 'workout_session' AND json_extract(o.payload_json, '$.id') = w.id
+     )
+     ORDER BY w.finishedAt ASC`,
+  );
+  for (const row of rows) {
+    let session: WorkoutSession;
+    try {
+      session = JSON.parse(row.json) as WorkoutSession;
+    } catch {
+      continue;
+    }
+    if (typeof session?.id !== "string" || typeof session.startedAt !== "string") continue;
+    await enqueueOp(db, "workout_session", workoutSessionToSyncPayload(session, row.finishedAt), {
+      clientClockAt: row.finishedAt,
+    });
+    queued += 1;
+  }
+
+  const plan = await getTrainingPlan(db);
+  if (plan != null) {
+    const queuedPlan = await db.getFirstAsync<{ ok: number }>(
+      `SELECT 1 AS ok FROM pending_server_ops
+       WHERE type = 'training_plan' AND json_extract(payload_json, '$.updatedAt') = ?
+       LIMIT 1`,
+      plan.updatedAt,
+    );
+    if (queuedPlan == null) {
+      await enqueueTrainingPlan(db, plan);
+      queued += 1;
+    }
+  }
+  return queued;
 }
 
 /** Finished sessions, newest first. */

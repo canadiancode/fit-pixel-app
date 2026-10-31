@@ -129,6 +129,31 @@ export async function enqueueOp(
   };
 }
 
+/**
+ * Restore: note that a row came from the server, so the outbox backfill does
+ * not upload it again. Stored as an already-synced op (never drained).
+ */
+export async function recordRestoredOp(
+  db: SQLiteDatabase,
+  type: PendingServerOpType,
+  id: string,
+  payload: Record<string, unknown>,
+): Promise<void> {
+  assertPendingOpType(type);
+  const createdAt = nowIso();
+  await db.runAsync(
+    `INSERT OR IGNORE INTO pending_server_ops (
+      id, type, payload_json, createdAt, status, clientClockAt, schemaVersion, trust
+    ) VALUES (?, ?, ?, ?, 'synced', NULL, ?, ?)`,
+    id,
+    type,
+    JSON.stringify(payload),
+    createdAt,
+    PENDING_OP_SCHEMA_VERSION,
+    trustForOpType(type),
+  );
+}
+
 /** Mark failed for debug / retry. Does not change payload. Never promotes to synced. */
 export async function markOpFailed(
   db: SQLiteDatabase,
@@ -205,17 +230,26 @@ export async function acknowledgeOpRejected(
   notifyPendingOpEnqueue();
 }
 
-/** Ops still waiting to drain (pending first, then failed for retry). */
+/**
+ * Ops still waiting to drain, oldest first. `excludeIds` skips ops the server
+ * asked to hold (see the drain's deferred set) so they can't block newer ones.
+ */
 export async function listDrainableOps(
   db: SQLiteDatabase,
   limit = 50,
+  excludeIds: readonly string[] = [],
 ): Promise<PendingServerOp[]> {
+  const exclude =
+    excludeIds.length > 0
+      ? `AND id NOT IN (${excludeIds.map(() => "?").join(", ")})`
+      : "";
   const rows = await db.getAllAsync<PendingServerOpRow>(
     `SELECT id, type, payload_json, createdAt, status, clientClockAt, schemaVersion, trust
      FROM pending_server_ops
-     WHERE status IN ('pending', 'failed')
+     WHERE status IN ('pending', 'failed') ${exclude}
      ORDER BY createdAt ASC
      LIMIT ?`,
+    ...excludeIds,
     limit,
   );
   return rows.map(mapRow);

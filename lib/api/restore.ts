@@ -69,6 +69,18 @@ export type RestoreSnapshot = {
   /** Missing on servers older than training sync. */
   trainingPlan?: { plan: Record<string, unknown>; updatedAt: string } | null;
   workoutSessionCount?: number;
+  /** Missing on servers older than weight journey sync. */
+  weightJourney?: RestoreWeightJourney | null;
+};
+
+export type RestoreWeightJourney = {
+  startWeight: number | null;
+  startUnit: "lb" | "kg" | null;
+  startDayKey: string | null;
+  weighInWeekday: number;
+  reminderEnabled: boolean;
+  hideNumbers: boolean;
+  updatedAt: string;
 };
 
 export async function fetchRestoreSnapshot(
